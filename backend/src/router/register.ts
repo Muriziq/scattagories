@@ -1,0 +1,424 @@
+import bcrypt from "bcryptjs";
+import express, { Request, Response, Router } from "express";
+import jwt from "jsonwebtoken";
+import { z } from "zod";
+import pool from "../db";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
+
+dotenv.config();
+
+const router = Router();
+
+// Rate Limiters
+// General rate limiter: 100 requests per 15 minutes
+
+
+// Strict rate limiter for sensitive actions (login, register, forgot password, send email): 5 requests per 15 minutes
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many attempts from this IP, please try again after 15 minutes." },
+});
+
+
+
+// Validation Schemas
+const registerSchema = z.object({
+  username: z.string().min(3).max(20),
+  email: z.string().email(),
+  password: z.string().min(6).max(20),
+});
+
+const loginSchema = z.object({
+  identifier: z.string().min(3),
+  password: z.string().min(6).max(20),
+});
+
+const emailSchema = z.string().email();
+
+// Helper: Send Verification Email
+async function sendEmail(username: string, email: string, verifyToken: string): Promise<void> {
+  const verificationUrl = `http://localhost:5504/verify-email?token=${verifyToken}`;
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: `"Scattagories" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Verify your email address",
+    html: `
+      <h2>Hello ${username}!</h2>
+      <p>Welcome to our platform. Please click the link below to verify your account to enjoy the game:</p>
+      <a href="${verificationUrl}" style="padding: 10px 20px; background-color: #e20c26; color: white; text-decoration: none; border-radius: 5px;">Verify My Email</a>
+      <p>If the button doesn't work, copy and paste this link into your browser:</p>
+      <p>${verificationUrl}</p>
+      <p>This link will expire in 15 minutes.</p>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+// 1. REGISTER
+router.post("/register", authLimiter, async (req: Request, res: Response) => {
+  const result = registerSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ message: "Invalid data", error: result.error });
+  }
+
+  const { username, email, password } = result.data;
+
+  try {
+    const checkQuery = `
+      SELECT id, username, email 
+      FROM users 
+      WHERE (username = $1 OR email = $2) AND deleted_at IS NULL;
+    `;
+    const checkResult = await pool.query(checkQuery, [username, email]);
+    if (checkResult.rows.length > 0) {
+      return res.status(400).json({ message: "Username or email already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const insertQuery = `
+      INSERT INTO users (username, email, password_hash, is_email_verified)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, username, email, is_email_verified;
+    `;
+    const newUser = await pool.query(insertQuery, [username, email, hashedPassword, false]);
+    const userAns = newUser.rows[0];
+
+    const verifyToken = jwt.sign({ id: userAns.id }, process.env.VERIFY_TOKEN!, {
+      expiresIn: "15m",
+    });
+    const refreshToken = jwt.sign({ id: userAns.id }, process.env.REFRESH_TOKEN!, {
+      expiresIn: "7d",
+    });
+    const accessToken = jwt.sign(userAns, process.env.ACCESS_TOKEN!, {
+      expiresIn: "15m",
+    });
+
+    await sendEmail(userAns.username, userAns.email, verifyToken);
+
+    res.cookie("token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(201).json({
+      message: "User registered successfully. Please check your email to verify your account.",
+      accessToken,
+      user: userAns,
+    });
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    return res.status(500).json({
+      message: "Server error during registration",
+      error: error.message,
+    });
+  }
+});
+
+// 2. LOGIN
+router.post("/login", authLimiter, async (req: Request, res: Response) => {
+  const result = loginSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ message: "Invalid data", error: result.error });
+  }
+
+  const { identifier, password } = result.data;
+
+  try {
+    const checkQuery= `
+      SELECT id, username, email, password_hash, is_email_verified, deleted_at
+      FROM users 
+      WHERE (username = $1 OR email = $2) AND deleted_at IS NULL;
+    `;
+    const checkResult = await pool.query(checkQuery, [identifier, identifier]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ message: "Invalid credentials" });
+    }
+
+    const userAns = checkResult.rows[0];
+    const isPasswordValid = await bcrypt.compare(password, userAns.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const refreshToken = jwt.sign({ id: userAns.id }, process.env.REFRESH_TOKEN!, {
+      expiresIn: "7d",
+    });
+
+    const { password_hash, deleted_at, ...others } = userAns;
+    const accessToken = jwt.sign(others, process.env.ACCESS_TOKEN!, {
+      expiresIn: "15m",
+    });
+
+    res.cookie("token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      message: "Login successful",
+      accessToken,
+      user: others,
+    });
+  } catch (error: any) {
+    console.error("Login error:", error);
+    return res.status(500).json({
+      message: "Server error during login",
+      error: error.message,
+    });
+  }
+});
+
+// 3. VERIFY EMAIL
+router.post("/verify-email", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(403).json({ error: "A token is required for authentication" });
+    }
+
+    const verify = jwt.verify(token, process.env.VERIFY_TOKEN!);
+    const { id } = verify as { id: string };
+
+    const updateQuery = `
+      UPDATE users
+      SET is_email_verified = TRUE, modified_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND deleted_at IS NULL;
+    `;
+    const result = await pool.query(updateQuery, [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "User not found or account deactivated" });
+    }
+
+    return res.status(200).json({ message: "Email verified successfully" });
+  } catch (error: any) {
+    console.error("Email verification error:", error);
+    return res.status(401).json({
+      message: "Invalid or expired verification token",
+      error: error.message,
+    });
+  }
+});
+
+// 4. RESEND VERIFICATION EMAIL
+router.post("/sendVerification", authLimiter, async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const result = emailSchema.safeParse(email);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid email address", error: result.error });
+    }
+
+    const user = await pool.query(
+      `SELECT id, username, email, is_email_verified FROM users WHERE email = $1 AND deleted_at IS NULL`,
+      [email]
+    );
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const userAns = user.rows[0];
+    if (userAns.is_email_verified) {
+      return res.status(400).json({ message: "User email already verified" });
+    }
+
+    const verifyToken = jwt.sign({ id: userAns.id }, process.env.VERIFY_TOKEN!, {
+      expiresIn: "15m",
+    });
+
+    await sendEmail(userAns.username, userAns.email, verifyToken);
+    return res.status(200).json({ message: "Verification email sent successfully" });
+  } catch (err: any) {
+    console.error("Send verification error:", err);
+    return res.status(500).json({ message: "Server error sending verification email", error: err.message });
+  }
+});
+
+// 5. SIGNOUT / LOGOUT
+router.post("/logout", (_req: Request, res: Response) => {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    return res.status(200).json({ message: "Signed out successfully" });
+  } catch (error: any) {
+    console.error("Logout error:", error);
+    return res.status(500).json({ message: "Server error during signout", error: error.message });
+  }
+});
+
+// 6. SOFT DELETE USER ACCOUNT
+router.delete("/delete", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = (authHeader && authHeader.split(" ")[1]) || req.cookies?.token;
+
+    if (!token) {
+      return res.status(401).json({ message: "Authentication required to delete account" });
+    }
+
+    let userId: string;
+    try {
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN!) as { id: string };
+      userId = decoded.id;
+    } catch {
+      // Fallback check refresh token if access token expired
+      const decoded = jwt.verify(token, process.env.REFRESH_TOKEN!) as { id: string };
+      userId = decoded.id;
+    }
+
+    // Soft delete: update deleted_at to current timestamp (Africa/Lagos timezone set in DB session/database)
+    const softDeleteQuery = `
+      UPDATE users 
+      SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP 
+      WHERE id = $1 AND deleted_at IS NULL 
+      RETURNING id, username, deleted_at;
+    `;
+    const deleteResult = await pool.query(softDeleteQuery, [userId]);
+
+    if (deleteResult.rowCount === 0) {
+      return res.status(404).json({ message: "User not found or already deleted" });
+    }
+
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    return res.status(200).json({
+      message: "Account deleted (soft delete) successfully",
+      deletedUser: deleteResult.rows[0],
+    });
+  } catch (error: any) {
+    console.error("Delete account error:", error);
+    return res.status(500).json({
+      message: "Server error deleting account",
+      error: error.message,
+    });
+  }
+});
+
+// 7. FORGOT PASSWORD - REQUEST RESET LINK
+const resetPasswordSchema = z.object({
+  token: z.string(),
+  newPassword: z.string().min(6).max(20),
+});
+
+async function sendResetPasswordEmail(username: string, email: string, resetToken: string): Promise<void> {
+  const resetUrl = `http://localhost:5504/reset-password?token=${resetToken}`;
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: `"Scattagories" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Reset your password",
+    html: `
+      <h2>Hello ${username}!</h2>
+      <p>We received a request to reset your password. Click the link below to set a new password:</p>
+      <a href="${resetUrl}" style="padding: 10px 20px; background-color: #e20c26; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+      <p>If the button doesn't work, copy and paste this link into your browser:</p>
+      <p>${resetUrl}</p>
+      <p>This link will expire in 15 minutes.</p>
+      <p>If you didn't request a password reset, please ignore this email.</p>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+router.post("/forgot-password", authLimiter, async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const result = emailSchema.safeParse(email);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid email address", error: result.error });
+    }
+
+    const user = await pool.query(
+      `SELECT id, username, email FROM users WHERE email = $1 AND deleted_at IS NULL`,
+      [email]
+    );
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User with this email does not exist" });
+    }
+
+    const userAns = user.rows[0];
+    const resetToken = jwt.sign({ id: userAns.id }, process.env.RESET_PASSWORD_TOKEN!, {
+      expiresIn: "15m",
+    });
+
+    await sendResetPasswordEmail(userAns.username, userAns.email, resetToken);
+    return res.status(200).json({ message: "Password reset link sent to your email" });
+  } catch (err: any) {
+    console.error("Forgot password error:", err);
+    return res.status(500).json({ message: "Server error sending reset password email", error: err.message });
+  }
+});
+
+// 8. RESET PASSWORD
+router.post("/reset-password", async (req: Request, res: Response) => {
+  const parseResult = resetPasswordSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ message: "Invalid data", error: parseResult.error });
+  }
+
+  const { token, newPassword } = parseResult.data;
+
+  try {
+    const decoded = jwt.verify(token, process.env.RESET_PASSWORD_TOKEN!) as { id: string };
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const updateQuery = `
+      UPDATE users 
+      SET password_hash = $1, modified_at = CURRENT_TIMESTAMP 
+      WHERE id = $2 AND deleted_at IS NULL 
+      RETURNING id;
+    `;
+    const result = await pool.query(updateQuery, [hashedPassword, decoded.id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "User not found or account deleted" });
+    }
+
+    return res.status(200).json({ message: "Password reset successfully" });
+  } catch (error: any) {
+    console.error("Reset password error:", error);
+    return res.status(401).json({
+      message: "Invalid or expired reset token",
+      error: error.message,
+    });
+  }
+});
+
+export default router;
