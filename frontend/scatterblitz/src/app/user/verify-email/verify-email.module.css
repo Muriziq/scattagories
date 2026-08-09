@@ -1,0 +1,111 @@
+.main {
+    padding: 2rem;
+    height: 100vh;
+    background-color: var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    background-color: var(--sunset);
+    border-radius: 2rem;
+    padding: 3rem 2.5rem;
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(181, 0, 1, 0.15);
+    gap: 1.25rem;
+}
+
+.icon {
+    font-size: 4rem;
+    margin-bottom: 0.5rem;
+}
+
+.loadingIcon {
+    color: var(--persimmon);
+    animation: spin 1.5s linear infinite;
+}
+
+.successIcon {
+    color: #2e7d32;
+}
+
+.errorIcon {
+    color: var(--blood-orange);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--blood-orange);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.message {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.5;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.primaryButton {
+    background-color: var(--persimmon);
+    color: #ffffff;
+    padding: 0.8rem 2rem;
+    border-radius: 2rem;
+    border: none;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow: 0 4px 14px rgba(228, 91, 17, 0.35);
+    transition: all 0.25s ease;
+    display: inline-block;
+}
+
+.primaryButton:hover {
+    background-color: var(--blood-orange);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(181, 0, 1, 0.4);
+}
+
+.secondaryButton {
+    background-color: rgba(255, 255, 255, 0.85);
+    color: var(--blood-orange);
+    padding: 0.8rem 1.75rem;
+    border-radius: 2rem;
+    border: 2px solid var(--blood-orange);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    display: inline-block;
+}
+
+.secondaryButton:hover {
+    background-color: #ffffff;
+    transform: translateY(-2px);
+}

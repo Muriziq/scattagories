@@ -40,9 +40,16 @@ const loginSchema = z.object({
 
 const emailSchema = z.string().email();
 
+const tokenSchema = z.string().min(1, "Token is required");
+
+const jwtPayloadSchema = z.object({
+  id: z.string().min(1),
+});
+
 // Helper: Send Verification Email
 async function sendEmail(username: string, email: string, verifyToken: string): Promise<void> {
-  const verificationUrl = `http://localhost:5504/verify-email?token=${verifyToken}`;
+  const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+  const verificationUrl = `${clientUrl}/verify-email?token=${verifyToken}`;
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -110,16 +117,22 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
 
     await sendEmail(userAns.username, userAns.email, verifyToken);
 
-    res.cookie("token", refreshToken, {
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
+
     return res.status(201).json({
       message: "User registered successfully. Please check your email to verify your account.",
-      accessToken,
       user: userAns,
     });
   } catch (error: any) {
@@ -166,16 +179,22 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
       expiresIn: "15m",
     });
 
-    res.cookie("token", refreshToken, {
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
+
     return res.status(200).json({
       message: "Login successful",
-      accessToken,
       user: others,
     });
   } catch (error: any) {
@@ -191,13 +210,22 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 router.post("/verify-email", async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
-    if (!token) {
-      return res.status(403).json({ error: "A token is required for authentication" });
+    const rawToken = (authHeader && authHeader.split(" ")[1]) || req.body?.token || req.query?.token;
+
+    const tokenResult = tokenSchema.safeParse(rawToken);
+    if (!tokenResult.success) {
+      return res.status(400).json({ message: "A valid token is required", error: tokenResult.error });
     }
 
+    const token = tokenResult.data;
     const verify = jwt.verify(token, process.env.VERIFY_TOKEN!);
-    const { id } = verify as { id: string };
+    
+    const payloadResult = jwtPayloadSchema.safeParse(verify);
+    if (!payloadResult.success) {
+      return res.status(401).json({ message: "Invalid token payload structure", error: payloadResult.error });
+    }
+
+    const { id } = payloadResult.data;
 
     const updateQuery = `
       UPDATE users
@@ -258,6 +286,16 @@ router.post("/sendVerification", authLimiter, async (req: Request, res: Response
 // 5. SIGNOUT / LOGOUT
 router.post("/logout", (_req: Request, res: Response) => {
   try {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
     res.clearCookie("token", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -274,7 +312,7 @@ router.post("/logout", (_req: Request, res: Response) => {
 router.delete("/delete", async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers["authorization"];
-    const token = (authHeader && authHeader.split(" ")[1]) || req.cookies?.token;
+    const token = (authHeader && authHeader.split(" ")[1]) || req.cookies?.accessToken || req.cookies?.refreshToken || req.cookies?.token;
 
     if (!token) {
       return res.status(401).json({ message: "Authentication required to delete account" });
@@ -303,6 +341,16 @@ router.delete("/delete", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found or already deleted" });
     }
 
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
     res.clearCookie("token", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -396,7 +444,13 @@ router.post("/reset-password", async (req: Request, res: Response) => {
   const { token, newPassword } = parseResult.data;
 
   try {
-    const decoded = jwt.verify(token, process.env.RESET_PASSWORD_TOKEN!) as { id: string };
+    const decoded = jwt.verify(token, process.env.RESET_PASSWORD_TOKEN!);
+    const payloadResult = jwtPayloadSchema.safeParse(decoded);
+    if (!payloadResult.success) {
+      return res.status(401).json({ message: "Invalid token payload structure", error: payloadResult.error });
+    }
+
+    const { id } = payloadResult.data;
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     const updateQuery = `
@@ -405,7 +459,7 @@ router.post("/reset-password", async (req: Request, res: Response) => {
       WHERE id = $2 AND deleted_at IS NULL 
       RETURNING id;
     `;
-    const result = await pool.query(updateQuery, [hashedPassword, decoded.id]);
+    const result = await pool.query(updateQuery, [hashedPassword, id]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "User not found or account deleted" });

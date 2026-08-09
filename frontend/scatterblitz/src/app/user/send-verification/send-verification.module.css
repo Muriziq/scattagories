@@ -1,0 +1,150 @@
+.main {
+    padding: 2rem;
+    height: 100vh;
+    background-color: var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    background-color: var(--sunset);
+    border-radius: 2rem;
+    padding: 3rem 2.5rem;
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(181, 0, 1, 0.15);
+    gap: 1.25rem;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.avatar {
+    color: var(--persimmon);
+    filter: drop-shadow(0 4px 12px rgba(181, 0, 1, 0.15));
+}
+
+.title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--blood-orange);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.description {
+    font-size: 0.9rem;
+    color: #444;
+    line-height: 1.4;
+    max-width: 360px;
+}
+
+.form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.label {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.icon {
+    position: absolute;
+    left: 1.25rem;
+    color: var(--persimmon);
+    font-size: 1.15rem;
+    pointer-events: none;
+}
+
+.input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3.25rem;
+    border-radius: 2rem;
+    border: 2px solid transparent;
+    background-color: rgba(255, 255, 255, 0.85);
+    color: #222;
+    font-size: 0.95rem;
+    font-weight: 500;
+    outline: none;
+    transition: all 0.25s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.input:focus {
+    border-color: var(--persimmon);
+    background-color: #ffffff;
+    box-shadow: 0 0 12px rgba(228, 91, 17, 0.25);
+}
+
+.errorText {
+    color: var(--blood-orange);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    width: 100%;
+    padding-left: 0.5rem;
+}
+
+.successText {
+    color: #2e7d32;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    width: 100%;
+    padding-left: 0.5rem;
+}
+
+.submitButton {
+    background-color: var(--persimmon);
+    color: #ffffff;
+    padding: 0.75rem 2rem;
+    border-radius: 2rem;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow: 0 4px 14px rgba(228, 91, 17, 0.35);
+    transition: all 0.25s ease;
+    width: 100%;
+}
+
+.submitButton:hover {
+    background-color: var(--blood-orange);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(181, 0, 1, 0.4);
+}
+
+.submitButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.backLink {
+    color: var(--blood-orange);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.backLink:hover {
+    text-decoration: underline;
+    opacity: 0.85;
+}

@@ -18,8 +18,8 @@ function Header(){
   return (
     <header className={styles.header}>
       <nav className={styles.nav}>
-        <button className={styles.loginBtn}>Login</button>
-        <button className={styles.registerBtn}>Register</button>
+        <Link href="/user/register?type=login" className={styles.loginBtn}>Login</Link>
+        <Link href="/user/register?type=register" className={styles.registerBtn}>Register</Link>
       </nav>
     </header>
   );
@@ -38,8 +38,8 @@ real-time category validation.</p>
       </div>
       <div className={styles.heroActions}>
         <div className={styles.buttonGroup}>
-          <button className={styles.joinBtn}>Join Game</button>
-          <button className={styles.createBtn}>Create Room</button>
+          <Link href="games/rooms?type=join" className={styles.joinBtn}>Join Game</Link>
+          <Link href="games/rooms?type=create" className={styles.createBtn}>Create Room</Link>
         </div>
       </div>
     </main>
