@@ -1,5 +1,5 @@
 "use client"
-import { FaUser, FaLock, FaEnvelope, FaUserCircle, FaGoogle, FaGithub, FaDiscord } from 'react-icons/fa';
+import { FaUser, FaLock, FaEnvelope, FaUserCircle, FaGoogle, FaGithub, FaDiscord, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useState, useRef, FormEvent, useEffect, Suspense } from "react";
 import Link from "next/link";
 import styles from "./register.module.css";
@@ -62,6 +62,7 @@ function Login(){
     const router = useRouter();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
     const [loading, setLoading] = useState(false);
@@ -127,12 +128,20 @@ function Login(){
                     <label className={styles.label}>
                         <FaLock className={styles.icon} />
                         <input 
-                            type="password" 
+                            type={showPassword ? "text" : "password"} 
                             placeholder="Password" 
                             className={`${styles.input} ${styles.passwordInput}`} 
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
+                        <button 
+                            type="button" 
+                            className={styles.togglePassword} 
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                        </button>
                     </label>
 
                     {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
@@ -174,6 +183,8 @@ function SignUp(){
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
     const [loading, setLoading] = useState(false);
@@ -258,23 +269,39 @@ function SignUp(){
                     <label className={styles.label}>
                         <FaLock className={styles.icon} />
                         <input 
-                            type="password" 
+                            type={showPassword ? "text" : "password"} 
                             placeholder="Password" 
                             className={`${styles.input} ${styles.passwordInput}`} 
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
+                        <button 
+                            type="button" 
+                            className={styles.togglePassword} 
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                        </button>
                     </label>
 
                     <label className={styles.label}>
                         <FaLock className={styles.icon} />
                         <input 
-                            type="password" 
+                            type={showConfirmPassword ? "text" : "password"} 
                             placeholder="Confirm Password" 
                             className={`${styles.input} ${styles.confirmPasswordInput}`} 
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                         />
+                        <button 
+                            type="button" 
+                            className={styles.togglePassword} 
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                        >
+                            {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                        </button>
                     </label>
 
                     {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
