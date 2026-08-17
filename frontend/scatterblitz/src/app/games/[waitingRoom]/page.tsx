@@ -11,7 +11,7 @@ export default function WaitingRoom({
 
     useEffect(() => {
         const socket = io("http://localhost:5000",{
-            withCredentials:true
+           auth:{token:""}
         })
         const joinRoom = async ()=>{
             const res = await fetch("http://localhost:500/games/room/join",{
