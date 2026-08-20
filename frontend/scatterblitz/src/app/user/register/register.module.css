@@ -1,97 +1,104 @@
 .main {
-    padding:2rem;
-    height:100vh;
-    background-color: var(--amber);
-    display:flex;
+    padding: 2rem;
+    height: 100vh;
+    background: radial-gradient(circle at 50% 0%, #290802 0%, #120907 50%, #0a0504 100%);
+    color: #f7f3ed;
+    display: flex;
     align-items: center;
-    justify-content:center;
-
+    justify-content: center;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
-.cardContainer{
-    display:flex;
-    flex-direction:row;
+
+.cardContainer {
+    display: flex;
+    flex-direction: row;
     height: 100%;
-
-    width:100%;
-    border-radius:2rem;
-overflow:hidden;
-
+    width: 100%;
+    max-width: 1100px;
+    max-height: 700px;
+    border-radius: 2rem;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 35px rgba(250, 115, 1, 0.2);
+    border: 1px solid rgba(242, 204, 136, 0.15);
 }
+
 .tabSection {
     background-color: var(--persimmon);
     width: 500px;
     position: relative;
+}
 
+.tabButtons {
+    position: absolute;
+    right: 0;
+    top: 30%;
+    display: flex;
+    flex-direction: column;
 }
-.tabButtons{
-position:absolute;
-right:0;
-top:30%;
-display:flex;
-flex-direction:column;
-}
-.sectionStyle1{
-    position:absolute;
-    bottom:0;
+
+.sectionStyle1 {
+    position: absolute;
+    bottom: 0;
     left: 0;
     height: 70%;
     width: 100%;
-    clip-path: polygon(0 0,100% 75%,100% 100%,0 100%);
+    clip-path: polygon(0 0, 100% 75%, 100% 100%, 0 100%);
     background-color: var(--blood-orange);
 }
 
-.sectionStyle4{
-    position:absolute;
-    bottom:0;
+.sectionStyle4 {
+    position: absolute;
+    bottom: 0;
     left: 0;
     height: 55%;
     width: 100%;
-    clip-path: polygon(0 0,100% 100%,100% 100%,0 100%);
+    clip-path: polygon(0 0, 100% 100%, 100% 100%, 0 100%);
     background-color: var(--safety-orange);
 }
 
-.sectionStyle2{
-    position:absolute;
-    top:0;
+.sectionStyle2 {
+    position: absolute;
+    top: 0;
     left: 0;
     height: 50%;
     width: 100%;
-    clip-path: polygon(0 0,90% 0,0 100%);
+    clip-path: polygon(0 0, 90% 0, 0 100%);
     background-color: var(--safety-orange);
-   
 }
 
-.sectionStyle3{
-    position:absolute;
-    top:0;
+.sectionStyle3 {
+    position: absolute;
+    top: 0;
     left: 0;
     height: 35%;
     width: 85%;
-    clip-path: polygon(0 0, 75% 0,0 100%);
+    clip-path: polygon(0 0, 75% 0, 0 100%);
     background-color: var(--blood-orange);
-   
 }
-.tabButton {
-/* padding: 1rem 1.5rem 1rem 3rem; */
-height:70px;
-width: 150px;
 
-font-size: 1.2rem;
-font-weight: 600;
-position: relative;
-border:none;
-background-color: transparent;
-z-index: 2;
+.tabButton {
+    height: 70px;
+    width: 150px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    position: relative;
+    border: none;
+    background-color: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.2s ease;
 }
-.activeTab::before{
+
+.activeTab::before {
     content: "";
-    position:absolute;
-    width:100%;
+    position: absolute;
+    width: 100%;
     height: 150px;
     clip-path: path("M 35,40 L 125,40 A 25,25,0,0,0 150,15 L 150,135 A 25,25,0,0,0 125,110 L 35,110 A 35,35,0,0,1 35,40 Z");
-    background-color: var(--sunset);
-    right:0;
-    top:50%;
+    background-color: #160a08;
+    right: 0;
+    top: 50%;
     transform: translateY(-50%);
     z-index: -1;
 }
@@ -99,14 +106,14 @@ z-index: 2;
 .cardWrapper {
     flex: 1;
     height: 100%;
-    background-color: var(--sunset);
+    background-color: #160a08;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: var(--persimmon) rgba(0, 0, 0, 0.05);
+    scrollbar-color: var(--safety-orange) rgba(0, 0, 0, 0.2);
 }
 
 .cardWrapper::-webkit-scrollbar {
@@ -114,12 +121,12 @@ z-index: 2;
 }
 
 .cardWrapper::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 4px;
 }
 
 .cardWrapper::-webkit-scrollbar-thumb {
-    background: var(--persimmon);
+    background: var(--safety-orange);
     border-radius: 4px;
 }
 
@@ -134,7 +141,6 @@ z-index: 2;
     justify-content: center;
     gap: 1rem;
     width: 100%;
-    /* max-width: 420px; */
     margin: 0 auto;
     text-align: center;
 }
@@ -147,8 +153,8 @@ z-index: 2;
 }
 
 .avatar {
-    color: var(--persimmon);
-    filter: drop-shadow(0 4px 12px rgba(181, 0, 1, 0.15));
+    color: var(--amber);
+    filter: drop-shadow(0 0 15px rgba(243, 185, 0, 0.4));
     transition: transform 0.3s ease;
 }
 
@@ -159,7 +165,7 @@ z-index: 2;
 .title {
     font-size: 2rem;
     font-weight: 800;
-    color: var(--blood-orange);
+    color: #ffffff;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     text-align: center;
@@ -193,7 +199,7 @@ z-index: 2;
 .icon {
     position: absolute;
     left: 1.25rem;
-    color: var(--persimmon);
+    color: var(--amber);
     font-size: 1.15rem;
     pointer-events: none;
     transition: color 0.25s ease;
@@ -202,16 +208,30 @@ z-index: 2;
 
 .input {
     width: 100%;
-    padding: 0.65rem 3.25rem 0.65rem 3.25rem;
+    padding: 0.75rem 3.25rem;
     border-radius: 2rem;
-    border: 2px solid transparent;
-    background-color: rgba(255, 255, 255, 0.85);
-    color: #222;
+    border: 1px solid rgba(242, 204, 136, 0.15);
+    background-color: rgba(242, 204, 136, 0.05);
+    color: #ffffff;
     font-size: 0.95rem;
     font-weight: 500;
     outline: none;
     transition: all 0.25s ease;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.input::placeholder {
+    color: #8c8275;
+    font-weight: 400;
+}
+
+.input:focus {
+    border-color: var(--safety-orange);
+    background-color: rgba(250, 115, 1, 0.08);
+    box-shadow: 0 0 15px rgba(250, 115, 1, 0.25);
+}
+
+.label:focus-within .icon {
+    color: var(--safety-orange);
 }
 
 .togglePassword {
@@ -219,38 +239,25 @@ z-index: 2;
     right: 1.25rem;
     background: none;
     border: none;
-    color: var(--persimmon);
+    color: var(--sunset);
+    opacity: 0.7;
     font-size: 1.15rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    transition: color 0.2s ease;
+    transition: opacity 0.2s ease, color 0.2s ease;
     z-index: 2;
 }
 
 .togglePassword:hover {
-    color: var(--blood-orange);
-}
-
-.input::placeholder {
-    color: #999;
-    font-weight: 400;
-}
-
-.input:focus {
-    border-color: var(--persimmon);
-    background-color: #ffffff;
-    box-shadow: 0 0 12px rgba(228, 91, 17, 0.25);
-}
-
-.label:focus-within .icon {
-    color: var(--blood-orange);
+    opacity: 1;
+    color: var(--amber);
 }
 
 .errorText {
-    color: var(--blood-orange);
+    color: #ff4d63;
     font-size: 0.85rem;
     font-weight: 600;
     text-align: left;
@@ -260,7 +267,7 @@ z-index: 2;
 }
 
 .successText {
-    color: #2e7d32;
+    color: #4caf50;
     font-size: 0.85rem;
     font-weight: 600;
     text-align: left;
@@ -278,43 +285,62 @@ z-index: 2;
 }
 
 .forgotPassword {
-    color: var(--blood-orange);
+    color: var(--sunset);
     font-size: 0.85rem;
     font-weight: 600;
     text-decoration: none;
-    transition: opacity 0.2s ease;
+    transition: color 0.2s ease;
 }
 
 .forgotPassword:hover {
+    color: var(--amber);
     text-decoration: underline;
-    opacity: 0.85;
 }
 
 .submitButton {
-    background-color: var(--persimmon);
+    position: relative;
+    background: linear-gradient(180deg, #ffc107 0%, var(--safety-orange) 50%, var(--persimmon) 100%);
     color: #ffffff;
-    padding: 0.8rem 2rem;
-    border-radius: 2rem;
-    border: none;
+    padding: 0.85rem 2.2rem;
+    border-radius: 14px;
+    border: 3.5px solid var(--blood-orange);
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    box-shadow: 0 4px 14px rgba(228, 91, 17, 0.35);
-    transition: all 0.25s ease;
+    box-shadow: inset 0 3px 2px rgba(255, 255, 255, 0.6), inset 0 -4px 2px rgba(0, 0, 0, 0.25), 0 5px 0 #730000, 0 8px 18px rgba(250, 115, 1, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    transition: all 0.15s ease;
     margin-left: auto;
+    overflow: hidden;
 }
 
-.submitButton:hover {
-    background-color: var(--blood-orange);
+.submitButton::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    width: 14px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 10px;
+    pointer-events: none;
+}
+
+.submitButton:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(181, 0, 1, 0.4);
+    box-shadow: inset 0 3px 2px rgba(255, 255, 255, 0.7), inset 0 -4px 2px rgba(0, 0, 0, 0.25), 0 7px 0 #730000, 0 12px 24px rgba(250, 115, 1, 0.6);
 }
 
-.submitButton:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(181, 0, 1, 0.3);
+.submitButton:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.4), inset 0 -2px 1px rgba(0, 0, 0, 0.3), 0 1px 0 #730000, 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.submitButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .socialSection {
@@ -331,7 +357,7 @@ z-index: 2;
     display: flex;
     align-items: center;
     text-align: center;
-    color: var(--blood-orange);
+    color: #8c8275;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -341,7 +367,7 @@ z-index: 2;
 .socialDivider::after {
     content: "";
     flex: 1;
-    border-bottom: 2px solid rgba(181, 0, 1, 0.18);
+    border-bottom: 1px solid rgba(242, 204, 136, 0.15);
 }
 
 .socialDivider span {
@@ -362,28 +388,27 @@ z-index: 2;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid transparent;
-    background-color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(242, 204, 136, 0.15);
+    background-color: rgba(242, 204, 136, 0.05);
     cursor: pointer;
     transition: all 0.25s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .socialButton:hover {
-    background-color: #ffffff;
-    border-color: var(--persimmon);
+    background-color: rgba(250, 115, 1, 0.15);
+    border-color: var(--safety-orange);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(228, 91, 17, 0.2);
+    box-shadow: 0 4px 12px rgba(250, 115, 1, 0.2);
 }
 
 .socialIcon {
     font-size: 1.25rem;
-    color: var(--persimmon);
+    color: var(--amber);
 }
 
 .termsText {
     font-size: 0.75rem;
-    color: rgba(181, 0, 1, 0.85);
+    color: #9c8e7d;
     text-align: center;
     line-height: 1.35;
     margin-top: 0.25rem;
@@ -391,12 +416,31 @@ z-index: 2;
 }
 
 .termsLink {
-    color: var(--blood-orange);
+    color: var(--amber);
     font-weight: 700;
     text-decoration: underline;
-    transition: opacity 0.2s ease;
+    transition: color 0.2s ease;
 }
 
 .termsLink:hover {
-    opacity: 0.75;
+    color: var(--safety-orange);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .cardContainer {
+        flex-direction: column;
+        max-height: none;
+    }
+    .tabSection {
+        width: 100%;
+        height: 100px;
+    }
+    .tabButtons {
+        top: 20%;
+        flex-direction: row;
+    }
+    .activeTab::before {
+        display: none;
+    }
 }

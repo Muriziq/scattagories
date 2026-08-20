@@ -1,21 +1,42 @@
 :root {
+  /* Brand Color Palette */
   --sunset: #f2cc88;
   --amber: #f3b900;
-  --safety-orange:#fa7301;
+  --safety-orange: #fa7301;
   --persimmon: #e45b11;
-  --blood-orange:#b50001;
+  --blood-orange: #b50001;
+  --gold: #ffc107;
+
+  /* Surface & Background Colors */
+  --bg-dark: #080403;
+  --header-bg: rgba(18, 9, 7, 0.95);
+  --card-bg: rgba(242, 204, 136, 0.025);
+  --card-bg-hover: rgba(250, 115, 1, 0.06);
+  --btn-dark-start: #4a2c20;
+  --btn-dark-end: #2b140b;
+
+  /* Typography Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #f7f3ed;
+  --text-description: #d1c5b8;
+  --text-subtle: #c4b6a5;
+  --text-muted: #bfae9c;
+  --text-dim: #9c8e7d;
+  --text-copyright: #7d7062;
+
+  /* 3D Button Effect Tokens */
+  --btn-3d-shadow: #730000;
+  --btn-highlight-shine: rgba(255, 255, 255, 0.7);
+  --box-shadow-default: inset 0 3px 2px rgba(255, 255, 255, 0.6), inset 0 -5px 2px rgba(0, 0, 0, 0.25), 0 5px 0 var(--btn-3d-shadow);
+  --box-shadow-hover: inset 0 3px 2px rgba(255, 255, 255, 0.7), inset 0 -5px 2px rgba(0, 0, 0, 0.25), 0 7px 0 var(--btn-3d-shadow);
+  --box-shadow-active: inset 0 2px 2px rgba(255, 255, 255, 0.4), inset 0 -2px 1px rgba(0, 0, 0, 0.3), 0 1px 0 var(--btn-3d-shadow);
 }
-*{
-  
+
+body, * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
-/* 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} */
+
 
