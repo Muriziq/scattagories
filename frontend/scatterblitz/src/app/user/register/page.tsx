@@ -1,12 +1,14 @@
 "use client";
-import { FaUser, FaLock, FaEnvelope, FaUserCircle, FaGoogle, FaGithub, FaDiscord, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaUser, FaLock, FaEnvelope, FaUserCircle, FaGoogle, FaGithub, FaDiscord, FaEye, FaEyeSlash, FaPaperPlane, FaCheckCircle } from 'react-icons/fa';
 import { useState, FormEvent, useEffect, Suspense } from "react";
 import Link from "next/link";
 import styles from "./register.module.css";
 import { useSearchParams, useRouter } from 'next/navigation';
+import { saveAccessToken,updateUserData } from "../../accessToken"
 
 function RegisterContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(false);
 
   useEffect(() => {
@@ -17,6 +19,12 @@ function RegisterContent() {
       setIsLogin(false);
     }
   }, [searchParams]);
+
+  const handleTabChange = (loginState: boolean) => {
+    setIsLogin(loginState);
+    const newType = loginState ? 'login' : 'register';
+    router.replace(`/user/register?type=${newType}`, { scroll: false });
+  };
 
   return (
     <main className={styles.main}>
@@ -29,13 +37,13 @@ function RegisterContent() {
           <div className={styles.tabButtons}>
             <button 
               className={`${styles.tabButton} ${isLogin ? styles.activeTab : ''}`} 
-              onClick={(e) => { e.preventDefault(); setIsLogin(true); }}
+              onClick={(e) => { e.preventDefault(); handleTabChange(true); }}
             >
               LOGIN
             </button>
             <button 
               className={`${styles.tabButton} ${!isLogin ? styles.activeTab : ''}`} 
-              onClick={(e) => { e.preventDefault(); setIsLogin(false); }}
+              onClick={(e) => { e.preventDefault(); handleTabChange(false); }}
             >
               SIGN UP
             </button>
@@ -80,6 +88,7 @@ function Login() {
       return;
     }
 
+
     setLoading(true);
     try {
       const res = await fetch("http://localhost:5000/user/login", {
@@ -93,6 +102,12 @@ function Login() {
         setErrorMsg(data.message || "Invalid credentials");
       } else {
         setSuccessMsg(data.message || "Login successful! Redirecting...");
+        if(data?.accessToken && data?.accessTokenDate){
+         saveAccessToken(data.accessToken,data.accessTokenDate) 
+        }
+        if(data?.user && typeof data.user === "object"){
+          updateUserData(data.user)
+        }
         setTimeout(() => {
           router.push("/");
         }, 1000);
@@ -147,7 +162,7 @@ function Login() {
           {successMsg && <p className={styles.successText}>{successMsg}</p>}
 
           <div className={styles.actions}>
-            <Link href="/" className={styles.forgotPassword}>Forgot Password</Link>
+            <Link href="/user/forgot-password" className={styles.forgotPassword}>Forgot Password</Link>
             <button type="submit" className={styles.submitButton} disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </button>
@@ -186,6 +201,7 @@ function SignUp() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -221,10 +237,13 @@ function SignUp() {
       if (!res.ok) {
         setErrorMsg(data.message || "Registration failed");
       } else {
-        setSuccessMsg(data.message || "Registered successfully! Redirecting...");
-        setTimeout(() => {
-          router.push("/");
-        }, 1200);
+        if(data?.accessToken && data?.accessTokenDate){
+         saveAccessToken(data.accessToken,data.accessTokenDate);
+        }
+                if(data?.user && typeof data.user === "object"){
+          updateUserData(data.user)
+        }
+        setIsRegistered(true);
       }
     } catch (err) {
       setErrorMsg("Network error. Could not connect to server.");
@@ -232,6 +251,35 @@ function SignUp() {
       setLoading(false);
     }
   };
+
+  if (isRegistered) {
+    return (
+      <section className={styles.card}>
+        <div className={styles.header}>
+          <FaPaperPlane size={80} className={styles.avatar} />
+          <h1 className={styles.title}>Account Created</h1>
+        </div>
+
+        <section className={styles.formSection} style={{ textAlign: "center", gap: "1.25rem" }}>
+          <p className={styles.successText} style={{ textAlign: "center", width: "100%", paddingLeft: 0, fontSize: "1rem" }}>
+            Successfully logged in!
+          </p>
+          <p style={{ color: "var(--text-description)", fontSize: "0.925rem", lineHeight: "1.5" }}>
+            A verification link has been sent to <strong style={{ color: "var(--sunset)" }}>{email}</strong>. Please check your inbox to verify your email address.
+          </p>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", width: "100%", marginTop: "0.5rem", alignItems: "center" }}>
+            <Link href="/" className={styles.submitButton} style={{ textDecoration: "none", textAlign: "center", width: "100%" }}>
+              Back to Home Page
+            </Link>
+            <Link href="/user/send-verification" className={styles.forgotPassword} style={{ marginTop: "0.25rem" }}>
+              Didn't receive email? Resend verification link
+            </Link>
+          </div>
+        </section>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.card}>

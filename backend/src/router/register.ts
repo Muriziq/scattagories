@@ -9,7 +9,8 @@ import rateLimit from "express-rate-limit";
 import { v4 as uuidv4 } from "uuid";
 import { verifyAccessToken, type AuthRequest } from "../middleware/tokens";
 
-  const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+const router = express.Router();
+const clientUrl = process.env.CLIENT_URL || "http://localhost:3000/user";
 
 
 // Rate Limiters
@@ -29,17 +30,17 @@ export const authLimiter = rateLimit({
 
 // Validation Schemas
 const registerSchema = z.object({
-  username: z.string().min(3).max(20),
-  email: z.string().email(),
+  username: z.string().min(3).max(20).trim().toLowerCase(),
+  email: z.string().email().trim().toLowerCase(),
   password: z.string().min(6).max(20),
 });
 
 const loginSchema = z.object({
-  identifier: z.string().min(3),
+  identifier: z.string().min(3).trim().toLowerCase(),
   password: z.string().min(6).max(20),
 });
 
-const emailSchema = z.string().email();
+const emailSchema = z.string().email().trim().toLowerCase();
 
 const tokenSchema = z.string().min(1, "Token is required");
 
@@ -87,7 +88,7 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
     const checkQuery = `
       SELECT id, username, email 
       FROM users 
-      WHERE (username = $1 OR email = $2) AND deleted_at IS NULL;
+      WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($2)) AND deleted_at IS NULL;
     `;
     const checkResult = await pool.query(checkQuery, [username, email]);
     if (checkResult.rows.length > 0) {
@@ -101,7 +102,7 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
       expiresIn: "7d",
     });
     const insertQuery = `
-      INSERT INTO users (id, username, email, password_hash, is_email_verified, refresh_token)
+      INSERT INTO users (id, username, email, password_hash, is_email_verified, refresh_tokens)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id, username, email, is_email_verified;
     `;
@@ -129,13 +130,13 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
     return res.status(201).json({
       user: userAns,
       accessToken,
+      accessTokenDate: Date.now()
     });
 
   } catch (error: any) {
     console.error("Registration error:", error);
     return res.status(500).json({
-      message: "Server error during registration",
-      error: error.message,
+      message: "Server error: Pls Retry Later",
     });
   }
 });
@@ -151,34 +152,34 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 
   try {
     const checkQuery= `
-      SELECT id, username, email, password_hash, is_email_verified, deleted_at,refresh_token
+      SELECT id, username, email, password_hash, is_email_verified, deleted_at, refresh_tokens
       FROM users 
-      WHERE (username = $1 OR email = $2) AND deleted_at IS NULL;
+      WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($2)) AND deleted_at IS NULL;
     `;
     const checkResult = await pool.query(checkQuery, [identifier, identifier]);
     if (checkResult.rows.length === 0) {
-      return res.sendStatus(404);
+      return res.status(404).json({ message: "Invalid Credentials" });
     }
     const userAns = checkResult.rows[0];
     const isPasswordValid = await bcrypt.compare(password, userAns.password_hash);
     if (!isPasswordValid) {
-      return res.sendStatus(401);
+      return res.status(401).json({ message: "Invalid Credentials" });
     }
 
     const refreshToken = jwt.sign({ id: userAns.id }, process.env.REFRESH_TOKEN!, {
       expiresIn: "7d",
     });
 
-    const existingTokens = Array.isArray(userAns.refresh_token) ? userAns.refresh_token : [];
+    const existingTokens = Array.isArray(userAns.refresh_tokens) ? userAns.refresh_tokens : [];
     const updatedTokens = [...existingTokens, refreshToken];
 
     const updateRefreshQuery = `
-      UPDATE users SET refresh_token = $1
+      UPDATE users SET refresh_tokens = $1
       WHERE id = $2 AND deleted_at IS NULL;
     `;
     const updateRefresh = await pool.query(updateRefreshQuery, [updatedTokens, userAns.id]);
     if (updateRefresh.rowCount === 0) {
-      return res.status(500).json({ message: "Server error updating tokens during login" });
+      return res.status(500).json({ message: "Server error: Pls Retry Later" });
     }
     const { password_hash, deleted_at, ...others } = userAns;
     const accessToken = jwt.sign(others, process.env.ACCESS_TOKEN!, {
@@ -195,13 +196,13 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
     return res.status(200).json({
       user: others,
       accessToken,
+       accessTokenDate: Date.now()
     });
 
   } catch (error: any) {
     console.error("Login error:", error);
     return res.status(500).json({
-      message: "Server error during login",
-      error: error.message,
+      message: "Server error: Pls Retry Later",
     });
   }
 });
@@ -247,16 +248,16 @@ router.post("/sendVerification", authLimiter, async (req: Request, res: Response
     const { email } = req.body;
     const result = emailSchema.safeParse(email);
     if (!result.success) {
-      return res.status(400).json({ message: "Invalid email address", error: result.error });
+      return res.status(400).json({ message: "Invalid email address" });
     }
 
     const user = await pool.query(
-      `SELECT id, username, email, is_email_verified FROM users WHERE email = $1 AND deleted_at IS NULL`,
-      [email]
+      `SELECT id, username, email, is_email_verified FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL`,
+      [result.data]
     );
 
     if (user.rows.length === 0) {
-      return res.status(200).json({ message: "If an account with that email exists, a verification link has been sent." });
+      return res.status(404).json({ message: "User email doesn't exist" });
     }
 
     const userAns = user.rows[0];
@@ -269,7 +270,7 @@ router.post("/sendVerification", authLimiter, async (req: Request, res: Response
     });
 
     await sendEmail(userAns.username, userAns.email, verifyToken);
-    return res.status(200).json({ message: "If an account with that email exists, a verification link has been sent." });
+    return res.status(200).json({ message: "Verification link has been sent." });
   } catch (err: any) {
     console.error("Send verification error:", err);
     return res.status(500).json({ message: "Server error sending verification email", error: err.message });
@@ -290,7 +291,7 @@ router.post("/logout", async (req: Request, res: Response) => {
       try {
         const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN!) as { id: string };
         const updateQuery = `
-          UPDATE users SET refresh_token = array_remove(refresh_token, $1)
+          UPDATE users SET refresh_tokens = array_remove(refresh_tokens, $1)
           WHERE id = $2 AND deleted_at IS NULL;
         `;
         await pool.query(updateQuery, [refreshToken, decoded.id]);
@@ -313,7 +314,7 @@ router.delete("/delete", verifyAccessToken, async (req: AuthRequest, res: Respon
 
     const softDeleteQuery = `
       UPDATE users 
-      SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP, refresh_token = '{}'
+      SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP, refresh_tokens = '{}'
       WHERE id = $1 AND deleted_at IS NULL 
       RETURNING id, username, deleted_at;
     `;
@@ -382,12 +383,12 @@ router.post("/forgot-password", authLimiter, async (req: Request, res: Response)
     }
 
     const user = await pool.query(
-      `SELECT id, username, email FROM users WHERE email = $1 AND deleted_at IS NULL`,
-      [email]
+      `SELECT id, username, email FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL`,
+      [result.data]
     );
 
     if (user.rows.length === 0) {
-      return res.status(200).json({ message: "If an account with that email exists, a password reset link has been sent." });
+      return res.status(404).json({ message: "User not found or account deactivated" });
     }
 
     const userAns = user.rows[0];
@@ -396,7 +397,7 @@ router.post("/forgot-password", authLimiter, async (req: Request, res: Response)
     });
 
     await sendResetPasswordEmail(userAns.username, userAns.email, resetToken);
-    return res.status(200).json({ message: "If an account with that email exists, a password reset link has been sent." });
+    return res.status(200).json({ message: "Check email for reset link." });
   } catch (err: any) {
     console.error("Forgot password error:", err);
     return res.status(500).json({ message: "Server error sending reset password email", error: err.message });
@@ -417,7 +418,7 @@ router.post("/reset-password", authLimiter, async (req: Request, res: Response) 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const updateQuery = `
       UPDATE users 
-      SET password_hash = $1, refresh_token = '{}', modified_at = CURRENT_TIMESTAMP 
+      SET password_hash = $1, refresh_tokens = '{}', modified_at = CURRENT_TIMESTAMP 
       WHERE id = $2 AND deleted_at IS NULL 
       RETURNING id;
     `;

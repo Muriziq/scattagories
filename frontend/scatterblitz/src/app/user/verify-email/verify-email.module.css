@@ -1,42 +1,47 @@
 .main {
     padding: 2rem;
-    height: 100vh;
-    background-color: var(--amber);
+    min-height: 100vh;
+    background: var(--bg-dark);
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .card {
-    background-color: var(--sunset);
+    background-color: #160a08;
     border-radius: 2rem;
     padding: 3rem 2.5rem;
     width: 100%;
-    max-width: 460px;
+    max-width: 480px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(181, 0, 1, 0.15);
-    gap: 1.25rem;
+    border: 2px solid var(--safety-orange);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(250, 115, 1, 0.15);
+    gap: 1.5rem;
 }
 
 .icon {
-    font-size: 4rem;
-    margin-bottom: 0.5rem;
+    font-size: 4.5rem;
+    margin-bottom: 0.25rem;
 }
 
 .loadingIcon {
-    color: var(--persimmon);
+    color: var(--amber);
+    filter: drop-shadow(0 0 15px rgba(243, 185, 0, 0.4));
     animation: spin 1.5s linear infinite;
 }
 
 .successIcon {
-    color: #2e7d32;
+    color: #4caf50;
+    filter: drop-shadow(0 0 15px rgba(76, 175, 80, 0.4));
 }
 
 .errorIcon {
-    color: var(--blood-orange);
+    color: #ff4d63;
+    filter: drop-shadow(0 0 15px rgba(255, 77, 99, 0.4));
 }
 
 @keyframes spin {
@@ -47,65 +52,38 @@
 .title {
     font-size: 2rem;
     font-weight: 800;
-    color: var(--blood-orange);
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
 }
 
 .message {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #333;
-    line-height: 1.5;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-description);
+    line-height: 1.65;
 }
 
 .buttonGroup {
     display: flex;
     gap: 1rem;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
     width: 100%;
     justify-content: center;
     flex-wrap: wrap;
 }
 
 .primaryButton {
-    background-color: var(--persimmon);
-    color: #ffffff;
-    padding: 0.8rem 2rem;
-    border-radius: 2rem;
-    border: none;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    text-decoration: none;
+    composes: btn-3d btn-primary from global;
+    padding: 0.85rem 2.2rem;
+    font-size: 0.95rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    box-shadow: 0 4px 14px rgba(228, 91, 17, 0.35);
-    transition: all 0.25s ease;
-    display: inline-block;
-}
-
-.primaryButton:hover {
-    background-color: var(--blood-orange);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(181, 0, 1, 0.4);
 }
 
 .secondaryButton {
-    background-color: rgba(255, 255, 255, 0.85);
-    color: var(--blood-orange);
-    padding: 0.8rem 1.75rem;
-    border-radius: 2rem;
-    border: 2px solid var(--blood-orange);
+    composes: btn-3d btn-secondary from global;
+    padding: 0.85rem 2.2rem;
     font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.25s ease;
-    display: inline-block;
-}
-
-.secondaryButton:hover {
-    background-color: #ffffff;
-    transform: translateY(-2px);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }

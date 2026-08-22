@@ -62,7 +62,7 @@ function VerifyEmailContent() {
 
         {status === "success" && (
           <>
-            <FaCheckCircle className={`${styles.icon} ${styles.successIcon}`} />
+            <FaCheckCircle size={100} className={`${styles.icon} ${styles.successIcon}`} />
             <h1 className={styles.title}>Verified!</h1>
             <p className={styles.message}>{message}</p>
             <div className={styles.buttonGroup}>
@@ -78,11 +78,11 @@ function VerifyEmailContent() {
 
         {status === "error" && (
           <>
-            <FaExclamationCircle className={`${styles.icon} ${styles.errorIcon}`} />
+            <FaExclamationCircle className={`${styles.icon} ${styles.errorIcon}`} size={100} />
             <h1 className={styles.title}>Verification Failed</h1>
             <p className={styles.message}>{message}</p>
             <div className={styles.buttonGroup}>
-              <Link href="/send-verification" className={styles.primaryButton}>
+              <Link href="/user/send-verification" className={styles.primaryButton}>
                 Resend Email
               </Link>
               <Link href="/user/register?type=login" className={styles.secondaryButton}>

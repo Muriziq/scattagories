@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
 import Link from "next/link";
-import { FaGithub, FaLinkedinIn, FaTwitter, FaBolt, FaGamepad, FaPlusCircle, FaUsers, FaTrophy, FaStopwatch } from "react-icons/fa";
-
+import { FaGithub, FaLinkedinIn, FaTwitter, FaBolt, FaGamepad, FaUserCircle, FaPlusCircle, FaUsers, FaTrophy, FaStopwatch, FaExclamationTriangle } from "react-icons/fa";
+import { getAccessToken, getUserData } from "./accessToken";
 function CanvasBackground() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -54,6 +54,23 @@ function CanvasBackground() {
 }
 
 export default function Home() {
+  const [accessToken, setAccessToken] = useState<string>("");
+  const [user, setUser] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    async function fetchToken() {
+      try {
+        const token = await getAccessToken();
+        setAccessToken(token || "");
+        setUser(getUserData() || {});
+      } catch (err) {
+        setAccessToken("");
+        setUser({});
+      }
+    }
+    fetchToken();
+  }, []);
+
   return (
     <div className={styles.pageWrapper}>
       {/* CANVAS BACKGROUND GRID */}
@@ -66,6 +83,8 @@ export default function Home() {
              <FaBolt className={styles.logoIcon} />
             <span className={styles.logoText}>Scatter<span className={styles.logoHighlight}>Blitz</span></span>
           </Link>
+          {
+            accessToken === "" ?
           <nav className={styles.nav}>
             <Link href="/user/register?type=login" className={styles.loginBtn}>
               Log In
@@ -74,13 +93,28 @@ export default function Home() {
               Get Started
             </Link>
           </nav>
+          : <div className={styles.nav}><FaUserCircle className={styles.profileIcon} /></div>
+          }
+
         </div>
       </header>
+
+      {/* EMAIL VERIFICATION WARNING BANNER */}
+      {accessToken !== "" && user && user.is_email_verified === false && (
+        <div className={styles.verificationBanner}>
+          <div className={styles.bannerContent}>
+            <FaExclamationTriangle className={styles.bannerIcon} />
+            <span>Your email address is not verified yet. Please check your inbox or resend the verification link.</span>
+          </div>
+          <Link href="/user/send-verification" className={styles.bannerActionBtn}>
+            Resend Email
+          </Link>
+        </div>
+      )}
 
       {/* MAIN HERO SECTION */}
       <main className={styles.main}>
         <div className={styles.heroSection}>
-
           <h1 className={styles.heroTitle}>
             Scatter<span className={styles.titleGradient}>Blitz</span>
           </h1>

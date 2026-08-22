@@ -4,6 +4,7 @@ import { Server, Socket } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import register from "./router/register";
+import refresh from "./router/refresh"
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import games from "./router/games";
@@ -54,6 +55,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use("/user", register);
 app.use("/games", games);
+app.use("/",refresh)
 app.get("/", (req, res) => {
   res.json({ message: "Conected to Scatterblitz Backend" });
 });

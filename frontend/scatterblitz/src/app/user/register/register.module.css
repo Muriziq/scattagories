@@ -1,8 +1,8 @@
 .main {
     padding: 2rem;
     height: 100vh;
-    background: radial-gradient(circle at 50% 0%, #290802 0%, #120907 50%, #0a0504 100%);
     color: #f7f3ed;
+    background: var(--bg-dark);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -14,12 +14,11 @@
     flex-direction: row;
     height: 100%;
     width: 100%;
-    max-width: 1100px;
-    max-height: 700px;
+    max-width: 1200px;
+    max-height: 900px;
     border-radius: 2rem;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 35px rgba(250, 115, 1, 0.2);
-    border: 1px solid rgba(242, 204, 136, 0.15);
+
 }
 
 .tabSection {
@@ -154,13 +153,9 @@
 
 .avatar {
     color: var(--amber);
-    filter: drop-shadow(0 0 15px rgba(243, 185, 0, 0.4));
-    transition: transform 0.3s ease;
 }
 
-.avatar:hover {
-    transform: scale(1.05);
-}
+
 
 .title {
     font-size: 2rem;
@@ -217,6 +212,7 @@
     font-weight: 500;
     outline: none;
     transition: all 0.25s ease;
+    box-shadow: inset 1px 1px var(--bg-dark);
 }
 
 .input::placeholder {
@@ -227,7 +223,6 @@
 .input:focus {
     border-color: var(--safety-orange);
     background-color: rgba(250, 115, 1, 0.08);
-    box-shadow: 0 0 15px rgba(250, 115, 1, 0.25);
 }
 
 .label:focus-within .icon {
@@ -288,60 +283,23 @@
     color: var(--sunset);
     font-size: 0.85rem;
     font-weight: 600;
-    text-decoration: none;
+    text-decoration: underline;
     transition: color 0.2s ease;
 }
 
 .forgotPassword:hover {
     color: var(--amber);
-    text-decoration: underline;
 }
 
 .submitButton {
-    position: relative;
-    background: linear-gradient(180deg, #ffc107 0%, var(--safety-orange) 50%, var(--persimmon) 100%);
-    color: #ffffff;
-    padding: 0.85rem 2.2rem;
-    border-radius: 14px;
-    border: 3.5px solid var(--blood-orange);
+    composes: btn-3d btn-primary from global;
+    padding: 0.85rem 3rem;
     font-size: 0.95rem;
-    font-weight: 800;
-    cursor: pointer;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    box-shadow: inset 0 3px 2px rgba(255, 255, 255, 0.6), inset 0 -4px 2px rgba(0, 0, 0, 0.25), 0 5px 0 #730000, 0 8px 18px rgba(250, 115, 1, 0.4);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    transition: all 0.15s ease;
     margin-left: auto;
-    overflow: hidden;
 }
 
-.submitButton::before {
-    content: "";
-    position: absolute;
-    top: 4px;
-    left: 8px;
-    width: 14px;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
-    pointer-events: none;
-}
-
-.submitButton:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: inset 0 3px 2px rgba(255, 255, 255, 0.7), inset 0 -4px 2px rgba(0, 0, 0, 0.25), 0 7px 0 #730000, 0 12px 24px rgba(250, 115, 1, 0.6);
-}
-
-.submitButton:active:not(:disabled) {
-    transform: translateY(3px);
-    box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.4), inset 0 -2px 1px rgba(0, 0, 0, 0.3), 0 1px 0 #730000, 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.submitButton:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
 
 .socialSection {
     width: 100%;

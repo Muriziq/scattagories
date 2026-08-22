@@ -11,7 +11,7 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     is_email_verified BOOLEAN DEFAULT FALSE,
-    refresh_token TEXT[] DEFAULT '{}',
+    refresh_tokens TEXT[] DEFAULT '{}',
     deleted_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     modified_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

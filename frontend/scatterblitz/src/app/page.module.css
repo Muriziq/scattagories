@@ -50,6 +50,10 @@
   letter-spacing: -0.5px;
 }
 
+.profileIcon{
+  font-size: 3rem;
+  color: var(--amber);
+}
 .logoIcon {
   color: var(--amber);
 }
@@ -67,80 +71,28 @@
   gap: 1rem;
 }
 
-/* Shared 3D Button Styles */
-.loginBtn,
-.registerBtn,
-.joinBtn,
-.createBtn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-decoration: none;
-  border-radius: 14px;
-  transition: all 0.15s ease;
-  overflow: hidden;
-  cursor: pointer;
-  box-shadow: var(--box-shadow-default);
-}
-
-
-.joinBtn::before,
-.createBtn::before {
-  content: "";
-  position: absolute;
-  top: 4px;
-  left: 8px;
-  width: 16px;
-  height: 7px;
-  background: var(--btn-highlight-shine);
-  border-radius: 10px;
-  pointer-events: none;
-}
-
-.loginBtn:hover,
-.registerBtn:hover,
-.joinBtn:hover,
-.createBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--box-shadow-hover);
-}
-
-.loginBtn:active,
-.registerBtn:active,
-.joinBtn:active,
-.createBtn:active {
-  transform: translateY(4px);
-  box-shadow: var(--box-shadow-active);
-}
-
-/* Button Color Variants */
-.registerBtn,
-.joinBtn {
-  background: linear-gradient(180deg, var(--gold) 0%, var(--safety-orange) 50%, var(--persimmon) 100%);
-  color: var(--text-primary);
-  border: 3.5px solid var(--blood-orange);
-}
-
-.loginBtn,
-.createBtn {
-  background: linear-gradient(180deg, var(--btn-dark-start) 0%, var(--btn-dark-end) 100%);
-  color: var(--sunset);
-  border: 3.5px solid var(--persimmon);
-}
-
-/* Button Sizes */
-.loginBtn,
-.registerBtn {
+/* Button Styles composing global 3D button classes */
+.loginBtn {
+  composes: btn-3d btn-secondary from global;
   padding: 0.65rem 1.6rem;
   font-size: 0.95rem;
 }
 
-.joinBtn,
+.registerBtn {
+  composes: btn-3d btn-primary from global;
+  padding: 0.65rem 1.6rem;
+  font-size: 0.95rem;
+}
+
+.joinBtn {
+  composes: btn-3d btn-primary from global;
+  padding: 0.95rem 2.8rem;
+  font-size: 1.05rem;
+  border-radius: 16px;
+}
+
 .createBtn {
+  composes: btn-3d btn-secondary from global;
   padding: 0.95rem 2.8rem;
   font-size: 1.05rem;
   border-radius: 16px;
@@ -459,8 +411,50 @@
   transform: translateY(-2px);
 }
 
+/* Email Verification Warning Banner */
+.verificationBanner {
+  width: 100%;
+  background: linear-gradient(90deg, #4a1e05 0%, #290802 100%);
+  border-bottom: 2px solid var(--safety-orange);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  z-index: 90;
+  position: relative;
+}
+
+.bannerContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.bannerIcon {
+  color: var(--amber);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.bannerActionBtn {
+  composes: btn-3d btn-primary from global;
+  padding: 0.45rem 1.2rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  border-radius: 10px;
+}
+
 /* Responsive Breakpoints */
 @media (max-width: 768px) {
+  .verificationBanner {
+    flex-direction: column;
+    text-align: center;
+    padding: 0.85rem 1rem;
+  }
   .heroTitle {
     font-size: 2.8rem;
   }
