@@ -13,7 +13,7 @@ export interface AuthRequest extends Request {
 
 export const verifyAccessToken = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers["authorization"];
+    const authHeader = (req.headers["authorization"] || req.headers["Authorization"]) as string;
     const token = (authHeader && authHeader.split(" ")[1]) || req.body?.accessToken;
 
     if (!token) {

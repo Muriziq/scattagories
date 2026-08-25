@@ -79,8 +79,7 @@ router.get("/", async (req: Request, res: Response) => {
 
     return res.status(200).json({user:updateRefresh.rows[0], accessToken: newAccessToken, accessTokenDate: Date.now() });
   } catch (err: any) {
-    console.error("Refresh token error:", err);
-    return res.status(500).json({ message: "Server error refreshing token", error: err.message });
+    return res.status(500).json({ message: "Server error refreshing token" });
   }
 });
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import { verifyAccessToken, AuthRequest } from "../middleware/tokens";
-import { GameRoom, activeRooms } from "../model/gamesModel";
+import { GameRoom, activeRooms, availableCategories } from "../model/gamesModel";
 import crypto from "crypto";
 
 dotenv.config();
@@ -18,7 +18,7 @@ const createRoomSchema = z
     password: z.string().optional().nullable(),
     maxPlayers: z.number().min(2).max(10).default(5),
     maxTimePerRound: z.number().min(10).max(120).default(60),
-    categories: z.array(z.string().min(1).max(50)).min(1, "At least one category is required"),
+    categories: z.array(z.enum(availableCategories as unknown as [string, ...string[]])).min(1, "At least one category is required"),
   })
   .refine(
     (data) => data.isPublic || (!data.isPublic && typeof data.password === "string" && data.password.trim() !== ""),
@@ -34,6 +34,9 @@ const joinRoomSchema = z.object({
   password: z.string().optional().nullable(),
 });
 
+router.get("/",(req:Request,res:Response)=>{
+  return res.status(200).json({categories:availableCategories})
+})
 // 1. CREATE ROOM
 router.post("/room/create", verifyAccessToken, async (req: AuthRequest, res: Response) => {
   try {

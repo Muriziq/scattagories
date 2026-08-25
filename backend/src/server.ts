@@ -55,7 +55,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use("/user", register);
 app.use("/games", games);
-app.use("/",refresh)
+app.use("/refresh",refresh)
 app.get("/", (req, res) => {
   res.json({ message: "Conected to Scatterblitz Backend" });
 });

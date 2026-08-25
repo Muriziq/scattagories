@@ -1,6 +1,10 @@
 import { Server, Socket } from "socket.io";
 export const activeRooms = new Map<string, GameRoom>();
-
+export const availableCategories = [
+  "Animals", "Countries", "Cities", "Food", "Movies", 
+  "Names", "Colors", "Sports", "Brands", "Things"
+] as const;
+export type Category = typeof availableCategories[number];
 export class GameRoom {
   // --- Core Identity ---
   id: string;

@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { v4 as uuidv4 } from "uuid";
 import { verifyAccessToken, type AuthRequest } from "../middleware/tokens";
-
+import crypto from "crypto";
 const router = express.Router();
 const clientUrl = process.env.CLIENT_URL || "http://localhost:3000/user";
 
@@ -436,6 +436,30 @@ router.post("/reset-password", authLimiter, async (req: Request, res: Response) 
       error: error.message,
     });
   }
+});
+
+
+router.get("/guest-login", (req: Request, res: Response) => {
+  const randomCode = crypto.randomBytes(3).toString("hex").toUpperCase().slice(0, 5);
+  const guestName = `GUEST_${randomCode}`;
+  const guestId = uuidv4();
+  const userObj = { id: guestId, username: guestName, role: "guest" };
+  const accessToken = jwt.sign(userObj, process.env.ACCESS_TOKEN!, {
+    expiresIn: "1d",
+  });
+  
+  res.cookie("accessToken", {accessToken:accessToken,accessTokenDate:Date.now()}, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 1 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.status(200).json({
+    user: userObj,
+    accessToken: accessToken,
+    accessTokenDate: Date.now()
+  });
 });
 
 export default router;
