@@ -1,16 +1,25 @@
 import { Server, Socket } from "socket.io";
+import { AuthenticatedSocket } from "../server";
 export const activeRooms = new Map<string, GameRoom>();
 export const availableCategories = [
-  "Animals", "Countries", "Cities", "Food", "Movies", 
-  "Names", "Colors", "Sports", "Brands", "Things"
+  "Animals",
+  "Countries",
+  "Cities",
+  "Food",
+  "Movies",
+  "Names",
+  "Colors",
+  "Sports",
+  "Brands",
+  "Things",
 ] as const;
-export type Category = typeof availableCategories[number];
+export type Category = (typeof availableCategories)[number];
 export class GameRoom {
   // --- Core Identity ---
   id: string;
   password: string | null;
   createdAt: Date;
-  hostId: string;
+  hostId: string | null;
 
   // --- Room Settings ---
   maxPlayers: number;
@@ -46,7 +55,7 @@ export class GameRoom {
       string, // Participant ID
       Record<
         string, // Category Name (e.g., "Animals")
-       string // Answer
+        string // Answer
       >
     >
   >;
@@ -116,11 +125,31 @@ export class GameRoom {
     this.participants = new Map();
     this.detailedSubmissions = {};
   }
-  public addParticipant(participant: any) {
-    this.participants.set(participant.id, participant);
+  public addParticipant(socket: AuthenticatedSocket) {
+    if(!socket.user) return socket.emit("error", "Unauthorized: Authentication required");
+    const participant = {
+      socketId: socket.id,
+      dbId: socket.user.id,
+      displayName: socket.user.username,
+      score: 0,
+    };
+    this.participants.set(socket.user.id, participant);
   }
   public removeParticipant(participantId: string) {
     this.participants.delete(participantId);
+    if(this.participants.size === 0){
+    activeRooms.delete(this.id);
+    }
+    if(this.hostId === participantId){
+      const participantsArray = Array.from(this.participants.values());
+      this.hostId = participantsArray[0].dbId || null;
+    }
+  }
+  public getParticipantsList() {
+    return Array.from(this.participants.values()).map((p) => ({
+      username: p.displayName,
+      score: p.score,
+    }));
   }
   public calculateTotalRound(): number {
     const playerCount = this.participants.size;
@@ -136,7 +165,7 @@ export class GameRoom {
     return this.totalRound;
   }
 
-  public getNextUserTurn(io: Server,socket:Socket) {
+  public getNextUserTurn(io: Server, socket: Socket) {
     const participantIds = Array.from(this.participants.keys());
     this.currentRound++;
     if (
@@ -145,9 +174,14 @@ export class GameRoom {
       this.currentRound <= 0
     ) {
       this.usersTurn = null;
-      const randomLetter = this.availableLetters[Math.floor(Math.random() * this.availableLetters.length)];
-      if(!randomLetter){
-      io.to(this.id).emit("game:ended", { message: "Game Has Ended" });
+      const randomLetter =
+        this.availableLetters[
+          Math.floor(Math.random() * this.availableLetters.length)
+        ];
+      if (!randomLetter) {
+        this.status = "waiting";
+        io.to(this.id).emit("game:ended", { message: "Game Has Ended" });
+        return true;
       }
       this.setActiveLetter(randomLetter, io, socket);
       return true;
@@ -159,7 +193,8 @@ export class GameRoom {
     io.to(this.id).emit("turn:change", this.usersTurn);
   }
 
-  public setActiveLetter(letter: string, io: Server,socket:Socket) {
+  public setActiveLetter(letter: string, io: Server, socket: Socket) {
+    if (!letter) return false;
     const newLetter = letter.toUpperCase();
     const isLetterRelevant = this.availableLetters.includes(newLetter);
     if (!isLetterRelevant) {
@@ -174,7 +209,7 @@ export class GameRoom {
     this.roundTimer = setTimeout(() => {
       this.submitStatus = "accepting";
       io.to(this.id).emit("round:ended", { reason: "time_up" });
-      this.startRecapTimer(io,socket);
+      this.startRecapTimer(io, socket);
     }, this.maxTimePerRound * 1000);
 
     io.to(this.id).emit("letter:active", newLetter);
@@ -200,9 +235,15 @@ export class GameRoom {
     }, 2500);
   }
 
-  saveAnswers(participantId: string, answers: Record<string, string>, socket: Socket) {
-    if (!this.activeLetter) return socket.emit("error", "No Active Letter Selected");
-    if (this.submitStatus === "notAccepting") return socket.emit("error", "Submit Status Closed");
+  saveAnswers(
+    participantId: string,
+    answers: Record<string, string>,
+    socket: Socket,
+  ) {
+    if (!this.activeLetter)
+      return socket.emit("error", "No Active Letter Selected");
+    if (this.submitStatus === "notAccepting")
+      return socket.emit("error", "Submit Status Closed");
 
     const answersKey = Object.keys(answers);
     if (this.categories.length < answersKey.length) {
@@ -220,6 +261,8 @@ export class GameRoom {
     }
 
     this.detailedSubmissions[this.activeLetter][participantId] = answers;
-    socket.emit("answer:success", { message: "Your answers have been submitted successfully" });
+    socket.emit("answer:success", {
+      message: "Your answers have been submitted successfully",
+    });
   }
 }

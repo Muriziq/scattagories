@@ -13,17 +13,21 @@ export default function Profile(){
     )
 }
 
-function UsersInfo(){
-    return(
+function UsersInfo() {
+    const avatarUrl = "";
+    return (
         <section className={styles.userInfoSection}>
             <div className={styles.avatarContainer}>
                 <input type="file" name="avatar" id="avatar" className={styles.fileInput} />
-                <Image src="" alt="User Image" width={100} height={100} className={styles.userImage} />
-                <FaUser className={styles.userIcon} />
+                {avatarUrl ? (
+                    <Image src={avatarUrl} alt="User Image" width={100} height={100} className={styles.userImage} />
+                ) : (
+                    <FaUser className={styles.userIcon} />
+                )}
             </div>
             <h1 className={styles.username}>Hi, Username</h1>
         </section>
-    )
+    );
 }
 
 function Stats(){

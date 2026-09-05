@@ -51,7 +51,7 @@ export default function JoinRoom() {
             return;
         }
 
-        router.push(`/games/${cleanCode}${password ? `?password=${encodeURIComponent(password)}` : ''}`);
+        router.push(`/games/${roomCode}${password ? `?password=${password}` : ''}`);
     };
 
     const filteredRooms = publicRooms.filter(r => 

@@ -1,0 +1,425 @@
+/* ==========================================================================
+   WAITING ROOM LOBBY STYLESHEET
+   ========================================================================== */
+
+.main {
+    min-height: 100vh;
+    width: 100%;
+    color: #f7f3ed;
+    background: var(--bg-dark);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Background Glowing Accents */
+.ambientGlow {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(250, 115, 1, 0.15) 0%, rgba(226, 12, 38, 0.05) 50%, transparent 70%);
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.lobbyContainer {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+}
+
+/* Top Header Bar */
+.topNav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 0.5rem;
+}
+
+.backBtn {
+    composes: btn-3d btn-secondary from global;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.9rem;
+    border-radius: 12px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.logoIcon {
+    color: var(--amber);
+    font-size: 1.5rem;
+}
+
+.logoHighlight {
+    color: var(--safety-orange);
+}
+
+/* Room Hero Header Card */
+.heroCard {
+    background: linear-gradient(135deg, rgba(35, 18, 14, 0.9) 0%, rgba(22, 10, 8, 0.95) 100%);
+    border: 2px solid var(--safety-orange);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(250, 115, 1, 0.15);
+    border-radius: 1.75rem;
+    padding: 2rem 2.5rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    backdrop-filter: blur(12px);
+    flex-wrap: wrap;
+}
+
+.heroDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.roomTitleRow {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.roomTitle {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.roomBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.publicBadge {
+    background: rgba(242, 204, 136, 0.15);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+}
+
+.privateBadge {
+    background: rgba(255, 77, 99, 0.15);
+    border: 1px solid #ff4d63;
+    color: #ff4d63;
+}
+
+/* Code Copy Box */
+.codeCopyBox {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: rgba(242, 204, 136, 0.05);
+    border: 1px dashed var(--sunset);
+    padding: 0.5rem 1rem 0.5rem 1.25rem;
+    border-radius: 14px;
+    width: fit-content;
+}
+
+.codeLabel {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.codeValue {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--sunset);
+    letter-spacing: 0.15em;
+    font-family: monospace;
+}
+
+.copyBtn {
+    background: rgba(250, 115, 1, 0.15);
+    border: 1px solid var(--safety-orange);
+    color: #ffffff;
+    padding: 0.45rem 0.85rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+}
+
+.copyBtn:hover {
+    background: var(--safety-orange);
+    box-shadow: 0 0 12px rgba(250, 115, 1, 0.4);
+}
+
+.copiedBtn {
+    background: #10b981 !important;
+    border-color: #10b981 !important;
+}
+
+/* Error Banner */
+.errorMessage {
+    background-color: rgba(255, 77, 99, 0.12);
+    border: 1px solid #ff4d63;
+    color: #ff4d63;
+    padding: 0.9rem 1.25rem;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Main Grid Layout */
+.contentGrid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+/* Participants Card Section */
+.playersSection {
+    background: rgba(22, 10, 8, 0.85);
+    border: 1px solid rgba(242, 204, 136, 0.15);
+    border-radius: 1.5rem;
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    backdrop-filter: blur(10px);
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(242, 204, 136, 0.1);
+}
+
+.sectionTitle {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.playerCountBadge {
+    background: rgba(242, 204, 136, 0.1);
+    border: 1px solid var(--sunset);
+    color: var(--sunset);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+/* Player Grid Cards */
+.playersGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.playerCard {
+    background: rgba(242, 204, 136, 0.03);
+    border: 1px solid rgba(242, 204, 136, 0.12);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    position: relative;
+    transition: all 0.25s ease;
+}
+
+.playerCard:hover {
+    border-color: var(--safety-orange);
+    background: rgba(250, 115, 1, 0.05);
+    transform: translateY(-2px);
+}
+
+.avatarWrapper {
+    position: relative;
+}
+
+.avatarCircle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--safety-orange) 0%, var(--blood-orange) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.crownBadge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--gold);
+    color: #160a08;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.playerName {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    text-align: center;
+    word-break: break-all;
+}
+
+.playerStatus {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--amber);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.emptySlotCard {
+    background: rgba(242, 204, 136, 0.015);
+    border: 1px dashed rgba(242, 204, 136, 0.1);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    min-height: 140px;
+}
+
+/* Sidebar Info & Controls */
+.sidebarSection {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.actionBox {
+    background: rgba(22, 10, 8, 0.85);
+    border: 1px solid rgba(242, 204, 136, 0.15);
+    border-radius: 1.5rem;
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    backdrop-filter: blur(10px);
+}
+
+.startGameBtn {
+    composes: btn-3d btn-primary from global;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+.waitingHostMsg {
+    background: rgba(242, 204, 136, 0.03);
+    border: 1px solid rgba(242, 204, 136, 0.1);
+    border-radius: 14px;
+    padding: 1.25rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.spinIcon {
+    animation: spin 2s linear infinite;
+    color: var(--amber);
+    font-size: 1.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.leaveRoomBtn {
+    composes: btn-3d btn-secondary from global;
+    width: 100%;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Responsive Layout */
+@media (max-width: 868px) {
+    .contentGrid {
+        grid-template-columns: 1fr;
+    }
+    .heroCard {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .codeCopyBox {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

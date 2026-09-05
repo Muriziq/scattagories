@@ -45,37 +45,12 @@ async function requestAccessToken() {
     }
 }
 
-function getCookie(name: string): string | null {
-    if (typeof document === "undefined") return null;
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-    return null;
-}
 
 export async function getAccessToken(): Promise<string> {
-    if (previousDate !== 0 && Date.now() - previousDate < duration && accessToken !== "") {
+    if (Date.now() - previousDate < duration && accessToken !== "") {
         return accessToken;
     } else {
-        const ifGet = await requestAccessToken();
-        if (!ifGet) {
-            const rawCookie = getCookie("accessToken");
-            if (rawCookie) {
-                let guestToken = rawCookie;
-                let guestDate = Date.now();
-                if (rawCookie.startsWith("j:")) {
-                    try {
-                        const parsed = JSON.parse(decodeURIComponent(rawCookie.substring(2)));
-                        guestToken = parsed.accessToken || rawCookie;
-                        guestDate = parsed.accessTokenDate || Date.now();
-                    } catch (e) {
-                        console.error("Error parsing guest cookie:", e);
-                    }
-                }
-                saveAccessToken(guestToken, guestDate);
-                duration = 24 * 60 * 60 * 1000;
-            }
-        }
+        await requestAccessToken();
         return accessToken;
     }
 }
@@ -97,7 +72,6 @@ export async function createNewGuest(): Promise<string> {
             saveAccessToken(data.accessToken, data.accessTokenDate || Date.now());
             if (data?.user) {
                 updateUserData(data.user);
-                duration = 24 * 60 * 60 * 1000
             }
             return data.accessToken;
         }

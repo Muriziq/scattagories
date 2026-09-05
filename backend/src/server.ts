@@ -4,7 +4,7 @@ import { Server, Socket } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import register from "./router/register";
-import refresh from "./router/refresh"
+import refresh from "./router/refresh";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import games from "./router/games";
@@ -55,7 +55,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use("/user", register);
 app.use("/games", games);
-app.use("/refresh",refresh)
+app.use("/refresh", refresh);
 app.get("/", (req, res) => {
   res.json({ message: "Conected to Scatterblitz Backend" });
 });
@@ -75,7 +75,7 @@ export const io = new Server(server, {
   },
 });
 
-interface AuthenticatedSocket extends Socket {
+export interface AuthenticatedSocket extends Socket {
   user?: {
     id: string;
     username: string;
@@ -101,21 +101,36 @@ io.use((socket: AuthenticatedSocket, next) => {
 io.on("connection", (socket: AuthenticatedSocket) => {
   console.log(`Socket connected: ${socket.id}`);
 
-  socket.on("room:join", (roomID: string) => {
+  socket.on("room:join", (data: { roomId: string; password?: string }) => {
+    const rawRoomId = data?.roomId;
+    const password = data?.password || "";
+
     if (!socket.user) {
       return socket.emit("error", "Unauthorized: Authentication required");
     }
-
-    const rawRoomId = roomID;
     if (!rawRoomId) {
       return socket.emit("error", "Room ID is required");
     }
-
     const roomId = rawRoomId.toUpperCase();
+    for (const room of activeRooms.values()) {
+      if (room.id === roomId) {
+        break;
+      }
+      if (room.participants.has(socket.user.id)) {
+        room.removeParticipant(socket.user.id);
+        io.to(room.id).emit("room:participants", room.getParticipantsList());
+        socket.leave(room.id);
+        break;
+      }
+    }
+
     const room = activeRooms.get(roomId);
 
     if (!room) {
       return socket.emit("error", "Room not found or has expired.");
+    }
+    if (!room.isPublic && room.password != password) {
+      return socket.emit("error", "Incorrect Password");
     }
 
     let participant = room.participants.get(socket.user.id);
@@ -127,28 +142,14 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       if (room.participants.size >= room.maxPlayers) {
         return socket.emit("error", "Room is currently full.");
       }
-
-      participant = {
-        socketId: socket.id,
-        dbId: socket.user.id,
-        displayName: socket.user.username,
-        score: 0,
-      };
-      room.participants.set(socket.user.id, participant);
+      room.addParticipant(socket)
     } else {
       participant.socketId = socket.id;
     }
 
     socket.join(roomId);
 
-    const participantsList = Array.from(room.participants.values()).map(
-      (p) => ({
-        username: p.displayName,
-        score: p.score,
-      }),
-    );
-
-    io.to(roomId).emit("room:participants", participantsList);
+    io.to(roomId).emit("room:participants", room.getParticipantsList());
   });
 
   socket.on("game:start", (roomID: string) => {
@@ -197,7 +198,11 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     const room = activeRooms.get(roomID);
     const participant = room?.participants.get(socket.user.id);
 
-    if (!participant || participant.displayName !== room?.usersTurn || room?.status !== "active_sprint")
+    if (
+      !participant ||
+      participant.displayName !== room?.usersTurn ||
+      room?.status !== "active_sprint"
+    )
       return socket.emit("error", "Not Your Turn.");
 
     room.startRecapTimer(io, socket);
@@ -226,6 +231,16 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     },
   );
 
+  socket.on("room:leave",(roomID: string)=>{
+
+    const room = activeRooms.get(roomID);
+    if(!room) return socket.emit("error","Room Not Found or Expired.")
+    if (socket.user){
+      room.removeParticipant(socket.user.id)
+    }
+    socket.leave(roomID);
+    io.to(roomID).emit("room:participants", room.getParticipantsList());
+  })
   socket.on("disconnect", () => {
     console.log(`Socket disconnected: ${socket.id}`);
   });

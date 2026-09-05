@@ -27,8 +27,7 @@ function VerifyEmailContent() {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({ token }),
+          }
         });
 
         const data = await res.json();

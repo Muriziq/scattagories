@@ -211,7 +211,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 router.post("/verify-email", authLimiter, async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers["authorization"];
-    const rawToken = (authHeader && authHeader.split(" ")[1]) || req.body?.verifyToken || req.query?.verifyToken;
+    const rawToken = (authHeader && authHeader.split(" ")[1]);
 
     const tokenResult = tokenSchema.safeParse(rawToken);
     if (!tokenResult.success) {
@@ -444,12 +444,15 @@ router.get("/guest-login", (req: Request, res: Response) => {
   const guestName = `GUEST_${randomCode}`;
   const guestId = uuidv4();
   const userObj = { id: guestId, username: guestName, role: "guest" };
-  const accessToken = jwt.sign(userObj, process.env.ACCESS_TOKEN!, {
+  const guestToken = jwt.sign(userObj, process.env.GUEST_TOKEN!, {
     expiresIn: "1d",
   });
+  const accessToken = jwt.sign(userObj, process.env.ACCESS_TOKEN!, {
+    expiresIn: "15m",
+  });
   
-  res.cookie("accessToken", {accessToken:accessToken,accessTokenDate:Date.now()}, {
-    httpOnly: false,
+  res.cookie("guestToken", guestToken, {
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     maxAge: 1 * 24 * 60 * 60 * 1000,

@@ -15,7 +15,7 @@ const generateRoomCode = () => crypto.randomBytes(3).toString("hex").toUpperCase
 const createRoomSchema = z
   .object({
     isPublic: z.boolean(),
-    password: z.string().optional().nullable(),
+    password: z.string().trim().optional().nullable(),
     maxPlayers: z.number().min(2).max(10).default(5),
     maxTimePerRound: z.number().min(10).max(120).default(60),
     categories: z.array(z.enum(availableCategories as unknown as [string, ...string[]])).min(1, "At least one category is required"),
@@ -48,15 +48,7 @@ router.post("/room/create", verifyAccessToken, async (req: AuthRequest, res: Res
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
     const hostId = req.user.id;
 
-    // Check if user is already hosting or participating in an active room
-    for (const room of activeRooms.values()) {
-      if (room.hostId === hostId) {
-        return res.status(400).json({ message: "You are already hosting a room", roomId: room.id });
-      }
-      if (room.participants.has(hostId)) {
-        return res.status(400).json({ message: "You are already in a room", roomId: room.id });
-      }
-    }
+
 
     const { isPublic, password, maxPlayers, maxTimePerRound, categories } = validation.data;
 
@@ -66,11 +58,8 @@ router.post("/room/create", verifyAccessToken, async (req: AuthRequest, res: Res
       roomId = generateRoomCode();
     }
 
-    // Hash password for private rooms
-    let hashedPassword = null;
     if (!isPublic) {
       if (!password) return res.status(400).json({ message: "Password is required for private games" });
-      hashedPassword = await bcrypt.hash(password, 10);
     }
 
     // Instantiate new GameRoom
@@ -79,7 +68,7 @@ router.post("/room/create", verifyAccessToken, async (req: AuthRequest, res: Res
       hostId,
       maxPlayers,
       maxTimePerRound,
-      hashedPassword,
+      password,
       isPublic,
       categories
     );

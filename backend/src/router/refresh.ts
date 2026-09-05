@@ -20,7 +20,27 @@ router.get("/", async (req: Request, res: Response) => {
     try {
       decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN!) as { id: string };
     } catch (jwtErr) {
-      return res.status(401).json({ message: "Invalid or expired refresh token" });
+      const guestToken = req.cookies.guestToken
+      if(!guestToken) return res.status(401).json({ message: "Invalid or expired Token" });
+      try {
+        let guestDecoded = jwt.verify(guestToken, process.env.GUEST_TOKEN!) as Record<string,any>;
+        const newAccessToken = jwt.sign(guestDecoded, process.env.ACCESS_TOKEN!, {
+            expiresIn: "15m",
+        });
+        const newGuestToken = jwt.sign(guestDecoded, process.env.GUEST_TOKEN!, {
+            expiresIn: "1d",
+        });
+      
+        res.cookie("guestToken", newGuestToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+          maxAge: 1 * 24 * 60 * 60 * 1000,
+      });
+    return res.status(200).json({user:guestDecoded, accessToken: newAccessToken, accessTokenDate: Date.now() });
+      } catch (guestJwtErr) {
+        return res.status(401).json({ message: "Invalid or expired Token" });
+      }
     }
 
     const { id } = decoded;
