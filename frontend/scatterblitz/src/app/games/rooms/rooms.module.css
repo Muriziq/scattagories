@@ -4,7 +4,7 @@
 
 /* Main Container & Layout */
 .main {
-    padding: 2rem;
+    padding: 1rem;
     height: 100vh;
     color: #f7f3ed;
     background: var(--bg-dark);
@@ -19,9 +19,9 @@
     flex-direction: row;
     height: 100%;
     width: 100%;
-    max-width: 1200px;
+    max-width: 1440px;
     max-height: 900px;
-    border-radius: 2rem;
+    border-radius: 1rem;
     overflow: hidden;
 }
 
@@ -181,6 +181,15 @@
     width: 100%;
 }
 
+.categoriesLabel{
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    border-bottom: 3px solid var(--sunset);
+    padding-bottom: 1rem;
+}
+
 .formLabel {
     font-size: 1rem;
     font-weight: 700;
@@ -202,6 +211,7 @@
     margin: 0 0.5rem;
 }
 
+
 .formSpan {
     display: flex;
     flex-direction: row;
@@ -220,7 +230,7 @@
     width: 100%;
     padding: 0.75rem 1.25rem;
     border-radius: 2rem;
-    border: 1px solid rgba(242, 204, 136, 0.15);
+    border: 1px solid var(--sunset);
     background-color: rgba(242, 204, 136, 0.05);
     color: #ffffff;
     font-size: 0.95rem;
@@ -457,6 +467,7 @@
     width: 100%;
     border-collapse: collapse;
     text-align: left;
+    overflow-x: auto;
 }
 
 .table th {

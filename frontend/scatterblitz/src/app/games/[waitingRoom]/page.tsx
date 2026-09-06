@@ -17,9 +17,12 @@ import {
     FaUserCircle,
     FaLock,
     FaGlobe,
-    FaArrowLeft
+    FaArrowLeft,
+    FaShareAlt,
+    FaTimes
 } from "react-icons/fa";
 import styles from "./waitingRoom.module.css";
+import authStyles from "../authmodel.module.css";
 import { getAccessToken, getUserData, createNewGuest } from "../../accessToken";
 import AuthModel from "../authModels";
 
@@ -37,7 +40,34 @@ function WaitingRoomContent() {
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [currentUser, setCurrentUser] = useState<Record<string, any>>({});
     
+    // Password Modal state
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [inputPassword, setInputPassword] = useState("");
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+
+    // Room Error Modal state
+    const [showRoomModal, setShowRoomModal] = useState(false);
+    const [roomErrorMsg, setRoomErrorMsg] = useState<string | null>(null);
+
     const socketRef = useRef<Socket | null>(null);
+
+    const handleSocketError = (err: any) => {
+        console.error("Socket error:", err);
+        const message = typeof err === "object" ? err?.message : String(err || "");
+        const type = typeof err === "object" ? err?.type : "";
+
+        if (type === "authorization" || message.includes("Unauthorized") || message.includes("Authentication required")) {
+            setShowAuthModal(true);
+        } else if (type === "password") {
+            setPasswordError(message);
+            setShowPasswordModal(true);
+        } else if (type === "room") {
+            setRoomErrorMsg(message);
+            setShowRoomModal(true);
+        } else {
+            setError(message);
+        }
+    };
 
     const connectSocket = async () => {
         setError(null);
@@ -65,13 +95,19 @@ function WaitingRoomContent() {
             setParticipants(participantsList);
         });
 
-        socket.on("error", (err: string) => {
-            console.error("Socket error:", err);
-            setError(err);
-            if (err.includes("Unauthorized") || err.includes("Authentication required")) {
-                setShowAuthModal(true);
-            }
-        });
+        socket.on("error", handleSocketError);
+        socket.on("join:error", handleSocketError);
+    };
+
+    const handlePasswordSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!inputPassword) return;
+        setShowPasswordModal(false);
+        setPasswordError(null);
+        router.replace(`/games/${roomId}?password=${inputPassword}`);
+        if (socketRef.current) {
+            socketRef.current.emit("room:join", { roomId, password: inputPassword });
+        }
     };
 
     useEffect(() => {
@@ -85,15 +121,19 @@ function WaitingRoomContent() {
         };
     }, [roomId, password]);
 
-    const handleCopyCode = () => {
-        navigator.clipboard.writeText(roomId);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+    const handleCopyCode = (val: string, key: string) => {
+        if (!val) return;
+        navigator.clipboard.writeText(val);
+        setCopiedKey(key);
+        setTimeout(() => setCopiedKey(null), 2000);
     };
 
       const enterAsGuest = async () => {
         const guestToken = await createNewGuest();
         if (guestToken) {
+                setCurrentUser(getUserData() || {});
           setShowAuthModal(false);
             connectSocket()
         } else {
@@ -121,20 +161,12 @@ function WaitingRoomContent() {
 
     return (
         <main className={styles.main}>
-            <div className={styles.ambientGlow} />
-
-            <div className={styles.lobbyContainer}>
-                {/* TOP NAVIGATION BAR */}
-                <nav className={styles.topNav}>
-                    <button onClick={handleLeaveRoom} className={styles.backBtn}>
+                                <button onClick={handleLeaveRoom} className={styles.backBtn}>
                         <FaArrowLeft /> Exit Lobby
                     </button>
+<div className={styles.container}>
+            <div className={styles.lobbyContainer}>
 
-                    <Link href="/" className={styles.logo}>
-                        <FaBolt className={styles.logoIcon} />
-                        <span>Scatter<span className={styles.logoHighlight}>Blitz</span></span>
-                    </Link>
-                </nav>
 
                 {/* ERROR BANNER */}
                 {error && (
@@ -145,43 +177,53 @@ function WaitingRoomContent() {
                 )}
 
                 {/* ROOM HERO HEADER CARD */}
-                <header className={styles.heroCard}>
-                    <div className={styles.heroDetails}>
-                        <div className={styles.roomTitleRow}>
-                            <h1 className={styles.roomTitle}>Game Room</h1>
-                            <span className={`${styles.roomBadge} ${password ? styles.privateBadge : styles.publicBadge}`}>
-                                {password ? <><FaLock /> Private</> : <><FaGlobe /> Public</>}
-                            </span>
-                        </div>
-                        <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-                            Waiting for players to get ready...
-                        </span>
-                    </div>
+                 <h1 className={styles.roomTitle}>WAITING ROOM</h1>
+                 <div className={styles.copyRow}>
+                <div className={styles.copyUrl} style={{margin:"0 1rem"}}>
+                    <p>Copy Url: <span>{typeof window !== "undefined" ? window.location.href : ""}</span> </p>  
+                    {copiedKey === "url" ? (
+                        <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
+                    ) : (
+                        <FaCopy 
+                            className={styles.copyBtn} 
+                            onClick={() => handleCopyCode(typeof window !== "undefined" ? window.location.href : "", "url")} 
+                        />
+                    )}
+                </div>
+                <div className={styles.copyUrl}>
+                    <p>Room Code: <span>{roomId}</span> </p>  
+                    {copiedKey === "room" ? (
+                        <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
+                    ) : (
+                        <FaCopy 
+                            className={styles.copyBtn} 
+                            onClick={() => handleCopyCode(roomId, "room")} 
+                        />
+                    )}
+                </div>
 
-                    <div className={styles.codeCopyBox}>
-                        <div>
-                            <span className={styles.codeLabel}>Room Code</span>
-                            <div className={styles.codeValue}>{roomId}</div>
-                        </div>
-                        <button 
-                            type="button" 
-                            className={`${styles.copyBtn} ${copied ? styles.copiedBtn : ''}`}
-                            onClick={handleCopyCode}
-                        >
-                            {copied ? <><FaCheck /> Copied!</> : <><FaCopy /> Copy Code</>}
-                        </button>
-                    </div>
-                </header>
+                {password && (<div className={styles.copyUrl}>
+                    <p>Password: <span>{password}</span> </p>  
+                    {copiedKey === "password" ? (
+                        <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
+                    ) : (
+                        <FaCopy 
+                            className={styles.copyBtn} 
+                            onClick={() => handleCopyCode(password, "password")} 
+                        />
+                    )}
+                </div>)}
+
+                 </div>
+
 
                 {/* CONTENT GRID */}
                 <div className={styles.contentGrid}>
                     {/* PARTICIPANTS SECTION */}
                     <section className={styles.playersSection}>
                         <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>
-                                <FaUsers style={{ color: "var(--amber)" }} />
-                                <span>Joined Players</span>
-                            </div>
+         
+                                <h2 className={styles.sectionTitle}>Joined Players</h2>
                             <span className={styles.playerCountBadge}>
                                 {participants.length} Players
                             </span>
@@ -261,9 +303,92 @@ function WaitingRoomContent() {
             {showAuthModal && (
                 <AuthModel
                     modelFunction={enterAsGuest}
-                    cancelModal={() => setShowAuthModal(false)}
+                    cancelModal={() => router.push("/")}
                 />
             )}
+
+            {/* PASSWORD REQUIRED MODAL */}
+            {showPasswordModal && (
+                <div className={authStyles.modalOverlay}>
+                    <div className={authStyles.modalCard}>
+                        <button
+                            type="button"
+                            className={authStyles.closeModalBtn}
+                            onClick={() => router.push("/games/rooms")}
+                            aria-label="Close modal"
+                        >
+                            <FaTimes />
+                        </button>
+                        <FaLock size={56} className={authStyles.modalIcon} />
+                        <h3 className={authStyles.modalTitle}>Password Required</h3>
+                        <p className={authStyles.modalDescription}>
+                            This room is password protected. Please enter the correct password to join.
+                        </p>
+                        <form onSubmit={handlePasswordSubmit} className={authStyles.modalForm}>
+                            <input
+                                type="password"
+                                placeholder="Enter Room Password..."
+                                value={inputPassword}
+                                onChange={(e) => setInputPassword(e.target.value)}
+                                className={authStyles.modalInput}
+                                autoFocus
+                                required
+                            />
+                            <div className={authStyles.modalActions}>
+                                <button type="submit" className={authStyles.modalPrimaryBtn}>
+                                    Submit & Join
+                                </button>
+                                <button
+                                    type="button"
+                                    className={authStyles.modalSecondaryBtn}
+                                    onClick={() => router.push("/games/rooms")}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ROOM ERROR MODAL */}
+            {showRoomModal && (
+                <div className={authStyles.modalOverlay}>
+                    <div className={authStyles.modalCard}>
+                        <button
+                            type="button"
+                            className={authStyles.closeModalBtn}
+                            onClick={() => router.push("/games/rooms")}
+                            aria-label="Close modal"
+                        >
+                            <FaTimes />
+                        </button>
+                        <FaExclamationTriangle size={56} className={authStyles.modalIcon} style={{ color: "#ff4d4d" }} />
+                        <h3 className={authStyles.modalTitle}>Room Alert</h3>
+                        <p className={authStyles.modalDescription}>
+                            {roomErrorMsg || "Room not found or has expired."}
+                        </p>
+                        <div className={authStyles.modalActions}>
+                            <button
+                                type="button"
+                                className={authStyles.modalPrimaryBtn}
+                                onClick={() => router.push("/games/rooms")}
+                            >
+                                Join a New Room
+                            </button>
+                            <button
+                                type="button"
+                                className={authStyles.modalSecondaryBtn}
+                                onClick={() => router.push("/")}
+                            >
+                                Go Back to Home
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+</div>
+
         </main>
     );
 }

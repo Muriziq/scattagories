@@ -106,10 +106,10 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     const password = data?.password || "";
 
     if (!socket.user) {
-      return socket.emit("error", "Unauthorized: Authentication required");
+      return socket.emit("error", { message:"Unauthorized: Authentication required",type:"authorization"});
     }
     if (!rawRoomId) {
-      return socket.emit("error", "Room ID is required");
+      return socket.emit("error", { message:"Room ID is required",type:"authorization"});
     }
     const roomId = rawRoomId.toUpperCase();
     for (const room of activeRooms.values()) {
@@ -127,20 +127,20 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     const room = activeRooms.get(roomId);
 
     if (!room) {
-      return socket.emit("error", "Room not found or has expired.");
+      return socket.emit("error", { message:"Room not found or has expired.",type:"room"});
     }
     if (!room.isPublic && room.password != password) {
-      return socket.emit("error", "Incorrect Password");
+      return socket.emit("error", { message:"Incorrect Password",type:"password"});
     }
 
     let participant = room.participants.get(socket.user.id);
 
     if (!participant) {
       if (room.status !== "waiting") {
-        return socket.emit("error", "Game is already in progress.");
+        return socket.emit("error", { message:"Game is already in progress.",type:"room"});
       }
       if (room.participants.size >= room.maxPlayers) {
-        return socket.emit("error", "Room is currently full.");
+        return socket.emit("error", { message:"Room is currently full.",type:"room"});
       }
       room.addParticipant(socket)
     } else {
@@ -241,6 +241,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     socket.leave(roomID);
     io.to(roomID).emit("room:participants", room.getParticipantsList());
   })
+  
   socket.on("disconnect", () => {
     console.log(`Socket disconnected: ${socket.id}`);
   });

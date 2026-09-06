@@ -20,7 +20,6 @@ export function saveAccessToken(val: string, date: number) {
 }
 
 async function requestAccessToken() {
-    accessToken = ""
     try {
         const response = await fetch("http://localhost:5000/refresh/", {
             method: "GET",
@@ -31,8 +30,8 @@ async function requestAccessToken() {
         });
 
         const data = await response.json();
-                if (!response.ok) {
-            console.log(data.message);
+        if (!response.ok) {
+               accessToken = ""
             return false;
         }
         saveAccessToken(data.accessToken, data.accessTokenDate);
@@ -83,8 +82,8 @@ export async function createNewGuest(): Promise<string> {
 }
 
 export function updateUserData(obj: Record<string, any>) {
-    userData = { ...userData, ...obj };
-}
+        userData = { ...userData, ...obj };
+    }
 
 export function getUserData(): Record<string, any> {
     return userData;

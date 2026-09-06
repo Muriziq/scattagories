@@ -103,6 +103,7 @@ router.get("/rooms/public", (req: Request, res: Response) => {
           playerCount: room.participants.size,
           maxPlayers: room.maxPlayers,
           createdAt: room.createdAt,
+          categories:room.categories
         });
       }
     });

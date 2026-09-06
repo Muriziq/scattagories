@@ -88,3 +88,34 @@
     font-size: 0.95rem;
     letter-spacing: 0.05em;
 }
+
+.modalForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+}
+
+.modalInput {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--sunset, #fa7301);
+    color: #ffffff;
+    padding: 0.75rem 1rem;
+    border-radius: 0.8rem;
+    font-size: 1rem;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s ease;
+}
+
+.modalInput:focus {
+    border-color: var(--amber, #f3b900);
+    box-shadow: 0 0 10px rgba(243, 185, 0, 0.3);
+}
+
+.modalErrorMsg {
+    color: #ff4d4d;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0;
+}

@@ -454,7 +454,7 @@ router.get("/guest-login", (req: Request, res: Response) => {
   res.cookie("guestToken", guestToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
     maxAge: 1 * 24 * 60 * 60 * 1000,
   });
 

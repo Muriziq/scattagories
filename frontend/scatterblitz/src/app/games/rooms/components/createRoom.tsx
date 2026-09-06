@@ -157,7 +157,7 @@ export default function CreateRoom() {
 
       {/* CATEGORIES SECTION */}
       <div className={styles.categoriesBox}>
-        <div className={styles.formLabel}>
+        <div className={styles.categoriesLabel}>
           <span>
             <FaTags /> Categories ({categories.length})
           </span>
@@ -199,6 +199,7 @@ export default function CreateRoom() {
             })}
           </div>
         </div>
+
       </div>
 
       {/* ROOM SETTINGS GRID */}

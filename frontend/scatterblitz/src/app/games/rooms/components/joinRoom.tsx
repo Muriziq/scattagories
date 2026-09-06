@@ -11,6 +11,7 @@ interface PublicRoomData {
     playerCount: number;
     maxPlayers: number;
     createdAt: number;
+    categories: string[];
 }
 
 export default function JoinRoom() {
@@ -141,25 +142,26 @@ export default function JoinRoom() {
                             <tr>
                                 <th>Room Code</th>
                                 <th>Players</th>
-                                <th>Action</th>
+                                <th>Categories</th>
+                                <th style={{textAlign:"right"}}>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loadingRooms ? (
                                 <tr>
-                                    <td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>
+                                    <td colSpan={4} style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>
                                         Loading public lobbies...
                                     </td>
                                 </tr>
                             ) : filteredRooms.length === 0 ? (
                                 <tr>
-                                    <td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>
+                                    <td colSpan={4} style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>
                                         No active public rooms found. Create one to start playing!
                                     </td>
                                 </tr>
                             ) : (
                                 filteredRooms.map((room) => (
-                                    <tr key={room.roomId}>
+                                    <tr key={room.roomId} onClick={() => router.push(`/games/${room.roomId}`)}>
                                         <td style={{ fontWeight: 800, color: "var(--sunset)", letterSpacing: "0.1em" }}>
                                             {room.roomId}
                                         </td>
@@ -169,7 +171,10 @@ export default function JoinRoom() {
                                                 {room.playerCount} / {room.maxPlayers}
                                             </span>
                                         </td>
-                                        <td>
+                                        <td style={{textWrap:"wrap"}}>
+                                            {room.categories.join(", ")}
+                                        </td>
+                                        <td style={{textAlign:"right"}} >
                                             <button 
                                                 type="button" 
                                                 className={styles.joinTableBtn}
