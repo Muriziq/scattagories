@@ -4,6 +4,7 @@ import { useEffect } from "react";
 let accessToken: string = ""
 let previousDate: number = 0
 let duration: number = 15 * 60 * 1000
+let refreshPromise: Promise<boolean> | null = null;
 
 export let userData: Record<string, any> = {};
 
@@ -19,29 +20,41 @@ export function saveAccessToken(val: string, date: number) {
     previousDate = date
 }
 
-async function requestAccessToken() {
-    try {
-        const response = await fetch("http://localhost:5000/refresh/", {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            credentials: "include",
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-               accessToken = ""
-            return false;
-        }
-        saveAccessToken(data.accessToken, data.accessTokenDate);
-        if (data?.user) {
-            updateUserData(data.user);
-        }
-        return true
-    } catch (err) {
-        console.log("Error requesting access token:", err);
+async function requestAccessToken(): Promise<boolean> {
+    if (refreshPromise) {
+        return refreshPromise;
     }
+
+    refreshPromise = (async () => {
+        try {
+            const response = await fetch("http://localhost:5000/refresh/", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                accessToken = "";
+                previousDate = Date.now();
+                return false;
+            }
+            saveAccessToken(data.accessToken, data.accessTokenDate || Date.now());
+            if (data?.user) {
+                updateUserData(data.user);
+            }
+            return true;
+        } catch (err) {
+            console.log("Error requesting access token:", err);
+            return false;
+        } finally {
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
 }
 
 

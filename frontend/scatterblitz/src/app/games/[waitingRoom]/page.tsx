@@ -25,6 +25,7 @@ import styles from "./waitingRoom.module.css";
 import authStyles from "../authmodel.module.css";
 import { getAccessToken, getUserData, createNewGuest } from "../../accessToken";
 import AuthModel from "../authModels";
+import { useSocket } from "./SocketContext";
 
 function WaitingRoomContent() {
     const params = useParams();
@@ -49,7 +50,8 @@ function WaitingRoomContent() {
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [roomErrorMsg, setRoomErrorMsg] = useState<string | null>(null);
 
-    const socketRef = useRef<Socket | null>(null);
+    // Persistent Socket Context
+    const { socket, connectSocket: initSocket, disconnectSocket } = useSocket();
 
     const handleSocketError = (err: any) => {
         console.error("Socket error:", err);
@@ -71,32 +73,32 @@ function WaitingRoomContent() {
 
     const connectSocket = async () => {
         setError(null);
-        const token = await getAccessToken();
+        const activeSocket = await initSocket();
 
-        if (!token || token === "") {
+        if (!activeSocket) {
             setShowAuthModal(true);
             return;
         }
 
         setCurrentUser(getUserData() || {});
 
-        if (socketRef.current) {
-            socketRef.current.disconnect();
-        }
+        activeSocket.emit("room:join", { roomId, password });
 
-        const socket = io("http://localhost:5000", {
-            auth: { token }
-        });
-        socketRef.current = socket;
+        activeSocket.off("room:participants");
+        activeSocket.off("error");
+        activeSocket.off("join:error");
+        activeSocket.off("game:started");
 
-        socket.emit("room:join", { roomId, password });
-
-        socket.on("room:participants", (participantsList: any[]) => {
+        activeSocket.on("room:participants", (participantsList: any[]) => {
             setParticipants(participantsList);
         });
 
-        socket.on("error", handleSocketError);
-        socket.on("join:error", handleSocketError);
+        activeSocket.on("game:started", () => {
+            router.push(`/games/${roomId}/game`);
+        });
+
+        activeSocket.on("error", handleSocketError);
+        activeSocket.on("join:error", handleSocketError);
     };
 
     const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -105,20 +107,13 @@ function WaitingRoomContent() {
         setShowPasswordModal(false);
         setPasswordError(null);
         router.replace(`/games/${roomId}?password=${inputPassword}`);
-        if (socketRef.current) {
-            socketRef.current.emit("room:join", { roomId, password: inputPassword });
+        if (socket) {
+            socket.emit("room:join", { roomId, password: inputPassword });
         }
     };
 
     useEffect(() => {
         connectSocket();
-
-        return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
-            }
-        };
     }, [roomId, password]);
 
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -142,15 +137,16 @@ function WaitingRoomContent() {
       };
 
     const handleStartGame = () => {
-        if (socketRef.current) {
-            socketRef.current.emit("game:start", roomId);
+        if (socket) {
+            socket.emit("game:start", roomId);
         }
     };
 
     const handleLeaveRoom = () => {
-        if (socketRef.current) {
-            socketRef.current.emit("room:leave", roomId);
+        if (socket) {
+            socket.emit("room:leave", roomId);
         }
+        disconnectSocket();
         router.push("/");
     };
 

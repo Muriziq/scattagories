@@ -27,7 +27,7 @@ export class GameRoom {
   categories: string[];
 
   // --- Game State Trackers ---
-  status: "waiting" | "letter_selection" | "active_sprint" | "recap";
+  status: "waiting" | "letter_selection" | "active_sprint" | "recap" | "ended";
   currentRound: number;
   totalRound: number;
   usersTurn: string | null;
@@ -40,7 +40,7 @@ export class GameRoom {
   participants: Map<
     string,
     {
-      socketId: string;
+      socketId: string | null;
       dbId: string | null;
       displayName: string;
       score: number;
