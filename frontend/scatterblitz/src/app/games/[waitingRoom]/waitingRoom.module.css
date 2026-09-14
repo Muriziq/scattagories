@@ -218,6 +218,7 @@
     grid-template-columns: 1fr 340px;
     gap: 1.5rem;
     width: 100%;
+    align-items: start;
 }
 
 /* Participants Card Section */

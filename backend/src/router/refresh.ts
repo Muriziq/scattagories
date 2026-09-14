@@ -11,6 +11,7 @@ router.get("/", async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies?.refreshToken;
           const guestToken = req.cookies?.guestToken
+
     if (!refreshToken && !guestToken) {
       return res.status(401).json({ message: "No refresh token found" });
       
@@ -95,7 +96,7 @@ router.get("/", async (req: Request, res: Response) => {
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

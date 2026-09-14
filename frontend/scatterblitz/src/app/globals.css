@@ -40,7 +40,6 @@ body, * {
 }
 
 /* Global 3D Button Base & Variants */
-:global(.btn-3d),
 .btn-3d {
   position: relative;
   display: inline-flex;
@@ -57,7 +56,6 @@ body, * {
   box-shadow: var(--box-shadow-default);
 }
 
-:global(.btn-3d::before),
 .btn-3d::before {
   content: "";
   position: absolute;
@@ -70,32 +68,27 @@ body, * {
   pointer-events: none;
 }
 
-:global(.btn-3d:hover:not(:disabled)),
 .btn-3d:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: var(--box-shadow-hover);
 }
 
-:global(.btn-3d:active:not(:disabled)),
 .btn-3d:active:not(:disabled) {
   transform: translateY(4px);
   box-shadow: var(--box-shadow-active);
 }
 
-:global(.btn-3d:disabled),
 .btn-3d:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-:global(.btn-primary),
 .btn-primary {
   background: linear-gradient(180deg, var(--gold) 0%, var(--safety-orange) 50%, var(--persimmon) 100%);
   color: var(--text-primary);
   border: 3.5px solid var(--blood-orange);
 }
 
-:global(.btn-secondary),
 .btn-secondary {
   background: linear-gradient(180deg, var(--btn-dark-start) 0%, var(--btn-dark-end) 100%);
   color: var(--sunset);

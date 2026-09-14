@@ -114,13 +114,10 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     const roomId = rawRoomId.toUpperCase();
     for (const room of activeRooms.values()) {
       if (room.id === roomId) {
-        break;
+        continue;
       }
       if (room.participants.get(socket.user.id)) {
-        room.removeParticipant(socket.user.id);
-        io.to(room.id).emit("room:participants", room.getParticipantsList());
-        socket.leave(room.id);
-        break;
+        return socket.emit("error", { message: "You are already in a room.", type: "change-room", roomID: room.id });
       }
     }
 
@@ -151,7 +148,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
 
     socket.join(roomId);
 
-    io.to(roomId).emit("room:participants", room.getParticipantsList());
+    io.to(roomId).emit("room:participants", room.getRoomParticipantsData());
   });
 
   socket.on("game:start", (roomID: string) => {
@@ -186,7 +183,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       return socket.emit("error", { message:"Room not found or has expired.",type:"room"});
     }
     if (room.status === "waiting") {
-      return socket.emit("error", {message:"Game is not started yet.",type:"other"});
+      return socket.emit("error", {message:"Game is not started yet.",type:"not-started"});
     }
     if(room.status === "ended"){
       return socket.emit("error", { message: "Game has ended", type: "room" });
@@ -199,13 +196,17 @@ io.on("connection", (socket: AuthenticatedSocket) => {
 
     socket.emit("room:state",{
       participants: room.getParticipantsList(),
+      allLetters: room.getAllLetters(),
       availableLetters: room.availableLetters,
       categories: room.categories,
       currentRound: room.currentRound,
       totalRound: room.totalRound,
       usersTurn: room.usersTurn,
       activeLetter: room.activeLetter,
-      status: room.status
+      status: room.status,
+      maxTimePerRound: room.maxTimePerRound,
+      hostUsername: room.getHostUsername(),
+      maxPlayers: room.maxPlayers
     });
   })
 
@@ -273,10 +274,10 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     const room = activeRooms.get(roomID);
     if(!room) return socket.emit("error","Room Not Found or Expired.")
     if (socket.user){
-      room.removeParticipant(socket.user.id)
+      room.removeParticipant(socket.user.id, io, socket);
     }
     socket.leave(roomID);
-    io.to(roomID).emit("room:participants", room.getParticipantsList());
+    io.to(roomID).emit("room:participants", room.getRoomParticipantsData());
   })
   
   socket.on("disconnect", () => {

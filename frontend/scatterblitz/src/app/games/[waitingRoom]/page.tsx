@@ -26,6 +26,7 @@ import authStyles from "../authmodel.module.css";
 import { getAccessToken, getUserData, createNewGuest } from "../../accessToken";
 import AuthModel from "../authModels";
 import { useSocket } from "./SocketContext";
+import ErrorModals from "./ErrorModals";
 
 function WaitingRoomContent() {
     const params = useParams();
@@ -36,11 +37,14 @@ function WaitingRoomContent() {
     const password = searchParams.get("password") || "";
 
     const [participants, setParticipants] = useState<any[]>([]);
+    const [hostUsername, setHostUsername] = useState<string | null>(null);
+    const [categories, setCategories] = useState<string[]>([]);
+    const [maxPlayers, setMaxPlayers] = useState<number>(4);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [currentUser, setCurrentUser] = useState<Record<string, any>>({});
-    
+
     // Password Modal state
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [inputPassword, setInputPassword] = useState("");
@@ -49,6 +53,10 @@ function WaitingRoomContent() {
     // Room Error Modal state
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [roomErrorMsg, setRoomErrorMsg] = useState<string | null>(null);
+
+    // Change Room Modal state
+    const [showChangeRoomModal, setShowChangeRoomModal] = useState(false);
+    const [previousRoomId, setPreviousRoomId] = useState<string>("");
 
     // Persistent Socket Context
     const { socket, connectSocket: initSocket, disconnectSocket } = useSocket();
@@ -66,8 +74,31 @@ function WaitingRoomContent() {
         } else if (type === "room") {
             setRoomErrorMsg(message);
             setShowRoomModal(true);
+        } else if (type === "change-room") {
+            const prevRoom = typeof err === "object" ? (err?.roomID || err?.roomId || "") : "";
+            setPreviousRoomId(prevRoom);
+            setShowChangeRoomModal(true);
         } else {
             setError(message);
+        }
+    };
+
+    const handleLeavePrevAndJoinNew = () => {
+        setShowChangeRoomModal(false);
+        if (socket) {
+            if (previousRoomId) {
+                socket.emit("room:leave", previousRoomId);
+            }
+            socket.emit("room:join", { roomId, password });
+        }
+    };
+
+    const handleGoToPrevRoom = () => {
+        setShowChangeRoomModal(false);
+        if (previousRoomId) {
+            router.push(`/games/${previousRoomId}`);
+        } else {
+            router.push("/games/rooms");
         }
     };
 
@@ -89,8 +120,15 @@ function WaitingRoomContent() {
         activeSocket.off("join:error");
         activeSocket.off("game:started");
 
-        activeSocket.on("room:participants", (participantsList: any[]) => {
-            setParticipants(participantsList);
+        activeSocket.on("room:participants", (data: any) => {
+            if (Array.isArray(data)) {
+                setParticipants(data);
+            } else if (data && typeof data === "object") {
+                setParticipants(data.participants || []);
+                if (data.hostUsername) setHostUsername(data.hostUsername);
+                if (data.categories) setCategories(data.categories);
+                if (data.maxPlayers) setMaxPlayers(data.maxPlayers);
+            }
         });
 
         activeSocket.on("game:started", () => {
@@ -146,13 +184,13 @@ function WaitingRoomContent() {
         if (socket) {
             socket.emit("room:leave", roomId);
         }
-        disconnectSocket();
         router.push("/");
     };
 
-    const isHost = participants.length > 0 && currentUser?.username && (
-        participants[0]?.username === currentUser.username ||
-        (typeof participants[0] === "string" && participants[0] === currentUser.username)
+    const isHost = currentUser?.username && (
+        (hostUsername && currentUser.username === hostUsername) ||
+        (participants.length > 0 && typeof participants[0] === "object" && participants[0].isHost && participants[0].username === currentUser.username) ||
+        (participants.length > 0 && (participants[0]?.username === currentUser.username || participants[0] === currentUser.username))
     );
 
     return (
@@ -221,14 +259,16 @@ function WaitingRoomContent() {
          
                                 <h2 className={styles.sectionTitle}>Joined Players</h2>
                             <span className={styles.playerCountBadge}>
-                                {participants.length} Players
+                                {participants.length} / {maxPlayers} Players
                             </span>
                         </div>
 
                         <div className={styles.playersGrid}>
                             {participants.map((participant, index) => {
                                 const username = typeof participant === "object" ? participant.username : participant;
-                                const isHostPlayer = index === 0;
+                                const isHostPlayer = typeof participant === "object"
+                                    ? (participant.isHost || (hostUsername && participant.username === hostUsername))
+                                    : (hostUsername ? participant === hostUsername : index === 0);
 
                                 return (
                                     <div key={index} className={styles.playerCard}>
@@ -250,8 +290,8 @@ function WaitingRoomContent() {
                                 );
                             })}
 
-                            {/* Filler Empty Slots */}
-                            {Array.from({ length: Math.max(0, 4 - participants.length) }).map((_, i) => (
+                            {/* Filler Empty Slots based on room maxPlayers */}
+                            {Array.from({ length: Math.max(0, maxPlayers - participants.length) }).map((_, i) => (
                                 <div key={`empty-${i}`} className={styles.emptySlotCard}>
                                     <FaUsers size={24} style={{ opacity: 0.3 }} />
                                     <span>Waiting for player...</span>
@@ -291,98 +331,46 @@ function WaitingRoomContent() {
                                 <FaSignOutAlt /> Leave Room
                             </button>
                         </div>
+
+                        {/* CATEGORIES PREVIEW BOX */}
+                        {categories.length > 0 && (
+                            <div className={styles.actionBox}>
+                                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--amber)", margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    <FaBolt /> Room Categories ({categories.length})
+                                </h3>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                                    {categories.map((cat, i) => (
+                                        <span key={i} style={{ background: "rgba(242, 204, 136, 0.08)", border: "1px solid var(--amber)", color: "var(--sunset)", padding: "0.35rem 0.85rem", borderRadius: "12px", fontSize: "0.85rem", fontWeight: 700 }}>
+                                            {cat}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </aside>
                 </div>
             </div>
 
-            {/* REUSABLE AUTH MODEL */}
-            {showAuthModal && (
-                <AuthModel
-                    modelFunction={enterAsGuest}
-                    cancelModal={() => router.push("/")}
-                />
-            )}
-
-            {/* PASSWORD REQUIRED MODAL */}
-            {showPasswordModal && (
-                <div className={authStyles.modalOverlay}>
-                    <div className={authStyles.modalCard}>
-                        <button
-                            type="button"
-                            className={authStyles.closeModalBtn}
-                            onClick={() => router.push("/games/rooms")}
-                            aria-label="Close modal"
-                        >
-                            <FaTimes />
-                        </button>
-                        <FaLock size={56} className={authStyles.modalIcon} />
-                        <h3 className={authStyles.modalTitle}>Password Required</h3>
-                        <p className={authStyles.modalDescription}>
-                            This room is password protected. Please enter the correct password to join.
-                        </p>
-                        <form onSubmit={handlePasswordSubmit} className={authStyles.modalForm}>
-                            <input
-                                type="password"
-                                placeholder="Enter Room Password..."
-                                value={inputPassword}
-                                onChange={(e) => setInputPassword(e.target.value)}
-                                className={authStyles.modalInput}
-                                autoFocus
-                                required
-                            />
-                            <div className={authStyles.modalActions}>
-                                <button type="submit" className={authStyles.modalPrimaryBtn}>
-                                    Submit & Join
-                                </button>
-                                <button
-                                    type="button"
-                                    className={authStyles.modalSecondaryBtn}
-                                    onClick={() => router.push("/games/rooms")}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* ROOM ERROR MODAL */}
-            {showRoomModal && (
-                <div className={authStyles.modalOverlay}>
-                    <div className={authStyles.modalCard}>
-                        <button
-                            type="button"
-                            className={authStyles.closeModalBtn}
-                            onClick={() => router.push("/games/rooms")}
-                            aria-label="Close modal"
-                        >
-                            <FaTimes />
-                        </button>
-                        <FaExclamationTriangle size={56} className={authStyles.modalIcon} style={{ color: "#ff4d4d" }} />
-                        <h3 className={authStyles.modalTitle}>Room Alert</h3>
-                        <p className={authStyles.modalDescription}>
-                            {roomErrorMsg || "Room not found or has expired."}
-                        </p>
-                        <div className={authStyles.modalActions}>
-                            <button
-                                type="button"
-                                className={authStyles.modalPrimaryBtn}
-                                onClick={() => router.push("/games/rooms")}
-                            >
-                                Join a New Room
-                            </button>
-                            <button
-                                type="button"
-                                className={authStyles.modalSecondaryBtn}
-                                onClick={() => router.push("/")}
-                            >
-                                Go Back to Home
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* REUSABLE ERROR & AUTH MODALS */}
+            <ErrorModals
+                roomId={roomId}
+                showAuthModal={showAuthModal}
+                enterAsGuest={enterAsGuest}
+                onCloseAuthModal={() => router.push("/")}
+                showPasswordModal={showPasswordModal}
+                inputPassword={inputPassword}
+                setInputPassword={setInputPassword}
+                handlePasswordSubmit={handlePasswordSubmit}
+                onClosePasswordModal={() => router.push("/games/rooms")}
+                showRoomModal={showRoomModal}
+                roomErrorMsg={roomErrorMsg}
+                onCloseRoomModal={() => router.push("/games/rooms")}
+                showChangeRoomModal={showChangeRoomModal}
+                previousRoomId={previousRoomId}
+                handleLeavePrevAndJoinNew={handleLeavePrevAndJoinNew}
+                handleGoToPrevRoom={handleGoToPrevRoom}
+                onCloseChangeRoomModal={handleGoToPrevRoom}
+            />
 </div>
 
         </main>

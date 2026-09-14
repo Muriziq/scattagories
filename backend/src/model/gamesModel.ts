@@ -13,7 +13,39 @@ export const availableCategories = [
   "Brands",
   "Things",
 ] as const;
-export type Category = (typeof availableCategories)[number];
+export const alphabets = {
+  en: [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+  ],
+} as const;
+
+export type Language = keyof typeof alphabets;
+
 export class GameRoom {
   // --- Core Identity ---
   id: string;
@@ -25,6 +57,7 @@ export class GameRoom {
   maxPlayers: number;
   maxTimePerRound: number;
   categories: string[];
+  language: Language;
 
   // --- Game State Trackers ---
   status: "waiting" | "letter_selection" | "active_sprint" | "recap" | "ended";
@@ -35,6 +68,8 @@ export class GameRoom {
   activeLetter: string | null;
   isBoardLocked: boolean;
   roundTimer: NodeJS.Timeout | null;
+  selectionTimer: NodeJS.Timeout | null;
+  selectionTimeLimit: number;
   isPublic: boolean;
   // --- Live Data Trackers ---
   participants: Map<
@@ -44,6 +79,7 @@ export class GameRoom {
       dbId: string | null;
       displayName: string;
       score: number;
+      hasLeft?: boolean;
     }
   >;
 
@@ -81,6 +117,8 @@ export class GameRoom {
     this.isPublic = isPublic;
 
     this.roundTimer = null;
+    this.selectionTimer = null;
+    this.selectionTimeLimit = 15;
 
     // 3. Set the default starting game state
     this.status = "waiting";
@@ -91,40 +129,18 @@ export class GameRoom {
     this.isBoardLocked = false;
     this.submitStatus = "notAccepting";
 
-    // The full alphabet ready for the picking
-    this.availableLetters = [
-      "A",
-      "B",
-      "C",
-      "D",
-      "E",
-      "F",
-      "G",
-      "H",
-      "I",
-      "J",
-      "K",
-      "L",
-      "M",
-      "N",
-      "O",
-      "P",
-      "Q",
-      "R",
-      "S",
-      "T",
-      "U",
-      "V",
-      "W",
-      "X",
-      "Y",
-      "Z",
-    ];
+    this.language = "en";
+    this.availableLetters = [...this.getAllLetters()];
 
     // 4. Initialize empty data trackers
     this.participants = new Map();
     this.detailedSubmissions = {};
   }
+
+  public getAllLetters(): readonly string[] {
+    return alphabets[this.language] || alphabets.en;
+  }
+
   public addParticipant(socket: AuthenticatedSocket) {
     if(!socket.user) return socket.emit("error", "Unauthorized: Authentication required");
     const participant = {
@@ -132,24 +148,68 @@ export class GameRoom {
       dbId: socket.user.id,
       displayName: socket.user.username,
       score: 0,
+      hasLeft: false,
     };
     this.participants.set(socket.user.id, participant);
   }
-  public removeParticipant(participantId: string) {
-    this.participants.delete(participantId);
-    if(this.participants.size === 0){
-    activeRooms.delete(this.id);
-    }
-    if(this.hostId === participantId){
-      const participantsArray = Array.from(this.participants.values());
-      this.hostId = participantsArray[0].dbId || null;
+
+  public removeParticipant(participantId: string, io?: Server, socket?: Socket) {
+    const participant = this.participants.get(participantId);
+    if (!participant) return;
+
+    if (this.status === "waiting") {
+      this.participants.delete(participantId);
+      if (this.participants.size === 0) {
+        this.clearSelectionTimer();
+        this.clearRoundTimer();
+        activeRooms.delete(this.id);
+      } else if (this.hostId === participantId) {
+        const participantsArray = Array.from(this.participants.values());
+        this.hostId = participantsArray.length > 0 ? (participantsArray[0].dbId || null) : null;
+      }
+    } else {
+      participant.hasLeft = true;
+      participant.socketId = null;
+
+      const activeParticipants = Array.from(this.participants.values()).filter((p) => !p.hasLeft);
+      if (activeParticipants.length === 0) {
+        this.clearSelectionTimer();
+        this.clearRoundTimer();
+        activeRooms.delete(this.id);
+        return;
+      }
+
+      if (io && socket && this.usersTurn === participant.displayName && this.status !== "ended") {
+        this.getNextUserTurn(io, socket);
+      }
     }
   }
+
+  public getHostUsername(): string | null {
+    if (!this.hostId) return null;
+    return this.participants.get(this.hostId)?.displayName || null;
+  }
+
   public getParticipantsList() {
+    const hostUsername = this.getHostUsername();
     return Array.from(this.participants.values()).map((p) => ({
       username: p.displayName,
       score: p.score,
+      isHost: p.displayName === hostUsername,
+      hasLeft: !!p.hasLeft,
+      isConnected: p.socketId !== null && !p.hasLeft,
     }));
+  }
+
+  public getRoomParticipantsData() {
+    return {
+      participants: this.getParticipantsList(),
+      hostUsername: this.getHostUsername(),
+      categories: this.categories,
+      maxPlayers: this.maxPlayers,
+      allLetters: this.getAllLetters(),
+      selectionTimeLimit: this.selectionTimeLimit,
+    };
   }
   public calculateTotalRound(): number {
     const playerCount = this.participants.size;
@@ -165,11 +225,22 @@ export class GameRoom {
     return this.totalRound;
   }
 
+  public clearSelectionTimer() {
+    if (this.selectionTimer !== null) {
+      clearTimeout(this.selectionTimer);
+      this.selectionTimer = null;
+    }
+  }
+
   public getNextUserTurn(io: Server, socket: Socket) {
-    const participantIds = Array.from(this.participants.keys());
+    this.clearSelectionTimer();
+    this.clearRoundTimer();
+    const activeParticipants = Array.from(this.participants.values()).filter((p) => !p.hasLeft);
+    const activeIds = activeParticipants.map((p) => p.dbId!).filter(Boolean);
+
     this.currentRound++;
     if (
-      participantIds.length === 0 ||
+      activeIds.length === 0 ||
       this.currentRound > this.totalRound ||
       this.currentRound <= 0
     ) {
@@ -178,7 +249,7 @@ export class GameRoom {
         this.availableLetters[
           Math.floor(Math.random() * this.availableLetters.length)
         ];
-      if (!randomLetter) {
+      if (!randomLetter || activeIds.length === 0) {
         this.status = "waiting";
         io.to(this.id).emit("game:ended", { message: "Game Has Ended" });
         return true;
@@ -187,10 +258,25 @@ export class GameRoom {
       return true;
     }
 
-    const playerIndex = (this.currentRound - 1) % participantIds.length;
+    const playerIndex = (this.currentRound - 1) % activeIds.length;
     this.usersTurn =
-      this.participants.get(participantIds[playerIndex])?.displayName || null;
-    io.to(this.id).emit("turn:change", this.usersTurn);
+      this.participants.get(activeIds[playerIndex])?.displayName || null;
+    io.to(this.id).emit("turn:change", {
+      usersTurn: this.usersTurn,
+      selectionTimeLimit: this.selectionTimeLimit,
+    });
+
+    this.selectionTimer = setTimeout(() => {
+      if (this.status === "letter_selection" && this.availableLetters.length > 0) {
+        const randomLetter =
+          this.availableLetters[
+            Math.floor(Math.random() * this.availableLetters.length)
+          ];
+        if (randomLetter) {
+          this.setActiveLetter(randomLetter, io, socket);
+        }
+      }
+    }, this.selectionTimeLimit * 1000);
   }
 
   public setActiveLetter(letter: string, io: Server, socket: Socket) {
@@ -201,6 +287,7 @@ export class GameRoom {
       socket.emit("error", "Pls Select A Valid Letter");
       return false;
     }
+    this.clearSelectionTimer();
     this.activeLetter = newLetter;
     this.availableLetters = this.availableLetters.filter(
       (l) => l !== newLetter,
@@ -223,6 +310,7 @@ export class GameRoom {
   }
 
   public startRecapTimer(io: Server, socket: Socket) {
+    this.clearSelectionTimer();
     this.clearRoundTimer();
     this.submitStatus = "accepting";
     this.status = "recap";

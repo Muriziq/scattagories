@@ -1,0 +1,516 @@
+/* ==========================================================================
+   SCATTERBLITZ GAME BOARD STYLESHEET
+   ========================================================================== */
+
+.main {
+    min-height: 100vh;
+    width: 100%;
+    color: #f7f3ed;
+    background: var(--bg-dark);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: relative;
+    overflow-x: hidden;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.gameContainer {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.exitBtn {
+align-self: start;
+    background-color: rgba(35, 18, 14, 0.95);
+    border: 2px solid var(--safety-orange);
+    color: var(--safety-orange);
+    padding: 0.75rem 1.25rem;
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+}
+
+.exitBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Header Bar */
+.headerBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(22, 10, 8, 0.85);
+    border: 2px solid var(--sunset);
+    border-radius: 1.5rem;
+    padding: 1rem 1.75rem;
+    backdrop-filter: blur(10px);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.roomInfo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.exitBtn {
+    composes: btn-3d btn-secondary from global;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    border-radius: 10px;
+}
+
+.roundBadge {
+    background: rgba(242, 204, 136, 0.1);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 0.4rem 0.85rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.turnIndicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(250, 115, 1, 0.1);
+    border: 1px solid var(--safety-orange);
+    padding: 0.5rem 1.25rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.turnIndicatorYourTurn {
+    background: rgba(255, 193, 7, 0.15);
+    border-color: var(--gold);
+    color: var(--gold);
+    animation: pulseTurn 1.5s infinite alternate;
+}
+
+@keyframes pulseTurn {
+    0% { box-shadow: 0 0 5px rgba(255, 193, 7, 0.2); }
+    100% { box-shadow: 0 0 20px rgba(255, 193, 7, 0.6); }
+}
+
+.timerBox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, rgba(35, 18, 14, 0.9) 0%, rgba(22, 10, 8, 0.95) 100%);
+    border: 2px solid var(--amber);
+    padding: 0.5rem 1.25rem;
+    border-radius: 1rem;
+    font-weight: 900;
+    font-size: 1.4rem;
+    color: var(--gold);
+    min-width: 110px;
+    justify-content: center;
+    font-family: monospace;
+}
+
+.timerLow {
+    border-color: #ff4d63;
+    color: #ff4d63;
+    animation: timerPulse 0.5s infinite alternate;
+}
+
+@keyframes timerPulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.05); }
+}
+
+/* Error Banner */
+.errorBanner {
+    background-color: rgba(255, 77, 99, 0.15);
+    border: 1px solid #ff4d63;
+    color: #ff4d63;
+    padding: 0.9rem 1.25rem;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+/* Layout Grid */
+.mainGrid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+@media (max-width: 900px) {
+    .mainGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Game Area Panel Base */
+.gamePanelBase {
+    background: rgba(22, 10, 8, 0.85);
+    border: 2px solid var(--sunset);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+max-width: 800px;
+    margin: auto;
+    width: 100%;
+}
+
+.letterSelectionSection {
+    composes: gamePanelBase;
+}
+
+.activeSprintSection {
+    composes: gamePanelBase;
+    border: none;
+    background-color: transparent;
+
+}
+
+.recapSection {
+    composes: gamePanelBase;
+}
+
+.endedSection {
+    composes: gamePanelBase;
+}
+
+/* Letter Selection Styles */
+.sectionTitle {
+    font-size:2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.turnNotice {
+    text-align: center;
+    padding: 0.75rem 1.25rem;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.turnNoticeActive {
+    background: rgba(255, 193, 7, 0.15);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+}
+
+.turnNoticeWaiting {
+    background: rgba(242, 204, 136, 0.05);
+    border: 1px solid rgba(242, 204, 136, 0.2);
+    color: var(--text-muted);
+}
+
+.lettersGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.letterBtn {
+    height: 64px;
+    font-size: 1.6rem;
+    font-weight: 900;
+    border-radius: 14px;
+    border: 2px solid var(--safety-orange);
+    background: linear-gradient(180deg, rgba(250, 115, 1, 0.2) 0%, rgba(181, 0, 1, 0.3) 100%);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+
+.letterBtn:hover:not(:disabled) {
+    transform: translateY(-4px) scale(1.05);
+    border-color: var(--gold);
+    background: linear-gradient(180deg, var(--gold) 0%, var(--safety-orange) 100%);
+    color: #160a08;
+    box-shadow: 0 8px 18px rgba(250, 115, 1, 0.4);
+}
+
+.letterBtnDisabled {
+    opacity: 0.25;
+    border-color: rgba(242, 204, 136, 0.1);
+    background: rgba(242, 204, 136, 0.02);
+    color: var(--text-dim);
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.letterBtnWaiting {
+    opacity: 0.6;
+    border-color: rgba(242, 204, 136, 0.2);
+    cursor: not-allowed;
+}
+
+/* Active Sprint Phase */
+.activeLetterHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, rgba(250, 115, 1, 0.15) 0%, rgba(181, 0, 1, 0.1) 100%);
+    border: 2px solid var(--safety-orange);
+    border-radius: 1.25rem;
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.activeLetterBadge {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.activeLetterBox {
+    align-self: center;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--safety-orange) 100%);
+    color: #160a08;
+    border-radius: 14px;
+    font-size: 2.2rem;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(250, 115, 1, 0.4);
+}
+
+.activeLetterTitle {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.stopRoundBtn {
+    composes: btn-3d btn-primary from global;
+
+
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    align-self: start;
+}
+
+.categoriesContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.categoryCard {
+    background: rgba(242, 204, 136, 0.03);
+    border: 1px solid rgba(242, 204, 136, 0.12);
+    border-radius: 1.25rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: border-color 0.2s ease;
+}
+
+.categoryCard:focus-within {
+    border-color: var(--safety-orange);
+    background: rgba(250, 115, 1, 0.04);
+}
+
+.categoryLabel {
+        background: rgba(242, 204, 136, 0.03);
+    border: 1px solid var(--sunset);
+    border-radius: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--sunset);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inputWrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(8, 4, 3, 0.6);
+    border: 1px solid rgba(242, 204, 136, 0.2);
+    border-radius: 12px;
+    padding: 0 0.75rem;
+    overflow: hidden;
+}
+
+.letterPrefix {
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: var(--amber);
+    padding-right: 0.5rem;
+    border-right: 1px solid rgba(242, 204, 136, 0.15);
+}
+
+.categoryInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.categoryInput::placeholder {
+    color: var(--text-dim);
+    font-weight: 400;
+}
+
+/* Sidebar Leaderboard */
+.sidebarSection {
+    background: rgba(22, 10, 8, 0.85);
+    border: 2px solid var(--sunset);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    height: fit-content;
+}
+
+.sidebarTitle {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgba(242, 204, 136, 0.1);
+    padding-bottom: 0.75rem;
+}
+
+.playersList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.playerScoreRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(242, 204, 136, 0.03);
+    border: 1px solid rgba(242, 204, 136, 0.1);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+}
+
+.playerScoreRowTurn {
+    border-color: var(--amber);
+    background: rgba(255, 193, 7, 0.06);
+}
+
+.playerScoreInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.playerName {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.scoreBadge {
+    background: var(--safety-orange);
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 10px;
+}
+
+/* Recap State */
+.recapBox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 3rem 1.5rem;
+    text-align: center;
+}
+
+.spinIcon {
+    animation: spin 2s linear infinite;
+    color: var(--amber);
+    font-size: 2.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Game Ended Overlay / View */
+.endedContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.winnerCard {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2) 0%, rgba(250, 115, 1, 0.1) 100%);
+    border: 2px solid var(--gold);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.returnBtn {
+    composes: btn-3d btn-primary from global;
+    padding: 0.9rem 2rem;
+    font-size: 1.1rem;
+    margin-top: 1rem;
+}
