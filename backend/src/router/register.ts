@@ -9,6 +9,7 @@ import rateLimit from "express-rate-limit";
 import { v4 as uuidv4 } from "uuid";
 import { verifyAccessToken, type AuthRequest } from "../middleware/tokens";
 import crypto from "crypto";
+import { createSessionObject } from "../utils/tokenSession";
 const router = express.Router();
 const clientUrl = process.env.CLIENT_URL || "http://localhost:3000/user";
 
@@ -101,12 +102,14 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
     const refreshToken = jwt.sign({ id: userID }, process.env.REFRESH_TOKEN!, {
       expiresIn: "7d",
     });
+    const sessionObj = createSessionObject(refreshToken, req, 7);
+
     const insertQuery = `
       INSERT INTO users (id, username, email, password_hash, is_email_verified, refresh_tokens)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb)
       RETURNING id, username, email, is_email_verified;
     `;
-    const newUser = await pool.query(insertQuery, [userID, username, email, hashedPassword, false, [refreshToken]]);
+    const newUser = await pool.query(insertQuery, [userID, username, email, hashedPassword, false, JSON.stringify([sessionObj])]);
 
     const userAns = newUser.rows[0];
 
@@ -170,14 +173,19 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
       expiresIn: "7d",
     });
 
-    const existingTokens = Array.isArray(userAns.refresh_tokens) ? userAns.refresh_tokens : [];
-    const updatedTokens = [...existingTokens, refreshToken];
+    const now = Date.now();
+    const existingSessions = Array.isArray(userAns.refresh_tokens) ? userAns.refresh_tokens : [];
+    const validSessions = existingSessions.filter(
+      (s: any) => typeof s === "object" && s?.expiresAt && s.expiresAt > now
+    );
+    const newSession = createSessionObject(refreshToken, req, 7);
+    const updatedSessions = [...validSessions, newSession];
 
     const updateRefreshQuery = `
-      UPDATE users SET refresh_tokens = $1
+      UPDATE users SET refresh_tokens = $1::jsonb
       WHERE id = $2 AND deleted_at IS NULL;
     `;
-    const updateRefresh = await pool.query(updateRefreshQuery, [updatedTokens, userAns.id]);
+    const updateRefresh = await pool.query(updateRefreshQuery, [JSON.stringify(updatedSessions), userAns.id]);
     if (updateRefresh.rowCount === 0) {
       return res.status(500).json({ message: "Server error: Pls Retry Later" });
     }
@@ -314,7 +322,7 @@ router.delete("/delete", verifyAccessToken, async (req: AuthRequest, res: Respon
 
     const softDeleteQuery = `
       UPDATE users 
-      SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP, refresh_tokens = '{}'
+      SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP, refresh_tokens = '[]'::jsonb
       WHERE id = $1 AND deleted_at IS NULL 
       RETURNING id, username, deleted_at;
     `;
@@ -418,7 +426,7 @@ router.post("/reset-password", authLimiter, async (req: Request, res: Response) 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const updateQuery = `
       UPDATE users 
-      SET password_hash = $1, refresh_tokens = '{}', modified_at = CURRENT_TIMESTAMP 
+      SET password_hash = $1, refresh_tokens = '[]'::jsonb, modified_at = CURRENT_TIMESTAMP 
       WHERE id = $2 AND deleted_at IS NULL 
       RETURNING id;
     `;

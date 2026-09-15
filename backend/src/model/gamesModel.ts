@@ -19,28 +19,28 @@ export const alphabets = {
     "B",
     "C",
     "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "O",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-    "Y",
-    "Z",
+    // "E",
+    // "F",
+    // "G",
+    // "H",
+    // "I",
+    // "J",
+    // "K",
+    // "L",
+    // "M",
+    // "N",
+    // "O",
+    // "P",
+    // "Q",
+    // "R",
+    // "S",
+    // "T",
+    // "U",
+    // "V",
+    // "W",
+    // "X",
+    // "Y",
+    // "Z",
   ],
 } as const;
 
@@ -70,6 +70,8 @@ export class GameRoom {
   roundTimer: NodeJS.Timeout | null;
   selectionTimer: NodeJS.Timeout | null;
   selectionTimeLimit: number;
+  roundStartTime: number | null = null;
+  selectionStartTime: number | null = null;
   isPublic: boolean;
   // --- Live Data Trackers ---
   participants: Map<
@@ -250,8 +252,7 @@ export class GameRoom {
           Math.floor(Math.random() * this.availableLetters.length)
         ];
       if (!randomLetter || activeIds.length === 0) {
-        this.status = "waiting";
-        io.to(this.id).emit("game:ended", { message: "Game Has Ended" });
+        this.endGame(io,socket)
         return true;
       }
       this.setActiveLetter(randomLetter, io, socket);
@@ -261,9 +262,12 @@ export class GameRoom {
     const playerIndex = (this.currentRound - 1) % activeIds.length;
     this.usersTurn =
       this.participants.get(activeIds[playerIndex])?.displayName || null;
+    this.selectionStartTime = Date.now();
+    this.roundStartTime = null;
     io.to(this.id).emit("turn:change", {
       usersTurn: this.usersTurn,
       selectionTimeLimit: this.selectionTimeLimit,
+      selectionStartTime: this.selectionStartTime,
     });
 
     this.selectionTimer = setTimeout(() => {
@@ -293,13 +297,18 @@ export class GameRoom {
       (l) => l !== newLetter,
     );
     this.status = "active_sprint";
+    this.roundStartTime = Date.now();
+    this.selectionStartTime = null;
     this.roundTimer = setTimeout(() => {
       this.submitStatus = "accepting";
       io.to(this.id).emit("round:ended", { reason: "time_up" });
       this.startRecapTimer(io, socket);
     }, this.maxTimePerRound * 1000);
 
-    io.to(this.id).emit("letter:active", newLetter);
+    io.to(this.id).emit("letter:active", {
+      letter: newLetter,
+      roundStartTime: this.roundStartTime,
+    });
   }
 
   public clearRoundTimer() {
@@ -308,7 +317,11 @@ export class GameRoom {
       this.roundTimer = null;
     }
   }
-
+  public endGame(io: Server, socket: Socket){
+            this.status = "ended";
+        io.to(this.id).emit("game:ended", { submissions:this.detailedSubmissions});
+        console.log(this.detailedSubmissions)
+  }
   public startRecapTimer(io: Server, socket: Socket) {
     this.clearSelectionTimer();
     this.clearRoundTimer();

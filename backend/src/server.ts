@@ -205,6 +205,9 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       activeLetter: room.activeLetter,
       status: room.status,
       maxTimePerRound: room.maxTimePerRound,
+      selectionTimeLimit: room.selectionTimeLimit,
+      selectionStartTime: room.selectionStartTime,
+      roundStartTime: room.roundStartTime,
       hostUsername: room.getHostUsername(),
       maxPlayers: room.maxPlayers
     });

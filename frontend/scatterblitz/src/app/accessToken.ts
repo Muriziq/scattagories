@@ -20,6 +20,16 @@ export function saveAccessToken(val: string, date: number) {
     previousDate = date
 }
 
+export function getDeviceId(): string {
+    if (typeof window === "undefined") return "";
+    let id = localStorage.getItem("scatterblitz_device_id");
+    if (!id) {
+        id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+        localStorage.setItem("scatterblitz_device_id", id);
+    }
+    return id;
+}
+
 async function requestAccessToken(): Promise<boolean> {
     if (refreshPromise) {
         return refreshPromise;
@@ -31,6 +41,7 @@ async function requestAccessToken(): Promise<boolean> {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
+                    "x-device-id": getDeviceId(),
                 },
                 credentials: "include",
             });
@@ -72,6 +83,7 @@ export async function createNewGuest(): Promise<string> {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
+                "x-device-id": getDeviceId(),
             },
             credentials: "include",
         });

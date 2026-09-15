@@ -46,8 +46,8 @@ function GameContent() {
     const [participants, setParticipants] = useState<{ username: string; score: number }[]>([]);
     const [allLetters, setAllLetters] = useState<string[]>([]);
     const [availableLetters, setAvailableLetters] = useState<string[]>([]);
-    const [activeLetter, setActiveLetter] = useState<string | null>("A");
-    const [categories, setCategories] = useState<string[]>(["Name","Animal","Cat"]);
+    const [activeLetter, setActiveLetter] = useState<string | null>(null);
+    const [categories, setCategories] = useState<string[]>([]);
     const [currentRound, setCurrentRound] = useState<number>(1);
     const [totalRound, setTotalRound] = useState<number>(1);
     const [usersTurn, setUsersTurn] = useState<string | null>(null);
@@ -61,9 +61,7 @@ function GameContent() {
     const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
     const answersRef = useRef<Record<string, string>>({});
     answersRef.current = answers;
-    
-
-
+    const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
     // Initialize user and socket setup
     useEffect(() => {
@@ -101,33 +99,49 @@ function GameContent() {
                 if (data.usersTurn !== undefined) setUsersTurn(data.usersTurn);
                 if (data.activeLetter !== undefined) setActiveLetter(data.activeLetter);
                 if (data.status) setStatus(data.status);
-                if (data.maxTimePerRound !== undefined) {
-                    setMaxTimePerRound(data.maxTimePerRound);
-                    setTimerSeconds(data.maxTimePerRound);
-                }
-                if (data.selectionTimeLimit !== undefined) {
-                    setSelectionTimeLimit(data.selectionTimeLimit);
+                if (data.maxTimePerRound !== undefined) setMaxTimePerRound(data.maxTimePerRound);
+                if (data.selectionTimeLimit !== undefined) setSelectionTimeLimit(data.selectionTimeLimit);
+
+                const maxTime = data.maxTimePerRound !== undefined ? data.maxTimePerRound : maxTimePerRound;
+                const selLimit = data.selectionTimeLimit !== undefined ? data.selectionTimeLimit : selectionTimeLimit;
+
+                if (data.selectionStartTime) {
+                    const remainingSel = Math.max(0, Math.ceil(selLimit - (Date.now() - data.selectionStartTime) / 1000));
+                    setSelectionTimerSeconds(remainingSel);
+                } else if (data.selectionTimeLimit !== undefined) {
                     setSelectionTimerSeconds(data.selectionTimeLimit);
+                }
+
+                if (data.roundStartTime) {
+                    const remainingSprint = Math.max(0, Math.ceil(maxTime - (Date.now() - data.roundStartTime) / 1000));
+                    setTimerSeconds(remainingSprint);
+                } else if (data.maxTimePerRound !== undefined) {
+                    setTimerSeconds(data.maxTimePerRound);
                 }
             });
 
             activeSocket.on("turn:change", (data: any) => {
                 const turnPlayer = typeof data === "object" ? data.usersTurn : String(data || "");
                 const limit = typeof data === "object" && data.selectionTimeLimit ? data.selectionTimeLimit : 15;
+                const startTime = typeof data === "object" && data.selectionStartTime ? data.selectionStartTime : Date.now();
+                const remaining = Math.max(0, Math.ceil(limit - (Date.now() - startTime) / 1000));
                 setUsersTurn(turnPlayer);
                 setSelectionTimeLimit(limit);
-                setSelectionTimerSeconds(limit);
+                setSelectionTimerSeconds(remaining);
                 setStatus("letter_selection");
                 setActiveLetter(null);
                 setAnswers({});
                 setHasSubmitted(false);
             });
 
-            activeSocket.on("letter:active", (letter: string) => {
-                setActiveLetter(letter);
+            activeSocket.on("letter:active", (data: any) => {
+                const letterStr = typeof data === "object" ? data.letter : String(data || "");
+                const startTime = typeof data === "object" && data.roundStartTime ? data.roundStartTime : Date.now();
+                const remaining = Math.max(0, Math.ceil(maxTimePerRound - (Date.now() - startTime) / 1000));
+                setActiveLetter(letterStr);
                 setStatus("active_sprint");
-                setAvailableLetters((prev) => prev.filter((l) => l !== letter.toUpperCase()));
-                setTimerSeconds(maxTimePerRound);
+                setAvailableLetters((prev) => prev.filter((l) => l !== letterStr.toUpperCase()));
+                setTimerSeconds(remaining);
                 setHasSubmitted(false);
             });
 
@@ -138,6 +152,7 @@ function GameContent() {
 
             activeSocket.on("game:ended", (data: any) => {
                 setStatus("ended");
+                console.log(data)
             });
 
             activeSocket.on("answer:success", () => {
@@ -282,8 +297,9 @@ function GameContent() {
                 )}
 
                 {/* MAIN GRID */}
+           
                         {/* STATUS 1: LETTER SELECTION */}
-                        {false && (
+                        {status === "letter_selection" && (
                             <section className={styles.letterSelectionSection}>
                                 <h2 className={styles.sectionTitle}>
                                     <FaSpellCheck style={{ marginRight: "0.5rem", color: "var(--amber)" }} />
@@ -292,9 +308,9 @@ function GameContent() {
 
                                 <div className={`${styles.turnNotice} ${isYourTurn ? styles.turnNoticeActive : styles.turnNoticeWaiting}`}>
                                     {isYourTurn ? (
-                                        `⚡ It's YOUR TURN! Click any letter below in ${selectionTimerSeconds}s or a random letter will be chosen for you.`
+                                        `⚡ It's YOUR TURN! Click any letter below in ${String(selectionTimerSeconds).padStart(2, "0")}s or a random letter will be chosen for you.`
                                     ) : (
-                                        `Waiting for ${usersTurn || "the player"} to pick a letter (${selectionTimerSeconds}s remaining)...`
+                                        `Waiting for ${usersTurn || "the player"} to pick a letter (${String(selectionTimerSeconds).padStart(2, "0")}s remaining)...`
                                     )}
                                 </div>
 
@@ -328,39 +344,51 @@ function GameContent() {
                         )}
 
                         {/* STATUS 2: ACTIVE SPRINT */}
-                        {/* {status === "active_sprint" && ( */}
+                        {status === "active_sprint" && (
                             <section className={styles.activeSprintSection}>
+                                <h2 className={styles.activeTimer}>{String(timerSeconds).padStart(2, "0")}</h2>
                                 <div className={styles.activeLetterBox}>{activeLetter || "?"}</div>
 
 
                                 <div className={styles.categoriesContainer}>
-                                    {categories.map((category) => (
-                                            <label key={category} className={styles.categoryLabel}>
-                                                {category}:
-                                                                                                <input
-                                                    type="text"
-                                                    className={styles.categoryInput}
-                                                    placeholder={`Type a ${category} starting with ${activeLetter}...`}
-                                                    value={answers[category] || ""}
-                                                    onChange={(e) => {
-                                                        setAnswers({
-                                                            ...answers,
-                                                            [category]: e.target.value,
-                                                        });
-                                                    }}
-                                                />
-                                            </label>
+                                    {categories.map((category, index) => (
+                                        <label key={category} className={styles.categoryLabel}>
+                                            {category}:
+                                            <input
+                                                ref={(el) => { inputRefs.current[index] = el; }}
+                                                type="text"
+                                                className={styles.categoryInput}
+                                                placeholder={`Type a ${category} starting with ${activeLetter}...`}
+                                                value={answers[category] || ""}
+                                                onChange={(e) => {
+                                                    setAnswers({
+                                                        ...answers,
+                                                        [category]: e.target.value,
+                                                    });
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        if (index + 1 < categories.length) {
+                                                            inputRefs.current[index + 1]?.focus();
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </label>
                                     ))}
                                 </div>
-                                <button
-                                    type="button"
-                                    className={styles.stopRoundBtn}
-                                    onClick={handleStopRound}
-                                >
-                                     STOP ROUND
-                                        </button>
+                                {isYourTurn && (
+                                    <button
+                                        type="button"
+                                        className={styles.stopRoundBtn}
+                                        onClick={handleStopRound}
+                                    >
+                                        STOP ROUND
+                                    </button>
+                                )}
                             </section>
-                        {/* )} */}
+                        )}
 
                         {/* STATUS 3: RECAP / SUBMITTED */}
                         {status === "recap" && (
@@ -373,7 +401,7 @@ function GameContent() {
                                     </p>
                                 </div>
                             </section>
-                        )}
+                         )}
 
                         {/* STATUS 4: ENDED */}
                         {status === "ended" && (
@@ -392,10 +420,11 @@ function GameContent() {
                                 </div>
                             </section>
                         )}
+              
             </div>
 
             {/* REUSABLE ERROR & AUTH MODALS */}
-            {/* <ErrorModals
+            <ErrorModals
                 roomId={roomId}
                 showAuthModal={showAuthModal}
                 enterAsGuest={enterAsGuest}
@@ -406,7 +435,7 @@ function GameContent() {
                 showNotStartedModal={showNotStartedModal}
                 notStartedMsg={notStartedMsg}
                 onCloseNotStartedModal={() => router.push(`/games/${roomId}`)}
-            /> */}
+            />
         </main>
     );
 }
