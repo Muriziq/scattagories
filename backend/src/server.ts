@@ -116,7 +116,8 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       if (room.id === roomId) {
         continue;
       }
-      if (room.participants.get(socket.user.id)) {
+      const p = room.participants.get(socket.user.id);
+      if (p && !p.hasLeft) {
         return socket.emit("error", { message: "You are already in a room.", type: "change-room", roomID: room.id });
       }
     }

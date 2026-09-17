@@ -89,7 +89,9 @@ function WaitingRoomContent() {
             if (previousRoomId) {
                 socket.emit("room:leave", previousRoomId);
             }
-            socket.emit("room:join", { roomId, password });
+            setTimeout(() => {
+                socket.emit("room:join", { roomId, password });
+            }, 50);
         }
     };
 
@@ -356,15 +358,24 @@ function WaitingRoomContent() {
                 roomId={roomId}
                 showAuthModal={showAuthModal}
                 enterAsGuest={enterAsGuest}
-                onCloseAuthModal={() => router.push("/")}
+                onCloseAuthModal={() => {
+                    setShowAuthModal(false);
+                    router.push("/");
+                }}
                 showPasswordModal={showPasswordModal}
                 inputPassword={inputPassword}
                 setInputPassword={setInputPassword}
                 handlePasswordSubmit={handlePasswordSubmit}
-                onClosePasswordModal={() => router.push("/games/rooms")}
+                onClosePasswordModal={() => {
+                    setShowPasswordModal(false);
+                    router.push("/games/rooms");
+                }}
                 showRoomModal={showRoomModal}
                 roomErrorMsg={roomErrorMsg}
-                onCloseRoomModal={() => router.push("/games/rooms")}
+                onCloseRoomModal={() => {
+                    setShowRoomModal(false);
+                    router.push("/games/rooms");
+                }}
                 showChangeRoomModal={showChangeRoomModal}
                 previousRoomId={previousRoomId}
                 handleLeavePrevAndJoinNew={handleLeavePrevAndJoinNew}

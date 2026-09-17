@@ -1,18 +1,34 @@
 import { Server, Socket } from "socket.io";
 import { AuthenticatedSocket } from "../server";
+import { countryLookup } from "./countries";
+import { capitalLookup } from "./capitals";
+import { currencyLookup } from "./currencies";
+import { stateLookup } from "./states";
+
 export const activeRooms = new Map<string, GameRoom>();
 export const availableCategories = [
-  "Animals",
   "Countries",
-  "Cities",
-  "Food",
-  "Movies",
-  "Names",
-  "Colors",
-  "Sports",
-  "Brands",
-  "Things",
+  "Capitals",
+  "Currencies",
+  "States",
 ] as const;
+
+const categoryLookups: Record<string, Record<string, Set<string>>> = {
+  Countries: countryLookup,
+  Capitals: capitalLookup,
+  Currencies: currencyLookup,
+  States: stateLookup,
+};
+
+function normalizeText(str: string): string {
+  if (!str) return "";
+  return str
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/^[^a-z0-9]/i, "");
+}
 export const alphabets = {
   en: [
     "A",
@@ -86,14 +102,14 @@ export class GameRoom {
   >;
 
   // The detailed tracker accumulating every answer and score for the whole match
-  // Structure: { participantId: { Letter: { Category: { value: "word", score: 2 } } } }
+  // Structure: { Letter: { participantId: { Category: { answer: "word", score: 2 } } } }
   detailedSubmissions: Record<
     string, // Letter (e.g., "A")
     Record<
       string, // Participant ID
       Record<
-        string, // Category Name (e.g., "Animals")
-        string // Answer
+        string, // Category Name (e.g., "Countries")
+        { answer: string; score: number } // Answer object with score
       >
     >
   >;
@@ -105,7 +121,7 @@ export class GameRoom {
     maxTimePerRound: number = 60,
     password: string | null = null,
     isPublic: boolean,
-    categories: string[] = ["Animals", "Countries", "Things in a Fridge"],
+    categories: string[] = ["Countries", "Capitals", "Currencies", "States"],
   ) {
     // 1. Set values passed in during room creation
     this.id = id;
@@ -330,10 +346,65 @@ export class GameRoom {
 
     this.roundTimer = setTimeout(() => {
       this.submitStatus = "notAccepting";
+      this.calculateRoundScores();
       this.status = "letter_selection";
       this.clearRoundTimer();
       this.getNextUserTurn(io, socket);
     }, 2500);
+  }
+
+  public calculateRoundScores() {
+    if (!this.activeLetter) return;
+    const letter = this.activeLetter;
+    const currentSubmissions = this.detailedSubmissions[letter];
+    if (!currentSubmissions) return;
+
+    for (const category of this.categories) {
+      const lookupMap = categoryLookups[category]?.[letter];
+
+      // 1. Build frequency map for duplicate detection across participants
+      const answerCounts: Record<string, number> = {};
+
+      for (const participantId of Object.keys(currentSubmissions)) {
+        const item = currentSubmissions[participantId]?.[category];
+        const raw = item?.answer?.trim() || "";
+        if (!raw) continue;
+
+        const clean = normalizeText(raw);
+        const firstChar = clean[0]?.toUpperCase();
+        if (firstChar === letter && lookupMap?.has(clean)) {
+          answerCounts[clean] = (answerCounts[clean] || 0) + 1;
+        }
+      }
+
+      // 2. Score each participant's answer for this category
+      for (const participantId of Object.keys(currentSubmissions)) {
+        const item = currentSubmissions[participantId]?.[category];
+        const raw = item?.answer?.trim() || "";
+        let score = 0;
+
+        if (raw) {
+          const clean = normalizeText(raw);
+          const count = answerCounts[clean];
+          if (count !== undefined) {
+            score = count === 1 ? 5 : 2; // 5 points for unique valid, 2 for duplicate valid
+          }
+        }
+
+        // Store score in detailedSubmissions
+        if (currentSubmissions[participantId][category]) {
+          currentSubmissions[participantId][category].score = score;
+        } else {
+          currentSubmissions[participantId][category] = { answer: raw, score };
+        }
+
+        // Add score to cumulative participant score
+        const participant = this.participants.get(participantId);
+        if (participant) {
+          participant.score += score;
+        }
+      }
+    }
   }
 
   saveAnswers(
@@ -361,7 +432,12 @@ export class GameRoom {
       this.detailedSubmissions[this.activeLetter] = {};
     }
 
-    this.detailedSubmissions[this.activeLetter][participantId] = answers;
+    const formattedAnswers: Record<string, { answer: string; score: number }> = {};
+    for (const [cat, word] of Object.entries(answers)) {
+      formattedAnswers[cat] = { answer: word, score: 0 };
+    }
+
+    this.detailedSubmissions[this.activeLetter][participantId] = formattedAnswers;
     socket.emit("answer:success", {
       message: "Your answers have been submitted successfully",
     });

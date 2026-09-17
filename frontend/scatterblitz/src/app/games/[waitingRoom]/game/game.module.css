@@ -211,8 +211,12 @@ max-width: 800px;
     font-weight:700;
     color: var(--sunset) ;
     border: 2px solid var(--sunset);
-    padding: 1rem;
     border-radius: 50%;
+    height: 100px;
+    width:100px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
 }
 
 .recapSection {
@@ -374,8 +378,8 @@ max-width: 800px;
 }
 
 .categoryLabel {
-        background: rgba(242, 204, 136, 0.03);
-    border: 1px solid var(--sunset);
+    background: rgba(242, 204, 136, 0.03);
+    border: 1.5px solid var(--sunset);
     border-radius: 1.5rem;
     padding: 0.75rem 1.5rem;
     font-size: 1.1rem;
@@ -384,44 +388,28 @@ max-width: 800px;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.inputWrapper {
-    display: flex;
-    align-items: center;
-    background: rgba(8, 4, 3, 0.6);
-    border: 1px solid rgba(242, 204, 136, 0.2);
-    border-radius: 12px;
-    padding: 0 0.75rem;
-    overflow: hidden;
-}
-
-.letterPrefix {
-    font-weight: 900;
-    font-size: 1.1rem;
-    color: var(--amber);
-    padding-right: 0.5rem;
-    border-right: 1px solid rgba(242, 204, 136, 0.15);
+.categoryLabel:focus-within {
+    border-color: var(--amber);
+    background: rgba(255, 183, 3, 0.08);
+    box-shadow: 0 0 16px rgba(255, 183, 3, 0.35), 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .categoryInput {
     flex: 1;
-    background: rgba(8, 4, 3, 0.4);
-    border: 1.5px solid rgba(242, 204, 136, 0.2);
-    border-radius: 12px;
+    background: transparent;
+    border: none;
     outline: none;
     color: #ffffff;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     font-size: 1rem;
     font-weight: 500;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .categoryInput:focus {
-    border-color: var(--amber);
-    background: rgba(255, 183, 3, 0.12);
-    color: #ffffff;
-    box-shadow: 0 0 16px rgba(255, 183, 3, 0.35), inset 0 0 8px rgba(255, 183, 3, 0.1);
+    outline: none;
 }
 
 .categoryInput::placeholder {
