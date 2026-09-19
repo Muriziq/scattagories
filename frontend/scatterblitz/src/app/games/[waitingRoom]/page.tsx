@@ -27,6 +27,7 @@ import { getAccessToken, getUserData, createNewGuest } from "../../accessToken";
 import AuthModel from "../authModels";
 import { useSocket } from "./SocketContext";
 import ErrorModals from "./ErrorModals";
+import CanvasBackground from "../../components/CanvasBackground";
 
 function WaitingRoomContent() {
     const params = useParams();
@@ -197,7 +198,8 @@ function WaitingRoomContent() {
 
     return (
         <main className={styles.main}>
-                                <button onClick={handleLeaveRoom} className={styles.backBtn}>
+            <CanvasBackground />
+            <button onClick={handleLeaveRoom} className={styles.backBtn}>
                         <FaArrowLeft /> Exit Lobby
                     </button>
 <div className={styles.container}>
@@ -207,8 +209,18 @@ function WaitingRoomContent() {
                 {/* ERROR BANNER */}
                 {error && (
                     <div className={styles.errorMessage}>
-                        <FaExclamationTriangle size={18} />
-                        <span>{error}</span>
+                        <div className={styles.errorMessageContent}>
+                            <FaExclamationTriangle size={18} />
+                            <span>{error}</span>
+                        </div>
+                        <button 
+                            type="button" 
+                            className={styles.closeErrorBtn}
+                            onClick={() => setError(null)}
+                            title="Dismiss notification"
+                        >
+                            <FaTimes size={14} />
+                        </button>
                     </div>
                 )}
 
@@ -295,7 +307,7 @@ function WaitingRoomContent() {
                             {/* Filler Empty Slots based on room maxPlayers */}
                             {Array.from({ length: Math.max(0, maxPlayers - participants.length) }).map((_, i) => (
                                 <div key={`empty-${i}`} className={styles.emptySlotCard}>
-                                    <FaUsers size={24} style={{ opacity: 0.3 }} />
+                                    <FaUsers size={50} style={{ opacity: 0.3 }} />
                                     <span>Waiting for player...</span>
                                 </div>
                             ))}
@@ -337,12 +349,12 @@ function WaitingRoomContent() {
                         {/* CATEGORIES PREVIEW BOX */}
                         {categories.length > 0 && (
                             <div className={styles.actionBox}>
-                                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--amber)", margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                    <FaBolt /> Room Categories ({categories.length})
+                                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    Categories ({categories.length})
                                 </h3>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                                <div className={styles.categories}>
                                     {categories.map((cat, i) => (
-                                        <span key={i} style={{ background: "rgba(242, 204, 136, 0.08)", border: "1px solid var(--amber)", color: "var(--sunset)", padding: "0.35rem 0.85rem", borderRadius: "12px", fontSize: "0.85rem", fontWeight: 700 }}>
+                                        <span key={i} className={styles.categoriesSpan} >
                                             {cat}
                                         </span>
                                     ))}

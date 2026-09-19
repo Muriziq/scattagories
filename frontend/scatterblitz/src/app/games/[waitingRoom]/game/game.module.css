@@ -15,6 +15,7 @@
     flex-direction: column;
     align-items: center;
     gap: 1.5rem;
+
 }
 .grid{
     display: flex;
@@ -178,7 +179,7 @@ align-self: start;
 
 /* Game Area Panel Base */
 .gamePanelBase {
-    background: rgba(22, 10, 8, 0.85);
+    background: rgba(242, 204, 136, 0.03);
     border: 2px solid var(--sunset);
     border-radius: 1.5rem;
     padding: 2rem;
@@ -228,6 +229,9 @@ max-width: 800px;
 
 .endedSection {
     composes: gamePanelBase;
+    border:none;
+    background-color:transparent;
+
 }
 
 /* Letter Selection Styles */
@@ -261,7 +265,7 @@ max-width: 800px;
 
 .lettersGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    grid-template-columns: repeat(auto-fill, 70px);
     gap: 0.75rem;
     justify-content: center;
 }
@@ -275,19 +279,19 @@ max-width: 800px;
     background: linear-gradient(180deg, rgba(250, 115, 1, 0.2) 0%, rgba(181, 0, 1, 0.3) 100%);
     color: var(--text-primary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.1s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    /* box-shadow: 0 4px 10px rgba(0,0,0,0.4); */
 }
 
 .letterBtn:hover:not(:disabled) {
-    transform: translateY(-4px) scale(1.05);
+    /* transform: translateY(-4px) scale(1.05); */
     border-color: var(--gold);
     background: linear-gradient(180deg, var(--gold) 0%, var(--safety-orange) 100%);
     color: #160a08;
-    box-shadow: 0 8px 18px rgba(250, 115, 1, 0.4);
+    /* box-shadow: 0 8px 18px rgba(250, 115, 1, 0.4); */
 }
 
 .letterBtnDisabled {
@@ -516,16 +520,11 @@ max-width: 800px;
 }
 
 .winnerCard {
-    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2) 0%, rgba(250, 115, 1, 0.1) 100%);
-    border: 2px solid var(--gold);
-    border-radius: 1.5rem;
-    padding: 2rem;
-    width: 100%;
-    max-width: 500px;
+
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .returnBtn {
@@ -533,4 +532,267 @@ max-width: 800px;
     padding: 0.9rem 2rem;
     font-size: 1.1rem;
     margin-top: 1rem;
+}
+
+/* Standings & Review Cards */
+.standingsCard {
+    background: rgba(22, 10, 8, 0.9);
+    border: 2px solid var(--sunset);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    width: 100%;
+    /* max-width: 650px; */
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    backdrop-filter: blur(10px);
+    width: 80%;
+}
+
+.standingsTitle {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--amber);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgba(242, 204, 136, 0.1);
+    padding-bottom: 0.75rem;
+}
+
+.standingsList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    
+}
+
+.standingRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(242, 204, 136, 0.04);
+    border: 1px solid rgba(242, 204, 136, 0.12);
+    border-radius: 14px;
+    padding: 0.85rem 1.25rem;
+}
+
+.standingRankInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.rankBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 900;
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.rank1 {
+    background: gold;
+    color: #000;
+}
+
+.rank2 {
+    background: #c0c0c0;
+    color: #000;
+}
+
+.rank3 {
+    background: #cd7f32;
+    color: #fff;
+}
+
+.standingUsername {
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.standingActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.standingScore {
+    font-weight: 900;
+    color: var(--gold);
+    font-size: 1.1rem;
+}
+
+.reviewBtn {
+    background: rgba(255, 193, 7, 0.15);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 0.4rem 0.9rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+}
+
+.reviewBtn:hover {
+    background: var(--amber);
+    color: #000;
+}
+
+/* Review Mode */
+.reviewContainer {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.reviewHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.backBtn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.reviewTitleBox {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.roundLetterBadge {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.reviewCategoryGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    width: 100%;
+}
+
+.reviewCategoryCard {
+    background: rgba(22, 10, 8, 0.9);
+    border-radius: 14px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    backdrop-filter: blur(8px);
+}
+
+.reviewCardUnique {
+    border: 2px solid #4CAF50;
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.reviewCardDuplicate {
+    border: 2px solid #8BC34A;
+    background: rgba(139, 195, 74, 0.05);
+}
+
+.reviewCardInvalid {
+    border: 2px solid #F44336;
+    background: rgba(244, 67, 54, 0.05);
+}
+
+.reviewCardEmpty {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.reviewCategoryTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.reviewCategoryName {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--amber);
+}
+
+.reviewScoreBadge {
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 0.15rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+}
+
+.reviewInput {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.reviewNavFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+}
+
+.navRoundBtn {
+    background: rgba(242, 204, 136, 0.1);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 0.6rem 1.2rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navRoundBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.stopReviewBtn {
+    background: rgba(244, 67, 54, 0.15);
+    border: 1px solid #F44336;
+    color: #F44336;
+    padding: 0.6rem 1.2rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
 }

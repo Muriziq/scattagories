@@ -333,10 +333,20 @@ export class GameRoom {
       this.roundTimer = null;
     }
   }
-  public endGame(io: Server, socket: Socket){
-            this.status = "ended";
-        io.to(this.id).emit("game:ended", { submissions:this.detailedSubmissions});
-        console.log(this.detailedSubmissions)
+  public endGame(io: Server, socket: Socket) {
+    this.status = "ended";
+    const standings = Array.from(this.participants.values())
+      .map((p) => ({
+        username: p.displayName,
+        score: p.score,
+        isHost: p.displayName === this.getHostUsername(),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    io.to(this.id).emit("game:ended", {
+      submissions: this.detailedSubmissions,
+      standings,
+    });
   }
   public startRecapTimer(io: Server, socket: Socket) {
     this.clearSelectionTimer();
@@ -365,8 +375,8 @@ export class GameRoom {
       // 1. Build frequency map for duplicate detection across participants
       const answerCounts: Record<string, number> = {};
 
-      for (const participantId of Object.keys(currentSubmissions)) {
-        const item = currentSubmissions[participantId]?.[category];
+      for (const username of Object.keys(currentSubmissions)) {
+        const item = currentSubmissions[username]?.[category];
         const raw = item?.answer?.trim() || "";
         if (!raw) continue;
 
@@ -378,8 +388,8 @@ export class GameRoom {
       }
 
       // 2. Score each participant's answer for this category
-      for (const participantId of Object.keys(currentSubmissions)) {
-        const item = currentSubmissions[participantId]?.[category];
+      for (const username of Object.keys(currentSubmissions)) {
+        const item = currentSubmissions[username]?.[category];
         const raw = item?.answer?.trim() || "";
         let score = 0;
 
@@ -392,14 +402,12 @@ export class GameRoom {
         }
 
         // Store score in detailedSubmissions
-        if (currentSubmissions[participantId][category]) {
-          currentSubmissions[participantId][category].score = score;
-        } else {
-          currentSubmissions[participantId][category] = { answer: raw, score };
-        }
+        currentSubmissions[username][category] = { answer: raw, score };
 
         // Add score to cumulative participant score
-        const participant = this.participants.get(participantId);
+        const participant = Array.from(this.participants.values()).find(
+          (p) => p.displayName === username,
+        );
         if (participant) {
           participant.score += score;
         }
@@ -416,6 +424,9 @@ export class GameRoom {
       return socket.emit("error", "No Active Letter Selected");
     if (this.submitStatus === "notAccepting")
       return socket.emit("error", "Submit Status Closed");
+
+    const participant = this.participants.get(participantId);
+    if (!participant) return socket.emit("error", "Participant Not Found");
 
     const answersKey = Object.keys(answers);
     if (this.categories.length < answersKey.length) {
@@ -437,7 +448,8 @@ export class GameRoom {
       formattedAnswers[cat] = { answer: word, score: 0 };
     }
 
-    this.detailedSubmissions[this.activeLetter][participantId] = formattedAnswers;
+    // Key submissions by unique username
+    this.detailedSubmissions[this.activeLetter][participant.displayName] = formattedAnswers;
     socket.emit("answer:success", {
       message: "Your answers have been submitted successfully",
     });
