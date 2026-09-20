@@ -107,6 +107,80 @@ body, * {
   opacity: 0.85;
 }
 
+/* Shared Geometric Tab Banner Styles */
+.geoTabSection {
+  background-color: var(--persimmon);
+  position: relative;
+}
+
+.geoSectionStyle1 {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 70%;
+  width: 100%;
+  clip-path: polygon(0 0, 100% 75%, 100% 100%, 0 100%);
+  background-color: var(--blood-orange);
+}
+
+.geoSectionStyle4 {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 55%;
+  width: 100%;
+  clip-path: polygon(0 0, 100% 100%, 100% 100%, 0 100%);
+  background-color: var(--safety-orange);
+}
+
+.geoSectionStyle2 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 50%;
+  width: 100%;
+  clip-path: polygon(0 0, 90% 0, 0 100%);
+  background-color: var(--safety-orange);
+}
+
+.geoSectionStyle3 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 35%;
+  width: 85%;
+  clip-path: polygon(0 0, 75% 0, 0 100%);
+  background-color: var(--blood-orange);
+}
+
+.geoTabButton {
+  height: 70px;
+  width: 150px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  position: relative;
+  border: none;
+  background-color: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  z-index: 2;
+  transition: color 0.2s ease;
+}
+
+.geoActiveTab::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 150px;
+  clip-path: path("M 35,40 L 125,40 A 25,25,0,0,0 150,15 L 150,135 A 25,25,0,0,0 125,110 L 35,110 A 35,35,0,0,1 35,40 Z");
+  background-color: #160a08;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: -1;
+}
+
+
 
 
 

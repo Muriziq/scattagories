@@ -60,12 +60,8 @@ function GameContent() {
   const [participants, setParticipants] = useState<
     { username: string; score: number }[]
   >([]);
-  const DEFAULT_ALPHABET = [
-    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
-    "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
-  ];
-  const [allLetters, setAllLetters] = useState<string[]>(DEFAULT_ALPHABET);
-  const [availableLetters, setAvailableLetters] = useState<string[]>(DEFAULT_ALPHABET);
+  const [allLetters, setAllLetters] = useState<string[]>([]);
+  const [availableLetters, setAvailableLetters] = useState<string[]>([]);
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [currentRound, setCurrentRound] = useState<number>(1);
@@ -381,8 +377,8 @@ function GameContent() {
     }
   };
 
-  // Temporary UI Preview Override (Set to true so letter_selection UI is fully active)
-  const isYourTurn = true;
+  const isYourTurn =
+    currentUser?.username && usersTurn && currentUser.username === usersTurn;
 
   return (
     <main className={styles.main}>
@@ -515,7 +511,7 @@ function GameContent() {
           <section className={styles.recapSection}>
             <div className={styles.recapBox}>
               <FaSpinner className={styles.spinIcon} />
-              <h3 style={{ fontSize: "1.4rem", fontWeight: 800 }}>
+              <h3 style={{ fontSize: "2rem", fontWeight: 800 }}>
                 Round Ended!
               </h3>
               <p style={{ color: "var(--text-muted)" }}>
@@ -587,7 +583,7 @@ function GameContent() {
                                   setReviewRoundIndex(0);
                                 }}
                               >
-                                <FaEye /> Review
+                                <FaEye /> 
                               </button>
                             </div>
                           </div>
@@ -614,14 +610,9 @@ function GameContent() {
                   return (
                     <div className={styles.reviewContainer}>
                       <div className={styles.reviewHeader}>
-                        <button
-                          className={styles.backBtn}
-                          onClick={() => setReviewParticipant(null)}
-                        >
-                          <FaArrowLeft /> Standings
-                        </button>
+  
                         <div className={styles.reviewTitleBox}>
-                          <h2>
+                          <h2 className={styles.reviewTitle}>
                             Reviewing:{" "}
                             <span style={{ color: "var(--amber)" }}>
                               {reviewParticipant}
@@ -645,47 +636,34 @@ function GameContent() {
                           const score = entry.score || 0;
 
                           let cardStyle = styles.reviewCardEmpty;
-                          let badgeText = "0 pts (Empty)";
+                          let badgeText = "0 pts";
                           let badgeColor = "#777777";
                           let Icon = FaTimesCircle;
 
                           if (score === 5) {
                             cardStyle = styles.reviewCardUnique;
-                            badgeText = "+5 pts (Unique)";
+                            badgeText = "+5 pts";
                             badgeColor = "#4CAF50";
                             Icon = FaCheckCircle;
                           } else if (score > 0) {
                             cardStyle = styles.reviewCardDuplicate;
-                            badgeText = `+${score} pts (Duplicate)`;
+                            badgeText = `+${score} pts`;
                             badgeColor = "#8BC34A";
                             Icon = FaCheckCircle;
                           } else if (rawAns) {
                             cardStyle = styles.reviewCardInvalid;
-                            badgeText = "0 pts (Invalid)";
+                            badgeText = "0 pts ";
                             badgeColor = "#F44336";
                             Icon = FaTimesCircle;
                           }
 
                           return (
-                            <div
+                            <label
                               key={catIdx}
-                              className={`${styles.reviewCategoryCard} ${cardStyle}`}
+                              className={styles.reviewDiv}
+                              style={{borderColor:badgeColor}}
                             >
-                              <div className={styles.reviewCategoryTop}>
-                                <span className={styles.reviewCategoryName}>
-                                  {cat}
-                                </span>
-                                <span
-                                  className={styles.reviewScoreBadge}
-                                  style={{
-                                    color: badgeColor,
-                                    borderColor: badgeColor,
-                                  }}
-                                >
-                                  <Icon style={{ marginRight: 4 }} />{" "}
-                                  {badgeText}
-                                </span>
-                              </div>
+                              {cat}:
                               <input
                                 type="text"
                                 readOnly
@@ -693,7 +671,17 @@ function GameContent() {
                                 value={rawAns || "(No Answer Submitted)"}
                                 className={styles.reviewInput}
                               />
-                            </div>
+                                                              <span
+                                  className={styles.reviewScoreBadge}
+                                  style={{
+                                    color: badgeColor,
+                                    borderColor: badgeColor,
+                                  }}
+                                >
+                                  
+                                  {badgeText}
+                                </span>
+                            </label>
                           );
                         })}
                       </div>
@@ -706,7 +694,7 @@ function GameContent() {
                             setReviewRoundIndex((prev) => Math.max(0, prev - 1))
                           }
                         >
-                          <FaChevronLeft /> Previous Round
+                          <FaChevronLeft />
                         </button>
                         <button
                           className={styles.stopReviewBtn}
@@ -723,7 +711,7 @@ function GameContent() {
                             )
                           }
                         >
-                          Next Round <FaChevronRight />
+                         <FaChevronRight />
                         </button>
                       </div>
                     </div>
@@ -736,7 +724,7 @@ function GameContent() {
       </div>
 
       {/* REUSABLE ERROR & AUTH MODALS */}
-      {/* <ErrorModals
+      <ErrorModals
         roomId={roomId}
         showAuthModal={showAuthModal}
         enterAsGuest={enterAsGuest}
@@ -747,7 +735,7 @@ function GameContent() {
         showNotStartedModal={showNotStartedModal}
         notStartedMsg={notStartedMsg}
         onCloseNotStartedModal={() => router.push(`/games/${roomId}`)}
-      /> */}
+      />
     </main>
   );
 }

@@ -30,19 +30,6 @@
   justify-content: center;
   padding: 2rem 1.5rem;
 }
-/* Background Glowing Accents */
-/* .ambientGlow {
-    position: absolute;
-    top: 15%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 600px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(250, 115, 1, 0.15) 0%, rgba(226, 12, 38, 0.05) 50%, transparent 70%);
-    filter: blur(80px);
-    pointer-events: none;
-    z-index: 0;
-} */
 
 .lobbyContainer {
   position: relative;
@@ -92,22 +79,6 @@
 .logoHighlight {
   color: var(--safety-orange);
 }
-
-/* Room Hero Header Card */
-/* .heroCard {
-    background: linear-gradient(135deg, rgba(35, 18, 14, 0.9) 0%, rgba(22, 10, 8, 0.95) 100%);
-    border: 2px solid var(--safety-orange);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(250, 115, 1, 0.15);
-    border-radius: 1.75rem;
-    padding: 2rem 2.5rem;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 2rem;
-    backdrop-filter: blur(12px);
-    flex-wrap: wrap;
-} */
 
 .heroDetails {
   display: flex;
