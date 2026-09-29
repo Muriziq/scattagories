@@ -1,6 +1,5 @@
 import express, { Response, Router, Request } from "express";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import { verifyAccessToken, AuthRequest } from "../middleware/tokens";
 import { GameRoom, activeRooms, availableCategories } from "../model/gamesModel";

@@ -1,8 +1,19 @@
 import express, { Request, Response, Router } from "express";
-import jwt from "jsonwebtoken";
 import pool from "../db";
 import dotenv from "dotenv";
 import { verifyAndRotateSession } from "../utils/tokenSession";
+import {
+  verifyRefreshToken,
+  verifyGuestToken,
+  signAccessToken,
+  signRefreshToken,
+  signGuestToken,
+} from "../utils/jwt";
+import {
+  setRefreshTokenCookie,
+  setGuestTokenCookie,
+  clearRefreshTokenCookie,
+} from "../utils/cookies";
 
 dotenv.config();
 
@@ -17,37 +28,42 @@ router.get("/", async (req: Request, res: Response) => {
       return res.status(401).json({ message: "No refresh token found" });
     }
 
-    // 1. Synchronously verify token
-    let decoded: { id: string };
-    try {
-      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN!) as { id: string };
-    } catch (jwtErr) {
-      if (!guestToken) return res.status(401).json({ message: "Invalid or expired Token" });
+    // 1. Try to verify refresh token
+    let decoded: { id: string } | null = null;
+    if (refreshToken) {
       try {
-        let guestDecoded = jwt.verify(guestToken, process.env.GUEST_TOKEN!) as Record<string, any>;
-        const { exp, iat, ...guestPayload } = guestDecoded;
-        const newAccessToken = jwt.sign(guestPayload, process.env.ACCESS_TOKEN!, {
-          expiresIn: "15m",
-        });
-        const newGuestToken = jwt.sign(guestPayload, process.env.GUEST_TOKEN!, {
-          expiresIn: "1d",
-        });
+        decoded = verifyRefreshToken<{ id: string }>(refreshToken);
+      } catch (jwtErr) {
+        // Fall back to checking guest token below if available
+      }
+    }
 
-        res.cookie("guestToken", newGuestToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-          maxAge: 1 * 24 * 60 * 60 * 1000,
+    // 2. Handle Guest Token refresh if normal refresh token failed or didn't exist
+    if (!decoded && guestToken) {
+      try {
+        const guestDecoded = verifyGuestToken<Record<string, any>>(guestToken);
+        const { exp, iat, ...guestPayload } = guestDecoded;
+        const newAccessToken = signAccessToken(guestPayload as any);
+        const newGuestToken = signGuestToken(guestPayload as any);
+
+        setGuestTokenCookie(res, newGuestToken);
+        return res.status(200).json({
+          user: guestPayload,
+          accessToken: newAccessToken,
+          accessTokenDate: Date.now(),
         });
-        return res.status(200).json({ user: guestPayload, accessToken: newAccessToken, accessTokenDate: Date.now() });
       } catch (guestJwtErr) {
         return res.status(401).json({ message: "Invalid or expired Token" });
       }
     }
 
+    if (!decoded) {
+      return res.status(401).json({ message: "Invalid or expired Token" });
+    }
+
     const { id } = decoded;
 
-    // 2. Fetch user from DB
+    // 3. Fetch user from DB
     const checkQuery = `
       SELECT id, username, email, is_email_verified, refresh_tokens
       FROM users
@@ -60,12 +76,10 @@ router.get("/", async (req: Request, res: Response) => {
 
     const user = checkResult.rows[0];
 
-    // 3. Generate new Refresh Token string to pass to atomic verification & rotation
-    const newRefreshToken = jwt.sign({ id }, process.env.REFRESH_TOKEN!, {
-      expiresIn: "7d",
-    });
+    // 4. Generate rotated Refresh Token string
+    const newRefreshToken = signRefreshToken({ id });
 
-    // 4. Verify token exists & match device/client info in user's active JSONB session array
+    // 5. Verify token session & rotate
     const { updatedSessions, isReuseDetected } = verifyAndRotateSession(
       user.refresh_tokens,
       refreshToken,
@@ -75,22 +89,21 @@ router.get("/", async (req: Request, res: Response) => {
     );
 
     if (isReuseDetected) {
-      // Clear all active sessions to protect account against token theft or device mismatch
       await pool.query(
         `UPDATE users SET refresh_tokens = '[]'::jsonb WHERE id = $1;`,
         [id]
       );
-      res.clearCookie("refreshToken");
-      return res.status(401).json({ message: "Security alert: Refresh token reuse or device mismatch detected. Please log in again." });
+      clearRefreshTokenCookie(res);
+      return res.status(401).json({
+        message: "Security alert: Refresh token reuse or device mismatch detected. Please log in again.",
+      });
     }
 
-    // 5. Token & Device verified! Now generate new Access Token
+    // 6. Generate new Access Token
     const { refresh_tokens, ...userPayload } = user;
-    const newAccessToken = jwt.sign(userPayload, process.env.ACCESS_TOKEN!, {
-      expiresIn: "15m",
-    });
+    const newAccessToken = signAccessToken(userPayload);
 
-    // 6. Save rotated JSONB sessions to DB
+    // 7. Save rotated sessions to DB
     const updateRefreshQuery = `
       UPDATE users SET refresh_tokens = $1::jsonb
       WHERE id = $2 AND deleted_at IS NULL
@@ -104,15 +117,13 @@ router.get("/", async (req: Request, res: Response) => {
       return res.status(500).json({ message: "Server error updating tokens during refresh" });
     }
 
-    // 6. Set updated cookie and return access token
-    res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setRefreshTokenCookie(res, newRefreshToken);
 
-    return res.status(200).json({ user: updateRefresh.rows[0], accessToken: newAccessToken, accessTokenDate: Date.now() });
+    return res.status(200).json({
+      user: updateRefresh.rows[0],
+      accessToken: newAccessToken,
+      accessTokenDate: Date.now(),
+    });
   } catch (err: any) {
     return res.status(500).json({ message: "Server error refreshing token" });
   }

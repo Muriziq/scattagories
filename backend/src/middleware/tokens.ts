@@ -1,14 +1,8 @@
-import { v4 as uuidv4 } from "uuid";
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-import pool from "../db";
 import { Request, Response, NextFunction } from "express";
+import { verifyAccessToken as verifyJwt, UserPayload } from "../utils/jwt";
 
-dotenv.config();
-
-// 1. Extend the Express Request type so TypeScript knows about req.user
 export interface AuthRequest extends Request {
-  user?: {id:string,username:string,email?: string, is_email_verified?:boolean};
+  user?: UserPayload;
 }
 
 export const verifyAccessToken = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -20,7 +14,7 @@ export const verifyAccessToken = (req: AuthRequest, res: Response, next: NextFun
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN!) as { id: string; username: string; email?: string; is_email_verified?: boolean };
+    const decoded = verifyJwt<UserPayload>(token);
     req.user = decoded;
     return next();
   } catch (error) {

@@ -42,6 +42,21 @@ export function createSessionObject(
   };
 }
 
+export function removeSession(
+  existingSessionsRaw: any,
+  tokenToRemove: string
+): RefreshTokenSession[] {
+  const targetHash = hashToken(tokenToRemove);
+  const existingArray = Array.isArray(existingSessionsRaw) ? existingSessionsRaw : [];
+  return existingArray.filter(
+    (s: any) =>
+      s &&
+      typeof s === "object" &&
+      s.tokenHash !== targetHash &&
+      s.token !== tokenToRemove
+  );
+}
+
 export function verifyAndRotateSession(
   existingSessionsRaw: any,
   oldTokenRaw: string,
@@ -75,8 +90,8 @@ export function verifyAndRotateSession(
   if (
     tokenMatched.deviceId &&
     clientInfo.deviceId &&
-    tokenMatched.deviceId !== clientInfo.deviceId
-    &&     tokenMatched.userAgent &&
+    tokenMatched.deviceId !== clientInfo.deviceId &&
+    tokenMatched.userAgent &&
     clientInfo.userAgent &&
     tokenMatched.userAgent !== "unknown" &&
     clientInfo.userAgent !== "unknown" &&
@@ -85,8 +100,6 @@ export function verifyAndRotateSession(
     // Device mismatch (stolen token presented on another physical device!)
     return { updatedSessions: [], isReuseDetected: true };
   }
-
-
 
   // Generate new rotated session object with updated IP & userAgent
   const newSession: RefreshTokenSession = {
@@ -107,6 +120,6 @@ export function verifyAndRotateSession(
 
   return {
     updatedSessions: [...remainingSessions, newSession],
-     isReuseDetected: false,
+    isReuseDetected: false,
   };
 }

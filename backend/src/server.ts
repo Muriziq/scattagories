@@ -8,9 +8,9 @@ import refresh from "./router/refresh";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import games from "./router/games";
-import jwt from "jsonwebtoken";
 import { activeRooms } from "./model/gamesModel";
-import { SocketAddress } from "net";
+import { verifyAccessToken, UserPayload } from "./utils/jwt";
+
 dotenv.config();
 
 const app = express();
@@ -27,7 +27,6 @@ const allowedOrigins = [
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. Postman, curl, mobile apps, or server-to-server during testing)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -43,11 +42,11 @@ export const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    message:
-      "Too many requests from this IP, please try again after 15 minutes.",
+    message: "Too many requests from this IP, please try again after 15 minutes.",
   },
 });
-// Middleware
+
+// Middlewares
 app.use(generalLimiter);
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -56,8 +55,15 @@ app.use(cookieParser());
 app.use("/user", register);
 app.use("/games", games);
 app.use("/refresh", refresh);
+
 app.get("/", (req, res) => {
-  res.json({ message: "Conected to Scatterblitz Backend" });
+  res.json({ message: "Connected to Scatterblitz Backend" });
+});
+
+// Global Express Error Handling Middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Unhandled express error:", err);
+  res.status(500).json({ message: err.message || "Internal Server Error" });
 });
 
 // Socket.IO Setup
@@ -76,28 +82,24 @@ export const io = new Server(server, {
 });
 
 export interface AuthenticatedSocket extends Socket {
-  user?: {
-    id: string;
-    username: string;
-    email?: string;
-    is_email_verified?: boolean;
-  };
+  user?: UserPayload;
 }
+
 io.use((socket: AuthenticatedSocket, next) => {
-  const token = socket.handshake.auth.token;
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    return next(new Error("Authentication error"));
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN!) as {
-      id: string;
-      username: string;
-      email?: string;
-      is_email_verified?: boolean;
-    };
+    const decoded = verifyAccessToken<UserPayload>(token);
     socket.user = decoded;
     next();
   } catch (err) {
     next(new Error("Authentication error"));
   }
 });
+
 io.on("connection", (socket: AuthenticatedSocket) => {
   console.log(`Socket connected: ${socket.id}`);
 
@@ -106,16 +108,15 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     const password = data?.password || "";
 
     if (!socket.user) {
-      return socket.emit("error", { message:"Unauthorized: Authentication required",type:"authorization"});
+      return socket.emit("error", { message: "Unauthorized: Authentication required", type: "authorization" });
     }
     if (!rawRoomId) {
-      return socket.emit("error", { message:"Room ID is required",type:"authorization"});
+      return socket.emit("error", { message: "Room ID is required", type: "authorization" });
     }
+
     const roomId = rawRoomId.toUpperCase();
     for (const room of activeRooms.values()) {
-      if (room.id === roomId) {
-        continue;
-      }
+      if (room.id === roomId) continue;
       const p = room.participants.get(socket.user.id);
       if (p && !p.hasLeft) {
         return socket.emit("error", { message: "You are already in a room.", type: "change-room", roomID: room.id });
@@ -123,79 +124,76 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     }
 
     const room = activeRooms.get(roomId);
-
     if (!room) {
-      return socket.emit("error", { message:"Room not found or has expired.",type:"room"});
+      return socket.emit("error", { message: "Room not found or has expired.", type: "room" });
     }
-    if (!room.isPublic && room.password != password) {
-      return socket.emit("error", { message:"Incorrect Password",type:"password"});
+    if (!room.isPublic && room.password !== password) {
+      return socket.emit("error", { message: "Incorrect Password", type: "password" });
     }
 
     let participant = room.participants.get(socket.user.id);
     if (!participant) {
       if (room.status !== "waiting") {
-        return socket.emit("error", { message:"Game is already in progress.",type:"room"});
+        return socket.emit("error", { message: "Game is already in progress.", type: "room" });
       }
       if (room.participants.size >= room.maxPlayers) {
-        return socket.emit("error", { message:"Room is currently full.",type:"room"});
+        return socket.emit("error", { message: "Room is currently full.", type: "room" });
       }
-      room.addParticipant(socket)
+      room.addParticipant(socket);
     } else {
       participant.socketId = socket.id;
-      if(room.status !== "waiting" && room.status !== "ended"){
-        socket.emit("game:started","Game Has Started")
+      if (room.status !== "waiting" && room.status !== "ended") {
+        socket.emit("game:started", "Game Has Started");
       }
     }
 
     socket.join(roomId);
-
     io.to(roomId).emit("room:participants", room.getRoomParticipantsData());
   });
 
   socket.on("game:start", (roomID: string) => {
-
     if (!socket.user) {
-      return socket.emit("error", { message:"Unauthorized: Authentication required",type:"authorization"});
+      return socket.emit("error", { message: "Unauthorized: Authentication required", type: "authorization" });
     }
     const room = activeRooms.get(roomID);
     if (!room) {
-      return socket.emit("error", { message:"Room not found or has expired.",type:"room"});
+      return socket.emit("error", { message: "Room not found or has expired.", type: "room" });
     }
     if (room.hostId !== socket.user.id) {
-      return socket.emit("error", { message:"You are not the host of this room",type:"room"});
+      return socket.emit("error", { message: "You are not the host of this room", type: "room" });
     }
     if (room.status !== "waiting") {
-      return socket.emit("error", { message:"Game is already in progress.",type:"room"});
+      return socket.emit("error", { message: "Game is already in progress.", type: "room" });
     }
 
     room.status = "letter_selection";
     room.calculateTotalRound();
     room.getNextUserTurn(io, socket);
-    return io.to(roomID).emit("game:started","Game Has Started")
+    return io.to(roomID).emit("game:started", "Game Has Started");
   });
-  socket.on("game:join",(roomID: string)=>{
-    
+
+  socket.on("game:join", (roomID: string) => {
     if (!socket.user) {
-      return socket.emit("error", { message:"Unauthorized: Authentication required",type:"authorization"});
+      return socket.emit("error", { message: "Unauthorized: Authentication required", type: "authorization" });
     }
 
     const room = activeRooms.get(roomID);
     if (!room) {
-      return socket.emit("error", { message:"Room not found or has expired.",type:"room"});
+      return socket.emit("error", { message: "Room not found or has expired.", type: "room" });
     }
     if (room.status === "waiting") {
-      return socket.emit("error", {message:"Game is not started yet.",type:"not-started"});
+      return socket.emit("error", { message: "Game is not started yet.", type: "not-started" });
     }
-    if(room.status === "ended"){
+    if (room.status === "ended") {
       return socket.emit("error", { message: "Game has ended", type: "room" });
     }
     if (!room.participants.get(socket.user.id)) {
-  return socket.emit("error", { message: "You are not a participant in this room.", type: "room" });
-}
+      return socket.emit("error", { message: "You are not a participant in this room.", type: "room" });
+    }
 
     socket.join(roomID);
 
-    socket.emit("room:state",{
+    socket.emit("room:state", {
       participants: room.getParticipantsList(),
       allLetters: room.getAllLetters(),
       availableLetters: room.availableLetters,
@@ -210,27 +208,25 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       selectionStartTime: room.selectionStartTime,
       roundStartTime: room.roundStartTime,
       hostUsername: room.getHostUsername(),
-      maxPlayers: room.maxPlayers
+      maxPlayers: room.maxPlayers,
     });
-  })
+  });
 
-  socket.on(
-    "letter:select",
-    ({ roomID, letter }: { roomID: string; letter: string }) => {
-      if (!socket.user) {
-        return socket.emit("error", "Unauthorized: Authentication required");
-      }
-      const room = activeRooms.get(roomID);
-      const participant = room?.participants.get(socket.user.id);
-      if (
-        !participant ||
-        participant.displayName !== room?.usersTurn ||
-        room.status !== "letter_selection"
-      )
-        return socket.emit("error", "Not Your Turn.");
-      room.setActiveLetter(letter, io, socket);
-    },
-  );
+  socket.on("letter:select", ({ roomID, letter }: { roomID: string; letter: string }) => {
+    if (!socket.user) {
+      return socket.emit("error", "Unauthorized: Authentication required");
+    }
+    const room = activeRooms.get(roomID);
+    const participant = room?.participants.get(socket.user.id);
+    if (
+      !participant ||
+      participant.displayName !== room?.usersTurn ||
+      room.status !== "letter_selection"
+    ) {
+      return socket.emit("error", "Not Your Turn.");
+    }
+    room.setActiveLetter(letter, io, socket);
+  });
 
   socket.on("round:stop", (roomID: string) => {
     if (!socket.user) {
@@ -244,46 +240,37 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       !participant ||
       participant.displayName !== room?.usersTurn ||
       room?.status !== "active_sprint"
-    )
+    ) {
       return socket.emit("error", "Not Your Turn.");
+    }
 
     room.startRecapTimer(io, socket);
     io.to(roomID).emit("round:ended", { reason: "stopped_by_player" });
   });
 
-  socket.on(
-    "answer:submit",
-    ({
-      roomID,
-      answers,
-    }: {
-      roomID: string;
-      answers: Record<string, string>;
-    }) => {
-      if (!socket.user) {
-        return socket.emit("error", "Unauthorized: Authentication required");
-      }
-      const room = activeRooms.get(roomID);
-      const participant = room?.participants.get(socket.user.id);
-      if (!participant) return socket.emit("error", "Participant not found");
-      if (room?.submitStatus === "notAccepting") {
-        return socket.emit("error", "Submit Status Closed");
-      }
-      room?.saveAnswers(socket.user.id, answers, socket);
-    },
-  );
-
-  socket.on("room:leave",(roomID: string)=>{
-
+  socket.on("answer:submit", ({ roomID, answers }: { roomID: string; answers: Record<string, string> }) => {
+    if (!socket.user) {
+      return socket.emit("error", "Unauthorized: Authentication required");
+    }
     const room = activeRooms.get(roomID);
-    if(!room) return socket.emit("error","Room Not Found or Expired.")
-    if (socket.user){
+    const participant = room?.participants.get(socket.user.id);
+    if (!participant) return socket.emit("error", "Participant not found");
+    if (room?.submitStatus === "notAccepting") {
+      return socket.emit("error", "Submit Status Closed");
+    }
+    room?.saveAnswers(socket.user.id, answers, socket);
+  });
+
+  socket.on("room:leave", (roomID: string) => {
+    const room = activeRooms.get(roomID);
+    if (!room) return socket.emit("error", "Room Not Found or Expired.");
+    if (socket.user) {
       room.removeParticipant(socket.user.id, io, socket);
     }
     socket.leave(roomID);
     io.to(roomID).emit("room:participants", room.getRoomParticipantsData());
-  })
-  
+  });
+
   socket.on("disconnect", () => {
     if (socket.user) {
       for (const room of activeRooms.values()) {
@@ -292,10 +279,8 @@ io.on("connection", (socket: AuthenticatedSocket) => {
           participant.socketId = null;
           break;
         }
-
       }
     }
-
   });
 });
 
