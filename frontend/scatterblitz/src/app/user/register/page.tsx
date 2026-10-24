@@ -4,7 +4,8 @@ import { useState, FormEvent, useEffect, Suspense } from "react";
 import Link from "next/link";
 import styles from "./register.module.css";
 import { useSearchParams, useRouter } from 'next/navigation';
-import { saveAccessToken,updateUserData } from "../../accessToken"
+import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
+import { API_BASE_URL } from "../../../config/api";
 
 function RegisterContent() {
   const searchParams = useSearchParams();
@@ -74,6 +75,7 @@ function Login() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Validates credentials and logs in the user, saving access token in memory
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsg("");
@@ -88,12 +90,14 @@ function Login() {
       return;
     }
 
-
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/user/login", {
+      const res = await fetch(`${API_BASE_URL}/user/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-device-id": getDeviceId(),
+        },
         credentials: "include",
         body: JSON.stringify({ identifier: username, password })
       });
@@ -102,8 +106,8 @@ function Login() {
         setErrorMsg(data.message || "Invalid credentials");
       } else {
         setSuccessMsg(data.message || "Login successful! Redirecting...");
-        if(data?.accessToken && data?.accessTokenDate){
-         saveAccessToken(data.accessToken,data.accessTokenDate) 
+        if (data?.accessToken) {
+          saveAccessToken(data.accessToken);
         }
         if(data?.user && typeof data.user === "object"){
           updateUserData(data.user)
@@ -203,6 +207,7 @@ function SignUp() {
   const [loading, setLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
 
+  // Validates user input and creates a new account, prompting verification email screen
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsg("");
@@ -227,9 +232,12 @@ function SignUp() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/user/register", {
+      const res = await fetch(`${API_BASE_URL}/user/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-device-id": getDeviceId(),
+        },
         credentials: "include",
         body: JSON.stringify({ username, email, password })
       });
@@ -237,8 +245,8 @@ function SignUp() {
       if (!res.ok) {
         setErrorMsg(data.message || "Registration failed");
       } else {
-        if(data?.accessToken && data?.accessTokenDate){
-         saveAccessToken(data.accessToken,data.accessTokenDate);
+        if (data?.accessToken) {
+          saveAccessToken(data.accessToken);
         }
                 if(data?.user && typeof data.user === "object"){
           updateUserData(data.user)

@@ -62,6 +62,7 @@ function WaitingRoomContent() {
     // Persistent Socket Context
     const { socket, connectSocket: initSocket, disconnectSocket } = useSocket();
 
+    // Routes socket errors to corresponding modal dialogs
     const handleSocketError = (err: any) => {
         console.error("Socket error:", err);
         const message = typeof err === "object" ? err?.message : String(err || "");
@@ -84,6 +85,7 @@ function WaitingRoomContent() {
         }
     };
 
+    // User confirmed leaving their previous room to join this new room
     const handleLeavePrevAndJoinNew = () => {
         setShowChangeRoomModal(false);
         if (socket) {
@@ -96,6 +98,7 @@ function WaitingRoomContent() {
         }
     };
 
+    // User chose to return to their existing room
     const handleGoToPrevRoom = () => {
         setShowChangeRoomModal(false);
         if (previousRoomId) {
@@ -105,6 +108,7 @@ function WaitingRoomContent() {
         }
     };
 
+    // Connects socket, attaches lobby event listeners, and emits room:join
     const connectSocket = async () => {
         setError(null);
         const activeSocket = await initSocket();
@@ -123,6 +127,7 @@ function WaitingRoomContent() {
         activeSocket.off("join:error");
         activeSocket.off("game:started");
 
+        // Syncs live participant list and host metadata
         activeSocket.on("room:participants", (data: any) => {
             if (Array.isArray(data)) {
                 setParticipants(data);
@@ -134,6 +139,7 @@ function WaitingRoomContent() {
             }
         });
 
+        // Transition players into the active game sprint
         activeSocket.on("game:started", () => {
             router.push(`/games/${roomId}/game`);
         });
@@ -166,17 +172,18 @@ function WaitingRoomContent() {
         setTimeout(() => setCopiedKey(null), 2000);
     };
 
-      const enterAsGuest = async () => {
+    const enterAsGuest = async () => {
         const guestToken = await createNewGuest();
         if (guestToken) {
-                setCurrentUser(getUserData() || {});
-          setShowAuthModal(false);
-            connectSocket()
+            setCurrentUser(getUserData() || {});
+            setShowAuthModal(false);
+            connectSocket();
         } else {
-          setError("Failed to create guest session. Please try logging in.");
+            setError("Failed to create guest session. Please try logging in.");
         }
-      };
+    };
 
+    // Host triggers game start for all room participants
     const handleStartGame = () => {
         if (socket) {
             socket.emit("game:start", roomId);
@@ -190,6 +197,7 @@ function WaitingRoomContent() {
         router.push("/");
     };
 
+    // Checks if current user matches host identity to grant start game permissions
     const isHost = currentUser?.username && (
         (hostUsername && currentUser.username === hostUsername) ||
         (participants.length > 0 && typeof participants[0] === "object" && participants[0].isHost && participants[0].username === currentUser.username) ||

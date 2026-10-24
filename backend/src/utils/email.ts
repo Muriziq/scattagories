@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 
 const clientUrl = process.env.CLIENT_URL || "http://localhost:3000/user";
 
+// Configures Nodemailer SMTP transport using Gmail credentials
 function createTransporter() {
   return nodemailer.createTransport({
     service: "gmail",
@@ -12,6 +13,7 @@ function createTransporter() {
   });
 }
 
+// Dispatches account verification email with 15-minute expiring link
 export async function sendVerificationEmail(
   username: string,
   email: string,
@@ -37,6 +39,7 @@ export async function sendVerificationEmail(
   await transporter.sendMail(mailOptions);
 }
 
+// Dispatches password reset link with 15-minute expiring token
 export async function sendPasswordResetEmail(
   username: string,
   email: string,

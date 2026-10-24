@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FaUsers, FaExclamationTriangle } from "react-icons/fa";
 import styles from "../rooms.module.css";
+import { API_BASE_URL } from "../../../../config/api";
 
 interface PublicRoomData {
     roomId: string;
@@ -11,6 +12,7 @@ interface PublicRoomData {
     playerCount: number;
     maxPlayers: number;
     createdAt: number;
+    hostUsername?: string | null;
     categories: string[];
 }
 
@@ -24,11 +26,17 @@ export default function JoinRoom() {
     const [searchQuery, setSearchQuery] = useState("");
     const [loadingRooms, setLoadingRooms] = useState(false);
 
+    // Fetches open public lobbies with optional search query and pagination
     useEffect(() => {
-        async function fetchPublicRooms() {
+        const timeoutId = setTimeout(async () => {
             setLoadingRooms(true);
             try {
-                const res = await fetch("http://localhost:5000/games/rooms/public");
+                const params = new URLSearchParams();
+                if (searchQuery.trim()) {
+                    params.append("search", searchQuery.trim());
+                }
+                const queryString = params.toString() ? `?${params.toString()}` : "";
+                const res = await fetch(`${API_BASE_URL}/games/rooms/public${queryString}`);
                 if (res.ok) {
                     const data = await res.json();
                     setPublicRooms(data.rooms || []);
@@ -38,10 +46,12 @@ export default function JoinRoom() {
             } finally {
                 setLoadingRooms(false);
             }
-        }
-        fetchPublicRooms();
-    }, []);
+        }, 300);
 
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
+
+    // Validates 5-character room code and routes player to the waiting room
     const handleJoinSubmit = (e: FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -52,12 +62,8 @@ export default function JoinRoom() {
             return;
         }
 
-        router.push(`/games/${roomCode}${password ? `?password=${password}` : ''}`);
+        router.push(`/games/${cleanCode}${password ? `?password=${password}` : ''}`);
     };
-
-    const filteredRooms = publicRooms.filter(r => 
-        r.roomId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     return (
         <section>
@@ -70,7 +76,7 @@ export default function JoinRoom() {
                 </div>
             )}
 
-            {/* DIRECT CODE JOIN CARD */}
+            {/* Direct Code Entry Card */}
             <div className={styles.joinCodeCard}>
                 <form onSubmit={handleJoinSubmit} className={styles.formGroup}>
                     <div className={styles.joinLabelRow}>
@@ -117,7 +123,7 @@ export default function JoinRoom() {
                 </form>
             </div>
 
-            {/* PUBLIC LOBBIES SECTION */}
+            {/* Public Lobbies List */}
             <div className={styles.publicRoomsSection}>
                 <div className={styles.toggleRow} style={{ marginBottom: "1rem" }}>
                     <div>
@@ -153,17 +159,22 @@ export default function JoinRoom() {
                                         Loading public lobbies...
                                     </td>
                                 </tr>
-                            ) : filteredRooms.length === 0 ? (
+                            ) : publicRooms.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>
                                         No active public rooms found. Create one to start playing!
                                     </td>
                                 </tr>
                             ) : (
-                                filteredRooms.map((room) => (
+                                publicRooms.map((room) => (
                                     <tr key={room.roomId} onClick={() => router.push(`/games/${room.roomId}`)}>
                                         <td style={{ fontWeight: 800, color: "var(--sunset)", letterSpacing: "0.1em" }}>
-                                            {room.roomId}
+                                            <div>{room.roomId}</div>
+                                            {room.hostUsername && (
+                                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 400 }}>
+                                                    by {room.hostUsername}
+                                                </div>
+                                            )}
                                         </td>
                                         <td>
                                             <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>

@@ -16,9 +16,9 @@ import {
 } from "../utils/cookies";
 
 dotenv.config();
-
 const router = Router();
 
+// GET /refresh: Rotates the refresh token and issues a fresh short-lived access token
 router.get("/", async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies?.refreshToken;
@@ -28,17 +28,17 @@ router.get("/", async (req: Request, res: Response) => {
       return res.status(401).json({ message: "No refresh token found" });
     }
 
-    // 1. Try to verify refresh token
+    // 1. Attempt verifying persistent user refresh token
     let decoded: { id: string } | null = null;
     if (refreshToken) {
       try {
         decoded = verifyRefreshToken<{ id: string }>(refreshToken);
       } catch (jwtErr) {
-        // Fall back to checking guest token below if available
+        // Fall back to checking guest token below if user token verification fails
       }
     }
 
-    // 2. Handle Guest Token refresh if normal refresh token failed or didn't exist
+    // 2. Handle guest token refresh if user refresh token is not present or expired
     if (!decoded && guestToken) {
       try {
         const guestDecoded = verifyGuestToken<Record<string, any>>(guestToken);
@@ -50,7 +50,6 @@ router.get("/", async (req: Request, res: Response) => {
         return res.status(200).json({
           user: guestPayload,
           accessToken: newAccessToken,
-          accessTokenDate: Date.now(),
         });
       } catch (guestJwtErr) {
         return res.status(401).json({ message: "Invalid or expired Token" });
@@ -63,7 +62,7 @@ router.get("/", async (req: Request, res: Response) => {
 
     const { id } = decoded;
 
-    // 3. Fetch user from DB
+    // 3. Fetch active user record and session list
     const checkQuery = `
       SELECT id, username, email, is_email_verified, refresh_tokens
       FROM users
@@ -76,10 +75,10 @@ router.get("/", async (req: Request, res: Response) => {
 
     const user = checkResult.rows[0];
 
-    // 4. Generate rotated Refresh Token string
+    // 4. Generate new rotated refresh token
     const newRefreshToken = signRefreshToken({ id });
 
-    // 5. Verify token session & rotate
+    // 5. Validate session against device/platform and rotate stored hash
     const { updatedSessions, isReuseDetected } = verifyAndRotateSession(
       user.refresh_tokens,
       refreshToken,
@@ -88,22 +87,19 @@ router.get("/", async (req: Request, res: Response) => {
       7
     );
 
+    // If token theft, revoked session, or unauthorized device switch is detected
     if (isReuseDetected) {
-      await pool.query(
-        `UPDATE users SET refresh_tokens = '[]'::jsonb WHERE id = $1;`,
-        [id]
-      );
       clearRefreshTokenCookie(res);
       return res.status(401).json({
-        message: "Security alert: Refresh token reuse or device mismatch detected. Please log in again.",
+        message: "Session expired or invalid. Please log in again.",
       });
     }
 
-    // 6. Generate new Access Token
+    // 6. Generate fresh access token
     const { refresh_tokens, ...userPayload } = user;
     const newAccessToken = signAccessToken(userPayload);
 
-    // 7. Save rotated sessions to DB
+    // 7. Persist rotated session list to database
     const updateRefreshQuery = `
       UPDATE users SET refresh_tokens = $1::jsonb
       WHERE id = $2 AND deleted_at IS NULL
@@ -122,7 +118,6 @@ router.get("/", async (req: Request, res: Response) => {
     return res.status(200).json({
       user: updateRefresh.rows[0],
       accessToken: newAccessToken,
-      accessTokenDate: Date.now(),
     });
   } catch (err: any) {
     return res.status(500).json({ message: "Server error refreshing token" });

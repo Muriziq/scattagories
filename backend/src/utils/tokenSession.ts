@@ -6,12 +6,22 @@ export interface RefreshTokenSession {
   createdAt: number;
   expiresAt: number;
   ip: string;
-  userAgent: string;
+  platform: string;
   deviceId?: string;
 }
 
 export function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+export function parsePlatform(userAgent: string): string {
+  if (!userAgent || userAgent === "unknown") return "unknown";
+  if (/android/i.test(userAgent)) return "Android";
+  if (/iphone|ipad|ipod/i.test(userAgent)) return "iOS";
+  if (/windows/i.test(userAgent)) return "Windows";
+  if (/macintosh|mac os x/i.test(userAgent)) return "macOS";
+  if (/linux/i.test(userAgent)) return "Linux";
+  return "Other";
 }
 
 export function getClientInfo(req: Request) {
@@ -21,8 +31,9 @@ export function getClientInfo(req: Request) {
     req.socket?.remoteAddress ||
     "";
   const userAgent = (req.headers["user-agent"] as string) || "unknown";
+  const platform = parsePlatform(userAgent);
   const deviceId = (req.headers["x-device-id"] as string) || undefined;
-  return { ip: rawIp, userAgent, deviceId };
+  return { ip: rawIp, platform, deviceId };
 }
 
 export function createSessionObject(
@@ -30,14 +41,14 @@ export function createSessionObject(
   req: Request,
   expiresInDays: number = 7
 ): RefreshTokenSession {
-  const { ip, userAgent, deviceId } = getClientInfo(req);
+  const { ip, platform, deviceId } = getClientInfo(req);
   const now = Date.now();
   return {
     tokenHash: hashToken(token),
     createdAt: now,
     expiresAt: now + expiresInDays * 24 * 60 * 60 * 1000,
     ip,
-    userAgent,
+    platform,
     ...(deviceId ? { deviceId } : {}),
   };
 }
@@ -86,28 +97,34 @@ export function verifyAndRotateSession(
     return { updatedSessions: [], isReuseDetected: true };
   }
 
-  // Device Security Validation: Check deviceId consistency if present on both sides
+  // Backward compatibility: read legacy `userAgent` if `platform` is not yet stored
+  const sessionPlatform = tokenMatched.platform || parsePlatform((tokenMatched as any).userAgent);
+
+  // 1. Device ID Validation: If both have a deviceId and they differ -> Stolen token from another device!
   if (
     tokenMatched.deviceId &&
     clientInfo.deviceId &&
-    tokenMatched.deviceId !== clientInfo.deviceId &&
-    tokenMatched.userAgent &&
-    clientInfo.userAgent &&
-    tokenMatched.userAgent !== "unknown" &&
-    clientInfo.userAgent !== "unknown" &&
-    tokenMatched.userAgent !== clientInfo.userAgent
+    tokenMatched.deviceId !== clientInfo.deviceId
   ) {
-    // Device mismatch (stolen token presented on another physical device!)
     return { updatedSessions: [], isReuseDetected: true };
   }
 
-  // Generate new rotated session object with updated IP & userAgent
+  // 2. Platform Validation: If both platforms are known and differ (e.g. issued on iOS, refreshed on Windows)
+  if (
+    sessionPlatform !== "unknown" &&
+    clientInfo.platform !== "unknown" &&
+    sessionPlatform !== clientInfo.platform
+  ) {
+    return { updatedSessions: [], isReuseDetected: true };
+  }
+
+  // Generate new rotated session object with updated IP & platform
   const newSession: RefreshTokenSession = {
     tokenHash: hashToken(newTokenRaw),
     createdAt: now,
     expiresAt: now + expiresInDays * 24 * 60 * 60 * 1000,
     ip: clientInfo.ip || tokenMatched.ip || "",
-    userAgent: clientInfo.userAgent || tokenMatched.userAgent || "unknown",
+    platform: clientInfo.platform !== "unknown" ? clientInfo.platform : sessionPlatform,
     ...(clientInfo.deviceId || tokenMatched.deviceId
       ? { deviceId: clientInfo.deviceId || tokenMatched.deviceId }
       : {}),

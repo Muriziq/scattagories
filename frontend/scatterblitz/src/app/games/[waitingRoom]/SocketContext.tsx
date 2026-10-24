@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { getAccessToken } from "../../accessToken";
+import { SOCKET_URL } from "../../../config/api";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -18,24 +19,26 @@ const SocketContext = createContext<SocketContextType>({
   disconnectSocket: () => {},
 });
 
+// Provides a singleton Socket.IO client instance across lobby and game routes
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
+  // Connects or re-authenticates the socket using the current access token
   const connectSocket = async (): Promise<Socket | null> => {
-    
+    // Reuse existing active socket if already connected
     if (socketRef.current) {
       if (socketRef.current.connected) {
         return socketRef.current;
       }
       socketRef.current.disconnect();
     }
+
     const token = await getAccessToken();
     if (!token) return null;
 
-
-    const newSocket = io("http://localhost:5000", {
+    const newSocket = io(SOCKET_URL, {
       auth: { token },
       autoConnect: true,
     });
@@ -54,6 +57,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     return newSocket;
   };
 
+  // Explicitly disconnects and clears the socket reference
   const disconnectSocket = () => {
     if (socketRef.current) {
       socketRef.current.disconnect();
@@ -63,6 +67,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Clean up socket connection on unmount
   useEffect(() => {
     return () => {
       disconnectSocket();

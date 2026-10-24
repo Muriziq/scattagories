@@ -1,13 +1,14 @@
 "use client";
 import { useEffect } from "react";
+import { API_BASE_URL } from "../config/api";
 
-let accessToken: string = ""
-let previousDate: number = 0
-let duration: number = 15 * 60 * 1000
-let refreshPromise: Promise<boolean> | null = null;
+// In-memory access token storage (avoids local storage XSS vulnerabilities)
+let accessToken: string = "";
+let refreshPromise: Promise<string> | null = null;
 
 export let userData: Record<string, any> = {};
 
+// Component that triggers initial access token retrieval on application mount
 export function TokenInitializer() {
     useEffect(() => {
         getAccessToken();
@@ -15,29 +16,38 @@ export function TokenInitializer() {
     return null;
 }
 
-export function saveAccessToken(val: string, date: number) {
-    accessToken = val
-    previousDate = date
+export function saveAccessToken(val: string) {
+    accessToken = val;
 }
 
+export function clearAccessToken() {
+    accessToken = "";
+    userData = {};
+}
+
+// Retrieves or initializes a persistent device identifier stored in localStorage
 export function getDeviceId(): string {
     if (typeof window === "undefined") return "";
     let id = localStorage.getItem("scatterblitz_device_id");
     if (!id) {
-        id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+        id = typeof crypto !== "undefined" && crypto.randomUUID 
+            ? crypto.randomUUID() 
+            : Math.random().toString(36).substring(2) + Date.now().toString(36);
         localStorage.setItem("scatterblitz_device_id", id);
     }
     return id;
 }
 
-async function requestAccessToken(): Promise<boolean> {
+// Requests a fresh access token from the backend refresh endpoint using HTTP-only cookies
+export async function requestAccessToken(): Promise<string> {
+    // Reuse ongoing refresh request if already in-flight to prevent race conditions
     if (refreshPromise) {
         return refreshPromise;
     }
 
     refreshPromise = (async () => {
         try {
-            const response = await fetch("http://localhost:5000/refresh/", {
+            const response = await fetch(`${API_BASE_URL}/refresh/`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -49,17 +59,17 @@ async function requestAccessToken(): Promise<boolean> {
             const data = await response.json();
             if (!response.ok) {
                 accessToken = "";
-                previousDate = Date.now();
-                return false;
+                return "";
             }
-            saveAccessToken(data.accessToken, data.accessTokenDate || Date.now());
+            saveAccessToken(data.accessToken || "");
             if (data?.user) {
                 updateUserData(data.user);
             }
-            return true;
+            return data.accessToken || "";
         } catch (err) {
             console.log("Error requesting access token:", err);
-            return false;
+            accessToken = "";
+            return "";
         } finally {
             refreshPromise = null;
         }
@@ -68,18 +78,55 @@ async function requestAccessToken(): Promise<boolean> {
     return refreshPromise;
 }
 
-
+// Returns the cached in-memory access token, or requests a new one if empty
 export async function getAccessToken(): Promise<string> {
-    if (Date.now() - previousDate < duration && accessToken !== "") {
-        return accessToken;
-    } else {
-        await requestAccessToken();
+    if (accessToken) {
         return accessToken;
     }
+    return await requestAccessToken();
 }
+
+/**
+ * Authenticated fetch wrapper:
+ * Injects Authorization header and automatically retries once if backend returns 439 (token expired)
+ */
+export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+    let token = await getAccessToken();
+
+    const headers = new Headers(options.headers || {});
+    if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+    }
+    if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
+        headers.set("Content-Type", "application/json");
+    }
+
+    let response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: "include",
+    });
+
+    // If backend returns status 439, refresh access token and retry the original request once
+    if (response.status === 439) {
+        const newToken = await requestAccessToken();
+        if (newToken) {
+            headers.set("Authorization", `Bearer ${newToken}`);
+            response = await fetch(url, {
+                ...options,
+                headers,
+                credentials: "include",
+            });
+        }
+    }
+
+    return response;
+}
+
+// Creates an anonymous guest session and returns the temporary access token
 export async function createNewGuest(): Promise<string> {
     try {
-        const response = await fetch("http://localhost:5000/user/guest-login", {
+        const response = await fetch(`${API_BASE_URL}/user/guest-login`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -93,7 +140,7 @@ export async function createNewGuest(): Promise<string> {
         }
         const data = await response.json();
         if (data?.accessToken) {
-            saveAccessToken(data.accessToken, data.accessTokenDate || Date.now());
+            saveAccessToken(data.accessToken);
             if (data?.user) {
                 updateUserData(data.user);
             }
@@ -107,8 +154,8 @@ export async function createNewGuest(): Promise<string> {
 }
 
 export function updateUserData(obj: Record<string, any>) {
-        userData = { ...userData, ...obj };
-    }
+    userData = { ...userData, ...obj };
+}
 
 export function getUserData(): Record<string, any> {
     return userData;

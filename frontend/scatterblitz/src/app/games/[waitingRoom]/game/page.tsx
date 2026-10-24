@@ -77,6 +77,11 @@ function GameContent() {
   const [selectionTargetEndTime, setSelectionTargetEndTime] = useState<number | null>(null);
   const [sprintTargetEndTime, setSprintTargetEndTime] = useState<number | null>(null);
 
+  // Latency & clock skew offset (clientNow - estimatedServerNow)
+  const [serverOffset, setServerOffset] = useState<number>(0);
+  const serverOffsetRef = useRef<number>(0);
+  serverOffsetRef.current = serverOffset;
+
   const maxTimeRef = useRef<number>(60);
   maxTimeRef.current = maxTimePerRound;
   const selectionLimitRef = useRef<number>(15);
@@ -115,11 +120,13 @@ function GameContent() {
         return;
       }
 
-      // Emit game:join on entry
-      activeSocket.emit("game:join", roomId);
+      // Sync player presence and room state on initial mount, sending client timestamp for NTP latency calculation
+      const clientSendTime = Date.now();
+      activeSocket.emit("game:join", { roomId, clientSendTime });
 
-      // Listeners
+      // Reset listeners to avoid duplicate subscriptions
       activeSocket.off("room:state");
+      activeSocket.off("room:participants");
       activeSocket.off("turn:change");
       activeSocket.off("letter:active");
       activeSocket.off("round:ended");
@@ -127,7 +134,31 @@ function GameContent() {
       activeSocket.off("answer:success");
       activeSocket.off("error");
 
+      // Updates participant roster and scores when emitted by server
+      activeSocket.on("room:participants", (data: any) => {
+        if (data?.participants) {
+          setParticipants(data.participants);
+        } else if (Array.isArray(data)) {
+          setParticipants(data);
+        }
+      });
+
+      // Synchronizes full game room snapshot upon entering or reconnecting
       activeSocket.on("room:state", (data: any) => {
+        // Calculate network round trip time (RTT) and one-way latency to sync clocks precisely
+        if (data.serverTime && data.clientSendTime) {
+          const t1 = Date.now();
+          const rtt = Math.max(0, t1 - data.clientSendTime);
+          const oneWayLatency = rtt / 2;
+          const estimatedServerNow = data.serverTime + oneWayLatency;
+          const calculatedOffset = t1 - estimatedServerNow;
+          setServerOffset(calculatedOffset);
+          serverOffsetRef.current = calculatedOffset;
+        }
+
+        const currentOffset = serverOffsetRef.current;
+        const synchronizedNow = Date.now() - currentOffset;
+
         if (data.participants) setParticipants(data.participants);
         if (data.allLetters) setAllLetters(data.allLetters);
         if (data.availableLetters) setAvailableLetters(data.availableLetters);
@@ -155,32 +186,36 @@ function GameContent() {
             ? data.selectionTimeLimit
             : selectionLimitRef.current;
 
+        // Synchronize selection countdown target timestamp using synchronized server time
         if (data.selectionStartTime) {
           const selTarget = data.selectionStartTime + selLimit * 1000;
           setSelectionTargetEndTime(selTarget);
           setSelectionTimerSeconds(
-            Math.max(0, Math.ceil((selTarget - Date.now()) / 1000)),
+            Math.max(0, Math.ceil((selTarget - synchronizedNow) / 1000)),
           );
         } else if (data.selectionTimeLimit !== undefined) {
-          const selTarget = Date.now() + selLimit * 1000;
+          const selTarget = synchronizedNow + selLimit * 1000;
           setSelectionTargetEndTime(selTarget);
           setSelectionTimerSeconds(selLimit);
         }
 
+        // Synchronize sprint round countdown target timestamp using synchronized server time
         if (data.roundStartTime) {
           const sprintTarget = data.roundStartTime + maxTime * 1000;
           setSprintTargetEndTime(sprintTarget);
           setTimerSeconds(
-            Math.max(0, Math.ceil((sprintTarget - Date.now()) / 1000)),
+            Math.max(0, Math.ceil((sprintTarget - synchronizedNow) / 1000)),
           );
         } else if (data.maxTimePerRound !== undefined) {
-          const sprintTarget = Date.now() + maxTime * 1000;
+          const sprintTarget = synchronizedNow + maxTime * 1000;
           setSprintTargetEndTime(sprintTarget);
           setTimerSeconds(maxTime);
         }
       });
 
+      // Starts letter selection phase for the next player in round-robin
       activeSocket.on("turn:change", (data: any) => {
+        const synchronizedNow = Date.now() - serverOffsetRef.current;
         const turnPlayer =
           typeof data === "object" ? data.usersTurn : String(data || "");
         const limit =
@@ -190,7 +225,7 @@ function GameContent() {
         const startTime =
           typeof data === "object" && data.selectionStartTime
             ? data.selectionStartTime
-            : Date.now();
+            : synchronizedNow;
 
         selectionLimitRef.current = limit;
         setSelectionTimeLimit(limit);
@@ -200,7 +235,7 @@ function GameContent() {
         setSelectionTargetEndTime(selTarget);
         const remaining = Math.max(
           0,
-          Math.ceil((selTarget - Date.now()) / 1000),
+          Math.ceil((selTarget - synchronizedNow) / 1000),
         );
         setSelectionTimerSeconds(remaining);
 
@@ -210,13 +245,15 @@ function GameContent() {
         setHasSubmitted(false);
       });
 
+      // Begins active sprint round once a letter has been selected
       activeSocket.on("letter:active", (data: any) => {
+        const synchronizedNow = Date.now() - serverOffsetRef.current;
         const letterStr =
           typeof data === "object" ? data.letter : String(data || "");
         const startTime =
           typeof data === "object" && data.roundStartTime
             ? data.roundStartTime
-            : Date.now();
+            : synchronizedNow;
         const roundTime =
           typeof data === "object" && data.maxTimePerRound
             ? data.maxTimePerRound
@@ -229,7 +266,7 @@ function GameContent() {
         setSprintTargetEndTime(sprintTarget);
         const remaining = Math.max(
           0,
-          Math.ceil((sprintTarget - Date.now()) / 1000),
+          Math.ceil((sprintTarget - synchronizedNow) / 1000),
         );
 
         setActiveLetter(letterStr);
@@ -241,11 +278,13 @@ function GameContent() {
         setHasSubmitted(false);
       });
 
+      // Triggers recap phase and auto-submits current answers
       activeSocket.on("round:ended", ({ reason }: { reason: string }) => {
         setStatus("recap");
         submitAnswers(activeSocket);
       });
 
+      // Finalizes match and displays final scores and submission breakdown
       activeSocket.on("game:ended", (data: any) => {
         setStatus("ended");
         if (data) {
@@ -283,14 +322,15 @@ function GameContent() {
     setup();
   }, [roomId]);
 
-  // Accurate timer countdown effect during letter_selection using target timestamp
+  // Accurate timer countdown effect during letter_selection using target timestamp adjusted for latency/clock offset
   useEffect(() => {
     if (status !== "letter_selection" || !selectionTargetEndTime) return;
 
     const updateSelectionTimer = () => {
+      const synchronizedNow = Date.now() - serverOffsetRef.current;
       const remaining = Math.max(
         0,
-        Math.ceil((selectionTargetEndTime - Date.now()) / 1000),
+        Math.ceil((selectionTargetEndTime - synchronizedNow) / 1000),
       );
       setSelectionTimerSeconds(remaining);
     };
@@ -299,16 +339,17 @@ function GameContent() {
     const interval = setInterval(updateSelectionTimer, 200);
 
     return () => clearInterval(interval);
-  }, [status, selectionTargetEndTime]);
+  }, [status, selectionTargetEndTime, serverOffset]);
 
-  // Accurate timer countdown effect during active_sprint using target timestamp
+  // Accurate timer countdown effect during active_sprint using target timestamp adjusted for latency/clock offset
   useEffect(() => {
     if (status !== "active_sprint" || !sprintTargetEndTime) return;
 
     const updateSprintTimer = () => {
+      const synchronizedNow = Date.now() - serverOffsetRef.current;
       const remaining = Math.max(
         0,
-        Math.ceil((sprintTargetEndTime - Date.now()) / 1000),
+        Math.ceil((sprintTargetEndTime - synchronizedNow) / 1000),
       );
       setTimerSeconds(remaining);
 
@@ -323,16 +364,32 @@ function GameContent() {
     const interval = setInterval(updateSprintTimer, 200);
 
     return () => clearInterval(interval);
-  }, [status, sprintTargetEndTime, socket]);
+  }, [status, sprintTargetEndTime, socket, serverOffset]);
 
-  // Helper to submit answers
-  const submitAnswers = (activeSocket: any) => {
-    if (!activeSocket || hasSubmitted) return;
+  // Helper to submit answers (used for auto-sync and final round submission)
+  const submitAnswers = (activeSocket: any, isFinal: boolean = true) => {
+    if (!activeSocket) return;
     activeSocket.emit("answer:submit", {
       roomID: roomId,
       answers: answersRef.current,
     });
-    setHasSubmitted(true);
+    if (isFinal) {
+      setHasSubmitted(true);
+    }
+  };
+
+  // Debounced continuous auto-sync: sends draft answers after 800ms of inactivity so answers are never lost
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const queueAnswerSync = (updatedAnswers: Record<string, string>) => {
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => {
+      if (socket && status === "active_sprint") {
+        socket.emit("answer:submit", {
+          roomID: roomId,
+          answers: updatedAnswers,
+        });
+      }
+    }, 800);
   };
 
   // User chooses a letter (when it's their turn)
@@ -345,10 +402,10 @@ function GameContent() {
     socket.emit("letter:select", { roomID: roomId, letter });
   };
 
-  // User clicks STOP ROUND (only available for turn player)
+  // User clicks STOP ROUND (available for turn player or any active player on computer turn)
   const handleStopRound = () => {
     if (!socket) return;
-    if (currentUser?.username !== usersTurn) {
+    if (!canStopRound) {
       setError("Only the current turn player can stop the round early!");
       return;
     }
@@ -378,7 +435,8 @@ function GameContent() {
   };
 
   const isYourTurn =
-    currentUser?.username && usersTurn && currentUser.username === usersTurn;
+    Boolean(currentUser?.username && usersTurn && currentUser.username === usersTurn);
+  const canStopRound = isYourTurn || usersTurn === "computer";
 
   return (
     <main className={styles.main}>
@@ -477,10 +535,12 @@ function GameContent() {
                     placeholder={`Type a ${category} starting with ${activeLetter}...`}
                     value={answers[category] || ""}
                     onChange={(e) => {
-                      setAnswers({
+                      const updated = {
                         ...answers,
                         [category]: e.target.value,
-                      });
+                      };
+                      setAnswers(updated);
+                      queueAnswerSync(updated);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -494,7 +554,7 @@ function GameContent() {
                 </label>
               ))}
             </div>
-            {isYourTurn && (
+            {canStopRound && (
               <button
                 type="button"
                 className={styles.stopRoundBtn}

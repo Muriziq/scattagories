@@ -2,15 +2,35 @@ import express, { Response, Router, Request } from "express";
 import { z } from "zod";
 import dotenv from "dotenv";
 import { verifyAccessToken, AuthRequest } from "../middleware/tokens";
-import { GameRoom, activeRooms, availableCategories } from "../model/gamesModel";
+import { GameRoom, publicRooms, privateRooms, getTotalRoomsCount, availableCategories } from "../model/gamesModel";
 import crypto from "crypto";
 
 dotenv.config();
 const router = Router();
 
-const generateRoomCode = () => crypto.randomBytes(3).toString("hex").toUpperCase().slice(0, 5);
+// Unambiguous 32-character alphanumeric set (omits easily confused characters 0, O, 1, I)
+const ROOM_CODE_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
-// Zod Schema for Creating a Room
+// Incremental sequence counter for rooms created during server lifetime
+let roomSequence = 1;
+
+// Bijective permutation mapping each increment of roomSequence to a unique, randomized 5-character string
+// Guarantees zero collisions within a 33.5 million room cycle without needing retry loops
+const generateUniqueRoomCode = (): string => {
+  // Prime multiplier and offset create a pseudo-random permutation with full period modulo 33,554,432 (32^5)
+  const n = (roomSequence * 104729 + 7919) % 33554432;
+  roomSequence++;
+
+  let val = n;
+  let code = "";
+  for (let i = 0; i < 5; i++) {
+    code += ROOM_CODE_CHARS[val % 32];
+    val = Math.floor(val / 32);
+  }
+  return code;
+};
+
+// Validation schema for room creation
 const createRoomSchema = z
   .object({
     isPublic: z.boolean(),
@@ -18,8 +38,10 @@ const createRoomSchema = z
     maxPlayers: z.number().min(2).max(10).default(5),
     maxTimePerRound: z.number().min(10).max(120).default(60),
     categories: z.array(z.enum(availableCategories as unknown as [string, ...string[]])).min(1, "At least one category is required"),
+    allowComputerHelper: z.boolean().default(true),
   })
   .refine(
+    // Enforce password requirement when room is set to private
     (data) => data.isPublic || (!data.isPublic && typeof data.password === "string" && data.password.trim() !== ""),
     {
       message: "Private rooms must have a password.",
@@ -27,16 +49,18 @@ const createRoomSchema = z
     }
   );
 
-// Zod Schema for Joining a Room
+// Validation schema for joining a room
 const joinRoomSchema = z.object({
   roomId: z.string().length(5, "Room code must be exactly 5 characters"),
   password: z.string().optional().nullable(),
 });
 
-router.get("/",(req:Request,res:Response)=>{
-  return res.status(200).json({categories:availableCategories})
-})
-// 1. CREATE ROOM
+// Returns the list of standard game categories available for selection
+router.get("/", (req: Request, res: Response) => {
+  return res.status(200).json({ categories: availableCategories });
+});
+
+// 1. CREATE ROOM: Initializes an in-memory game room and assigns creator as host
 router.post("/room/create", verifyAccessToken, async (req: AuthRequest, res: Response) => {
   try {
     const validation = createRoomSchema.safeParse(req.body);
@@ -46,41 +70,45 @@ router.post("/room/create", verifyAccessToken, async (req: AuthRequest, res: Res
 
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
     const hostId = req.user.id;
+    const hostUsername = req.user.username;
 
+    const { isPublic, password, maxPlayers, maxTimePerRound, categories, allowComputerHelper } = validation.data;
 
-
-    const { isPublic, password, maxPlayers, maxTimePerRound, categories } = validation.data;
-
-    // Generate unique 5-letter code
-    let roomId = generateRoomCode();
-    while (activeRooms.has(roomId)) {
-      roomId = generateRoomCode();
+    // Reset counter if there are currently no active rooms
+    if (getTotalRoomsCount() === 0) {
+      roomSequence = 1;
     }
 
-    if (!isPublic) {
-      if (!password) return res.status(400).json({ message: "Password is required for private games" });
+    // Instant, collision-free room code generated in O(1) time without retry loops
+    const roomId = generateUniqueRoomCode();
+
+    if (!isPublic && !password) {
+      return res.status(400).json({ message: "Password is required for private games" });
     }
 
-    // Instantiate new GameRoom
     const newRoom = new GameRoom(
       roomId,
+      hostUsername,
       hostId,
       maxPlayers,
       maxTimePerRound,
       password,
       isPublic,
-      categories
+      categories,
+      allowComputerHelper
     );
 
-    // Automatically add host as the first participant
-    newRoom.participants.set(hostId, {
-      socketId: "",
-      dbId: hostId,
-      displayName: req.user.username,
+    // Register host as the first participant keyed by username
+    newRoom.participants.set(hostUsername, {
       score: 0,
     });
 
-    activeRooms.set(roomId, newRoom);
+    // Store into the appropriate map based on room privacy
+    if (isPublic) {
+      publicRooms.set(roomId, newRoom);
+    } else {
+      privateRooms.set(roomId, newRoom);
+    }
 
     return res.status(201).json({ message: "Room created", roomId });
   } catch (error) {
@@ -89,30 +117,80 @@ router.post("/room/create", verifyAccessToken, async (req: AuthRequest, res: Res
   }
 });
 
-// 2. GET PUBLIC ROOMS
+// Validation schema for public lobby query parameters
+const publicRoomsQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  category: z.string().trim().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+// 2. GET PUBLIC ROOMS: Seamlessly browses publicRooms map with search filtering and pagination
 router.get("/rooms/public", (req: Request, res: Response) => {
   try {
-    const publicLobbies: any[] = [];
+    const queryValidation = publicRoomsQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      return res.status(400).json({ errors: queryValidation.error.format() });
+    }
 
-    activeRooms.forEach((room) => {
-      if (room.isPublic && room.status === "waiting" && room.participants.size < room.maxPlayers) {
-        publicLobbies.push({
-          roomId: room.id,
-          hostId: room.hostId,
-          playerCount: room.participants.size,
-          maxPlayers: room.maxPlayers,
-          createdAt: room.createdAt,
-          categories:room.categories
-        });
+    const { search, category, page, limit } = queryValidation.data;
+    const searchFilter = search?.toLowerCase();
+    const categoryFilter = category?.toLowerCase();
+
+    const matchingRooms: any[] = [];
+
+    // Directly iterates over the dedicated publicRooms map
+    for (const room of publicRooms.values()) {
+      // Only include lobbies that are still waiting and have available slots
+      if (room.status !== "waiting" || room.participants.size >= room.maxPlayers) {
+        continue;
       }
-    });
 
-    return res.status(200).json({ rooms: publicLobbies });
+      // Filter by room code or host username if search query is provided
+      if (searchFilter) {
+        const matchesCode = room.id.toLowerCase().includes(searchFilter);
+        const hostName = room.hostUsername?.toLowerCase() || "";
+        const matchesHost = hostName.includes(searchFilter);
+        if (!matchesCode && !matchesHost) continue;
+      }
+
+      // Filter by category if requested
+      if (categoryFilter) {
+        const hasCategory = room.categories.some((cat) => cat.toLowerCase().includes(categoryFilter));
+        if (!hasCategory) continue;
+      }
+
+      matchingRooms.push({
+        roomId: room.id,
+        hostUsername: room.hostUsername,
+        playerCount: room.participants.size,
+        maxPlayers: room.maxPlayers,
+        createdAt: room.createdAt,
+        categories: room.categories,
+      });
+    }
+
+    // Sort newest rooms first
+    matchingRooms.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Apply pagination
+    const totalCount = matchingRooms.length;
+    const startIndex = (page - 1) * limit;
+    const paginatedRooms = matchingRooms.slice(startIndex, startIndex + limit);
+
+    return res.status(200).json({
+      rooms: paginatedRooms,
+      pagination: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit) || 1,
+      },
+    });
   } catch (error) {
     console.error("Error fetching public rooms:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
-
 
 export default router;

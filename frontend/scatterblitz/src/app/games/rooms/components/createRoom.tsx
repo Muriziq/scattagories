@@ -13,7 +13,8 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import styles from "../rooms.module.css";
-import { getAccessToken, createNewGuest } from "../../../accessToken";
+import { getAccessToken, createNewGuest, authFetch } from "../../../accessToken";
+import { API_BASE_URL } from "../../../../config/api";
 import AuthModel from "../../authModels";
 
 export default function CreateRoom() {
@@ -24,10 +25,11 @@ export default function CreateRoom() {
   const [presetCategories, setPresetCategories] = useState<string[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
+  // Fetches available game categories on mount
   useEffect(() => {
     const getCategories = async () => {
       try {
-        const res = await fetch("http://localhost:5000/games/");
+        const res = await fetch(`${API_BASE_URL}/games/`);
         if (!res.ok) {
           setError("Server Error. Please reload.");
           return;
@@ -69,6 +71,7 @@ export default function CreateRoom() {
     }));
   };
 
+  // Toggles selected categories while enforcing at least one category selection
   const toggleCategory = (cat: string) => {
     if (categories.includes(cat)) {
       if (categories.length <= 1) return;
@@ -78,6 +81,7 @@ export default function CreateRoom() {
     }
   };
 
+  // Submits room creation request; triggers auth modal if user lacks valid session
   const createRoom = async () => {
     setError(null);
 
@@ -86,31 +90,28 @@ export default function CreateRoom() {
       return;
     }
 
+    // Enforce password requirement for private lobbies
     if (!settings.isPublic && !settings.password.trim()) {
       setError("Private rooms must have a password.");
       return;
     }
 
-    const accessToken = await getAccessToken();
-    if (!accessToken || accessToken === "") {
-      setLoading(false);
-      setShowAuthModal(true);
-      return;
-    }
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/games/room/create", {
+      const res = await authFetch(`${API_BASE_URL}/games/room/create`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
         body: JSON.stringify({ categories, ...settings }),
       });
 
       const data = await res.json();
+
+      // Show login/guest modal if token refresh fails or session is missing
+      if (res.status === 439 || res.status === 401) {
+        setLoading(false);
+        setShowAuthModal(true);
+        return;
+      }
 
       if (!res.ok) {
         if (data.errors?.password?._errors) {
@@ -134,6 +135,7 @@ export default function CreateRoom() {
     }
   };
 
+  // Creates an instant anonymous guest profile and proceeds to room creation
   const enterAsGuest = async () => {
     const guestToken = await createNewGuest();
     if (guestToken) {
