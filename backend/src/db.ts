@@ -21,4 +21,9 @@ pool.connect((err, client, release) => {
   release();
 });
 
+// Prevent unhandled errors on idle database clients from crashing the server process
+pool.on('error', (err) => {
+  console.error('Unexpected PostgreSQL idle client error:', err);
+});
+
 export default pool;

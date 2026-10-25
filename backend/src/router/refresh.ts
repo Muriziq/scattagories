@@ -64,7 +64,7 @@ router.get("/", async (req: Request, res: Response) => {
 
     // 3. Fetch active user record and session list
     const checkQuery = `
-      SELECT id, username, email, is_email_verified, refresh_tokens
+      SELECT id, username, email, is_email_verified, avatar_url, refresh_tokens
       FROM users
       WHERE id = $1 AND deleted_at IS NULL;
     `;
@@ -103,7 +103,7 @@ router.get("/", async (req: Request, res: Response) => {
     const updateRefreshQuery = `
       UPDATE users SET refresh_tokens = $1::jsonb
       WHERE id = $2 AND deleted_at IS NULL
-      RETURNING id, username, email, is_email_verified;
+      RETURNING id, username, email, is_email_verified, avatar_url;
     `;
     const updateRefresh = await pool.query(updateRefreshQuery, [
       JSON.stringify(updatedSessions),

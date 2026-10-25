@@ -25,6 +25,9 @@ import {
   clearGuestTokenCookie,
 } from "../utils/cookies";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
+import { uploadAvatar } from "../utils/upload";
+import fs from "fs";
+import path from "path";
 
 const router = express.Router();
 
@@ -75,7 +78,7 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
     const insertQuery = `
       INSERT INTO users (id, username, email, password_hash, is_email_verified, refresh_tokens)
       VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-      RETURNING id, username, email, is_email_verified;
+      RETURNING id, username, email, is_email_verified, avatar_url;
     `;
     const newUser = await pool.query(insertQuery, [
       userID,
@@ -127,7 +130,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
   try {
     // Query by either username or email, excluding soft-deleted accounts
     const checkQuery = `
-      SELECT id, username, email, password_hash, is_email_verified, deleted_at, refresh_tokens
+      SELECT id, username, email, password_hash, is_email_verified, avatar_url, deleted_at, refresh_tokens
       FROM users 
       WHERE (username = $1 OR email = $2) AND deleted_at IS NULL;
     `;
@@ -420,7 +423,7 @@ router.post("/convert-guest", authLimiter, async (req: Request, res: Response) =
     const insertQuery = `
       INSERT INTO users (id, username, email, password_hash, is_email_verified, refresh_tokens)
       VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-      RETURNING id, username, email, is_email_verified;
+      RETURNING id, username, email, is_email_verified, avatar_url;
     `;
     const newUser = await pool.query(insertQuery, [
       guestId,
@@ -461,6 +464,302 @@ router.post("/convert-guest", authLimiter, async (req: Request, res: Response) =
 
     console.error("Convert guest error:", error);
     return res.status(500).json({ message: "Server error converting account. Please try again later." });
+  }
+});
+
+// 11. GET USER PROFILE: Returns core profile details and aggregate career stats in a single unified query
+router.get("/profile", verifyAccessToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const profileQuery = `
+      SELECT 
+        u.id, 
+        u.username, 
+        u.email, 
+        u.is_email_verified, 
+        u.avatar_url, 
+        u.created_at,
+        COUNT(gp.id)::int AS total_games,
+        COALESCE(SUM(CASE WHEN gp.is_winner = TRUE THEN 1 ELSE 0 END), 0)::int AS total_wins,
+        COALESCE(MAX(gp.score), 0)::int AS high_score,
+        COALESCE(AVG(gp.score), 0)::numeric(10, 1) AS average_score
+      FROM users u
+      LEFT JOIN game_players gp ON gp.user_id = u.id
+      WHERE u.id = $1 AND u.deleted_at IS NULL
+      GROUP BY u.id;
+    `;
+
+    const result = await pool.query(profileQuery, [userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const row = result.rows[0];
+    const totalGames = row.total_games || 0;
+    const totalWins = row.total_wins || 0;
+    const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0;
+
+    return res.status(200).json({
+      user: {
+        id: row.id,
+        username: row.username,
+        email: row.email,
+        is_email_verified: row.is_email_verified,
+        avatar_url: row.avatar_url,
+        created_at: row.created_at,
+      },
+      stats: {
+        totalGames,
+        totalWins,
+        winRate,
+        highScore: row.high_score,
+        averageScore: Number(row.average_score) || 0,
+      },
+    });
+  } catch (error) {
+    console.error("Fetch profile error:", error);
+    return res.status(500).json({ message: "Server error fetching profile" });
+  }
+});
+
+// Validation schema for paginated match history queries
+const matchesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+  onlyWins: z.enum(["true", "false"]).optional(),
+});
+
+// 12. GET USER MATCH HISTORY: Dedicated paginated endpoint with optional win filtering
+router.get("/profile/matches", verifyAccessToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const queryValidation = matchesQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      return res.status(400).json({ errors: queryValidation.error.format() });
+    }
+
+    const { page, limit, onlyWins } = queryValidation.data;
+    const filterByWins = onlyWins === "true";
+
+    // Fetch paginated matches (fetch limit + 1 to determine if there is a next page)
+    const offset = (page - 1) * limit;
+    const matchesQuery = `
+      SELECT 
+        gp.game_id,
+        g.room_code,
+        gp.score,
+        gp.rank,
+        gp.is_winner,
+        g.categories,
+        g.total_rounds,
+        g.ended_at
+      FROM game_players gp
+      JOIN games g ON gp.game_id = g.id
+      WHERE gp.user_id = $1 ${filterByWins ? "AND gp.is_winner = TRUE" : ""}
+      ORDER BY g.ended_at DESC
+      LIMIT $2 OFFSET $3;
+    `;
+    const matchesResult = await pool.query(matchesQuery, [userId, limit + 1, offset]);
+    const hasMore = matchesResult.rows.length > limit;
+    const matches = hasMore ? matchesResult.rows.slice(0, limit) : matchesResult.rows;
+
+    return res.status(200).json({
+      matches,
+      pagination: {
+        page,
+        limit,
+        hasMore,
+      },
+    });
+  } catch (error) {
+    console.error("Fetch match history error:", error);
+    return res.status(500).json({ message: "Server error fetching match history" });
+  }
+});
+
+// 12. UPLOAD PROFILE AVATAR: Handles local file upload, purges previous avatar, and updates avatar_url
+router.post(
+  "/profile/avatar",
+  verifyAccessToken,
+  uploadAvatar.single("avatar"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      // 1. Retrieve existing avatar to remove older file from disk
+      const userQuery = `SELECT avatar_url FROM users WHERE id = $1 AND deleted_at IS NULL;`;
+      const userRes = await pool.query(userQuery, [userId]);
+      const oldAvatarUrl = userRes.rows[0]?.avatar_url;
+
+      if (oldAvatarUrl && oldAvatarUrl.startsWith("/uploads/avatars/")) {
+        const oldFilePath = path.join(process.cwd(), oldAvatarUrl);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlink(oldFilePath, (err) => {
+            if (err) console.error("Error removing old avatar:", err);
+          });
+        }
+      }
+
+      // 2. Relative static public URL
+      const relativeUrl = `/uploads/avatars/${req.file.filename}`;
+
+      // 3. Update database record
+      const updateQuery = `
+        UPDATE users
+        SET avatar_url = $1, modified_at = CURRENT_TIMESTAMP
+        WHERE id = $2 AND deleted_at IS NULL
+        RETURNING id, username, email, is_email_verified, avatar_url;
+      `;
+      const updateResult = await pool.query(updateQuery, [relativeUrl, userId]);
+      if (updateResult.rows.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const updatedUser = updateResult.rows[0];
+      const newAccessToken = signAccessToken(updatedUser);
+
+      return res.status(200).json({
+        message: "Profile avatar updated successfully",
+        avatar_url: relativeUrl,
+        user: updatedUser,
+        accessToken: newAccessToken,
+      });
+    } catch (error) {
+      console.error("Upload avatar error:", error);
+      return res.status(500).json({ message: "Server error uploading avatar" });
+    }
+  }
+);
+
+// 14. UPDATE PROFILE DETAILS: Updates username and/or email (requires password to change email)
+const updateProfileSchema = z
+  .object({
+    username: z.string().min(3).max(20).trim().toLowerCase().optional(),
+    email: z.string().email().trim().toLowerCase().optional(),
+    currentPassword: z.string().optional(),
+  })
+  .refine(
+    (data) => !data.email || (data.email && typeof data.currentPassword === "string" && data.currentPassword.length > 0),
+    {
+      message: "Current password is required to change your email address.",
+      path: ["currentPassword"],
+    }
+  );
+
+router.patch("/profile", verifyAccessToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const parseResult = updateProfileSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ message: "Invalid data", error: parseResult.error });
+    }
+
+    const { username, email, currentPassword } = parseResult.data;
+    if (!username && !email) {
+      return res.status(400).json({ message: "Nothing to update" });
+    }
+
+    // 1. Fetch current user row to verify password and compare existing values
+    const userQuery = `
+      SELECT id, username, email, password_hash, avatar_url, is_email_verified
+      FROM users 
+      WHERE id = $1 AND deleted_at IS NULL;
+    `;
+    const userResult = await pool.query(userQuery, [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const currentUser = userResult.rows[0];
+
+    // 2. If email is changing, verify current password
+    let isEmailChanging = false;
+    if (email && email !== currentUser.email) {
+      isEmailChanging = true;
+      const isPasswordValid = await bcrypt.compare(currentPassword!, currentUser.password_hash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Incorrect current password" });
+      }
+    }
+
+    // 3. Build dynamic SQL update statements
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (username && username !== currentUser.username) {
+      updates.push(`username = $${paramIndex++}`);
+      values.push(username);
+    }
+
+    if (isEmailChanging) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(email);
+      updates.push(`is_email_verified = FALSE`);
+    }
+
+    if (updates.length === 0) {
+      return res.status(200).json({
+        message: "No changes detected",
+        user: {
+          id: currentUser.id,
+          username: currentUser.username,
+          email: currentUser.email,
+          is_email_verified: currentUser.is_email_verified,
+          avatar_url: currentUser.avatar_url,
+        },
+      });
+    }
+
+    updates.push(`modified_at = CURRENT_TIMESTAMP`);
+    values.push(userId);
+
+    const updateQuery = `
+      UPDATE users
+      SET ${updates.join(", ")}
+      WHERE id = $${paramIndex} AND deleted_at IS NULL
+      RETURNING id, username, email, is_email_verified, avatar_url;
+    `;
+    const updateResult = await pool.query(updateQuery, values);
+    const updatedUser = updateResult.rows[0];
+
+    // 4. If email changed, dispatch verification link to new email address
+    if (isEmailChanging) {
+      const verifyToken = signVerifyToken({ id: updatedUser.id });
+      await sendVerificationEmail(updatedUser.username, updatedUser.email, verifyToken);
+    }
+
+    const newAccessToken = signAccessToken(updatedUser);
+
+    return res.status(200).json({
+      message: isEmailChanging
+        ? "Email updated! Please check your new inbox to verify."
+        : "Profile updated successfully",
+      user: updatedUser,
+      accessToken: newAccessToken,
+    });
+  } catch (error: any) {
+    if (error.code === "23505") {
+      if (error.detail?.includes("username")) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      if (error.detail?.includes("email")) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      return res.status(400).json({ message: "Username or email already in use" });
+    }
+    console.error("Update profile error:", error);
+    return res.status(500).json({ message: "Server error updating profile" });
   }
 });
 

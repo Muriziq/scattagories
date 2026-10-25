@@ -8,8 +8,11 @@ import refresh from "./router/refresh";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import games from "./router/games";
-import { getRoom, publicRooms, privateRooms } from "./model/gamesModel";
+import pool from "./db";
+import { getRoom, publicRooms, privateRooms, getTotalRoomsCount } from "./model/gamesModel";
 import { verifyAccessToken, UserPayload } from "./utils/jwt";
+
+import path from "path";
 
 dotenv.config();
 
@@ -37,10 +40,10 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
 };
 
-// General API rate limiter (100 requests per 15 minutes)
+// General API rate limiter (300 requests per 15 minutes for smooth UI navigation and search)
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -49,8 +52,10 @@ export const generalLimiter = rateLimit({
 });
 
 // Middlewares
-app.use(generalLimiter);
 app.use(cors(corsOptions));
+// Serve static uploads with browser cache headers (exempt from general rate limiter)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), { maxAge: "1d" }));
+app.use(generalLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -58,15 +63,58 @@ app.use("/user", register);
 app.use("/games", games);
 app.use("/refresh", refresh);
 
-// Health check endpoint
+// Comprehensive database and server health check endpoint
+app.get("/health", async (req, res) => {
+  const startTime = Date.now();
+  try {
+    // Probe PostgreSQL connection and measure query response latency
+    await pool.query("SELECT 1 AS healthy;");
+    const dbLatencyMs = Date.now() - startTime;
+
+    return res.status(200).json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.floor(process.uptime()),
+      database: {
+        status: "connected",
+        latencyMs: dbLatencyMs,
+        pool: {
+          totalClients: pool.totalCount,
+          idleClients: pool.idleCount,
+          waitingRequests: pool.waitingCount,
+        },
+      },
+      activeRoomsCount: getTotalRoomsCount(),
+      memory: {
+        rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+        heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      },
+    });
+  } catch (error: any) {
+    const dbLatencyMs = Date.now() - startTime;
+    console.error("Health check failure:", error);
+    return res.status(503).json({
+      status: "degraded",
+      timestamp: new Date().toISOString(),
+      database: {
+        status: "disconnected",
+        latencyMs: dbLatencyMs,
+        error: error.message || "Failed to connect to PostgreSQL database",
+      },
+      activeRoomsCount: getTotalRoomsCount(),
+    });
+  }
+});
+
+// Root welcome route
 app.get("/", (req, res) => {
-  res.json({ message: "Connected to Scatterblitz Backend" });
+  res.json({ message: "Scatterblitz API is running. Check /health for database and system metrics." });
 });
 
 // Global Express error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("Unhandled express error:", err);
-  res.status(500).json({ message:  "Internal Server Error" });
+  res.status(500).json({ message: "Internal Server Error" });
 });
 
 // Socket.IO Server Setup
@@ -104,9 +152,32 @@ io.use((socket: AuthenticatedSocket, next) => {
   }
 });
 
+// Per-socket event rate tracker (mitigates socket event flood attacks: max 30 events/sec per connection)
+const socketEventTracker = new Map<string, { count: number; resetTime: number }>();
+
 // Socket.IO Connection and Game Event Handlers
 io.on("connection", (socket: AuthenticatedSocket) => {
   console.log(`Socket connected: ${socket.id}`);
+
+  // Socket flood protection middleware: throttles rapid packet flooding
+  socket.use(([event], next) => {
+    const now = Date.now();
+    let tracker = socketEventTracker.get(socket.id);
+
+    if (!tracker || now > tracker.resetTime) {
+      tracker = { count: 1, resetTime: now + 1000 };
+      socketEventTracker.set(socket.id, tracker);
+      return next();
+    }
+
+    tracker.count++;
+    if (tracker.count > 30) {
+      console.warn(`[Socket Throttled] Socket ${socket.id} exceeded event rate limit on '${event}'`);
+      return socket.emit("error", { message: "Too many socket requests. Please slow down.", type: "rate-limit" });
+    }
+
+    next();
+  });
 
   // Handles joining or re-joining a room lobby
   socket.on("room:join", (data: { roomId: string; password?: string }) => {
@@ -304,6 +375,8 @@ io.on("connection", (socket: AuthenticatedSocket) => {
 
   // Handles disconnect without disrupting active games or page refreshes
   socket.on("disconnect", () => {
+    socketEventTracker.delete(socket.id);
+
     if (socket.user) {
       const username = socket.user.username;
       console.log(`Socket disconnected: ${username} (${socket.id})`);

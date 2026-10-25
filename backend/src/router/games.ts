@@ -1,12 +1,23 @@
 import express, { Response, Router, Request } from "express";
 import { z } from "zod";
 import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
+import pool from "../db";
 import { verifyAccessToken, AuthRequest } from "../middleware/tokens";
-import { GameRoom, publicRooms, privateRooms, getTotalRoomsCount, availableCategories } from "../model/gamesModel";
+import { GameRoom, publicRooms, privateRooms, getRoom, getTotalRoomsCount, availableCategories } from "../model/gamesModel";
 import crypto from "crypto";
 
 dotenv.config();
 const router = Router();
+
+// Rate limiter for room creation to prevent memory spamming (15 rooms per 10 minutes)
+const roomCreationLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many rooms created recently, please try again in a few minutes." },
+});
 
 // Unambiguous 32-character alphanumeric set (omits easily confused characters 0, O, 1, I)
 const ROOM_CODE_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -60,8 +71,8 @@ router.get("/", (req: Request, res: Response) => {
   return res.status(200).json({ categories: availableCategories });
 });
 
-// 1. CREATE ROOM: Initializes an in-memory game room and assigns creator as host
-router.post("/room/create", verifyAccessToken, async (req: AuthRequest, res: Response) => {
+// 1. CREATE ROOM: Initializes an in-memory game room and assigns creator as host (rate-limited)
+router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const validation = createRoomSchema.safeParse(req.body);
     if (!validation.success) {
@@ -189,6 +200,58 @@ router.get("/rooms/public", (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Error fetching public rooms:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// 3. GET ROOM DETAILS: Checks room status, privacy, and player capacity before joining
+router.get("/room/:roomId", (req: Request, res: Response) => {
+  const rawRoomId = req.params.roomId;
+  const roomId = typeof rawRoomId === "string" ? rawRoomId.toUpperCase() : undefined;
+  if (!roomId || roomId.length !== 5) {
+    return res.status(400).json({ message: "Invalid room code format" });
+  }
+
+  const room = getRoom(roomId);
+  if (!room) {
+    return res.status(404).json({ message: "Room not found or has expired" });
+  }
+
+  return res.status(200).json({
+    roomId: room.id,
+    isPublic: room.isPublic,
+    hasPassword: Boolean(!room.isPublic && room.password),
+    status: room.status,
+    playerCount: room.participants.size,
+    maxPlayers: room.maxPlayers,
+    hostUsername: room.hostUsername,
+    categories: room.categories,
+  });
+});
+
+// 4. GET GLOBAL LEADERBOARD: Returns top players ranked by wins and total score
+router.get("/leaderboard", async (req: Request, res: Response) => {
+  try {
+    const leaderboardQuery = `
+      SELECT 
+        u.id,
+        u.username,
+        u.avatar_url,
+        COUNT(gp.id)::int AS matches_played,
+        COALESCE(SUM(CASE WHEN gp.is_winner = TRUE THEN 1 ELSE 0 END), 0)::int AS total_wins,
+        COALESCE(SUM(gp.score), 0)::int AS total_score,
+        COALESCE(MAX(gp.score), 0)::int AS high_score
+      FROM users u
+      JOIN game_players gp ON gp.user_id = u.id
+      WHERE u.deleted_at IS NULL
+      GROUP BY u.id
+      ORDER BY total_wins DESC, total_score DESC
+      LIMIT 20;
+    `;
+    const result = await pool.query(leaderboardQuery);
+    return res.status(200).json({ leaderboard: result.rows });
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 });

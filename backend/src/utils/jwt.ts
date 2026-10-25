@@ -6,6 +6,7 @@ export interface UserPayload {
   username: string;
   email?: string;
   is_email_verified?: boolean;
+  avatar_url?: string | null;
   role?: string;
 }
 

@@ -15,6 +15,7 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     is_email_verified BOOLEAN DEFAULT FALSE,
+    avatar_url VARCHAR(255) DEFAULT NULL,
     refresh_tokens JSONB DEFAULT '[]'::jsonb,
     deleted_at TIMESTAMPTZ DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
