@@ -1,77 +1,34 @@
 .main {
+    position: relative;
     padding: 2rem;
-    height: 100vh;
+    min-height: 100vh;
     color: #f7f3ed;
     background: var(--bg-dark);
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
 }
 
 .cardContainer {
+    position: relative;
+    z-index: 1;
     display: flex;
-    flex-direction: row;
-    height: 100%;
+    justify-content: center;
+    align-items: center;
     width: 100%;
-    max-width: 1200px;
-    max-height: 900px;
-    border-radius: 2rem;
-    overflow: hidden;
-
 }
-
-.tabSection {
-    composes: geoTabSection from global;
-    width: 500px;
-}
-
-.tabButtons {
-    position: absolute;
-    right: 0;
-    top: 30%;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Tab Background Geometric Art composed from global */
-.sectionStyle1 { composes: geoSectionStyle1 from global; }
-.sectionStyle2 { composes: geoSectionStyle2 from global; }
-.sectionStyle3 { composes: geoSectionStyle3 from global; }
-.sectionStyle4 { composes: geoSectionStyle4 from global; }
-.tabButton { composes: geoTabButton from global; }
-.activeTab { composes: geoActiveTab from global; }
-
 
 .cardWrapper {
-    flex: 1;
-    height: 100%;
-    background-color: #160a08;
+    width: 100%;
+    background-color: transparent;
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.5rem;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--safety-orange) rgba(0, 0, 0, 0.2);
-}
-
-.cardWrapper::-webkit-scrollbar {
-    width: 6px;
-}
-
-.cardWrapper::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-}
-
-.cardWrapper::-webkit-scrollbar-thumb {
-    background: var(--safety-orange);
-    border-radius: 4px;
-}
-
-.cardWrapper::-webkit-scrollbar-thumb:hover {
-    background: var(--blood-orange);
+    padding: 1.5rem 0;
+    box-shadow: none;
 }
 
 .card {
@@ -79,7 +36,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
+    gap: 1.5rem;
     width: 100%;
     margin: 0 auto;
     text-align: center;
@@ -90,13 +47,32 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
+    gap: 0.5rem;
 }
 
 .avatar {
     color: var(--amber);
 }
 
+.iconCircle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(250, 115, 1, 0.15) 0%, rgba(242, 204, 136, 0.05) 70%);
+    border: 2px solid rgba(250, 115, 1, 0.4);
+    box-shadow: 0 0 25px rgba(250, 115, 1, 0.25), inset 0 0 15px rgba(243, 185, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
 
+.iconCircle:hover {
+    transform: scale(1.05);
+    border-color: var(--safety-orange);
+    box-shadow: 0 0 35px rgba(250, 115, 1, 0.4);
+}
 
 .title {
     font-size: 2rem;
@@ -108,20 +84,21 @@
 }
 
 .formSection {
-    width: 100%;
-    max-width: 440px;
+    width: 55vw;
+    max-width: 680px;
+    min-width: min(100%, 320px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .form {
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: start;
 }
 
 .label {
@@ -129,6 +106,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+}
+
+.fullWidth {
+    grid-column: 1 / -1;
     width: 100%;
 }
 
@@ -144,8 +126,8 @@
 
 .input {
     width: 100%;
-    padding: 0.75rem 3.25rem;
-    border-radius: 2rem;
+    padding: 0.85rem 3.25rem;
+    border-radius: 0.65rem;
     border: 1px solid rgba(242, 204, 136, 0.15);
     background-color: rgba(242, 204, 136, 0.05);
     color: #ffffff;
@@ -183,8 +165,8 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    transition: opacity 0.2s ease, color 0.2s ease;
-    z-index: 2;
+    transition: opacity 0.2s ease;
+    z-index: 1;
 }
 
 .togglePassword:hover {
@@ -193,125 +175,51 @@
 }
 
 .errorText {
-    color: #ff4d63;
+    grid-column: 1 / -1;
+    color: #ff4d4f;
     font-size: 0.85rem;
     font-weight: 600;
-    text-align: left;
     margin: 0;
+    text-align: left;
     width: 100%;
-    padding-left: 0.5rem;
+    padding-left: 0.25rem;
 }
 
 .successText {
-    color: #4caf50;
+    grid-column: 1 / -1;
+    color: #52c41a;
     font-size: 0.85rem;
     font-weight: 600;
-    text-align: left;
     margin: 0;
+    text-align: left;
     width: 100%;
-    padding-left: 0.5rem;
-}
-
-.actions {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 0.25rem;
-}
-
-.forgotPassword {
-    color: var(--sunset);
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-decoration: underline;
-    transition: color 0.2s ease;
-}
-
-.forgotPassword:hover {
-    color: var(--amber);
+    padding-left: 0.25rem;
 }
 
 .submitButton {
     composes: btn-3d btn-primary from global;
-    padding: 0.85rem 3rem;
+    align-self: flex-start;
+    padding: 0.75rem 2.5rem;
     font-size: 0.95rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    margin-left: auto;
-}
-
-
-.socialSection {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-}
-
-.socialDivider {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    text-align: center;
-    color: #8c8275;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-}
-
-.socialDivider::before,
-.socialDivider::after {
-    content: "";
-    flex: 1;
-    border-bottom: 1px solid rgba(242, 204, 136, 0.15);
-}
-
-.socialDivider span {
-    padding: 0 0.5rem;
-}
-
-.socialButtons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    width: 100%;
-}
-
-.socialButton {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(242, 204, 136, 0.15);
-    background-color: rgba(242, 204, 136, 0.05);
+    border-radius: 0.5rem;
+    width: auto;
+    min-width: 160px;
     cursor: pointer;
-    transition: all 0.25s ease;
 }
 
-.socialButton:hover {
-    background-color: rgba(250, 115, 1, 0.15);
-    border-color: var(--safety-orange);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(250, 115, 1, 0.2);
-}
-
-.socialIcon {
-    font-size: 1.25rem;
-    color: var(--amber);
+.submitButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
 }
 
 .termsText {
-    font-size: 0.75rem;
+    grid-column: 1 / -1;
+    font-size: 0.8rem;
     color: #9c8e7d;
     text-align: center;
-    line-height: 1.35;
+    line-height: 1.4;
     margin-top: 0.25rem;
-    white-space: nowrap;
 }
 
 .termsLink {
@@ -325,21 +233,56 @@
     color: var(--safety-orange);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .cardContainer {
-        flex-direction: column;
-        max-height: none;
+.centerButton {
+    align-self: center !important;
+    text-align: center;
+}
+
+.resendLink {
+    color: var(--amber);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: underline;
+    transition: all 0.2s ease;
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+}
+
+.resendLink:hover {
+    color: var(--safety-orange);
+    text-shadow: 0 0 10px rgba(250, 115, 1, 0.4);
+}
+
+.switchPrompt {
+    font-size: 0.88rem;
+    color: #9c8e7d;
+    margin-top: 0.5rem;
+}
+
+.switchLink {
+    color: var(--amber);
+    font-weight: 700;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.switchLink:hover {
+    color: var(--safety-orange);
+}
+
+@media (max-width: 680px) {
+    .main {
+        padding: 1rem;
     }
-    .tabSection {
+    .formSection {
         width: 100%;
-        height: 100px;
+        max-width: 100%;
     }
-    .tabButtons {
-        top: 20%;
-        flex-direction: row;
+    .form {
+        grid-template-columns: 1fr;
     }
-    .activeTab::before {
-        display: none;
+    .submitButton {
+        width: 100%;
+        align-self: stretch;
     }
 }

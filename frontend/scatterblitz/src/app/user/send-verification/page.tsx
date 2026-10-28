@@ -4,6 +4,8 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { FaEnvelope, FaPaperPlane } from "react-icons/fa";
 import styles from "./send-verification.module.css";
+import { API_BASE_URL } from "../../../config/api";
+import CanvasBackground from "../../components/CanvasBackground";
 
 export default function SendVerificationPage() {
   const [email, setEmail] = useState("");
@@ -23,10 +25,10 @@ export default function SendVerificationPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/user/sendVerification", {
+      const res = await fetch(`${API_BASE_URL}/user/sendVerification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
 
       const data = await res.json();
@@ -45,38 +47,43 @@ export default function SendVerificationPage() {
 
   return (
     <main className={styles.main}>
-      <section className={styles.card}>
-        <div className={styles.header}>
-          <FaPaperPlane size={64} className={styles.avatar} />
-          <h1 className={styles.title}>Resend Verification</h1>
-          <p className={styles.description}>
-            Enter your registered email address and we'll send you a new verification link.
-          </p>
-        </div>
+      <CanvasBackground />
+      <section className={styles.cardContainer}>
+        <section className={styles.card}>
+          <div className={styles.header}>
+            <div className={styles.iconCircle}>
+              <FaPaperPlane size={44} className={styles.avatar} style={{ transform: "translate(-2px, 2px)" }} />
+            </div>
+            <h1 className={styles.title}>Resend Verification</h1>
+            <p className={styles.description}>
+              Enter your registered email address and we&apos;ll send you a new verification link.
+            </p>
+          </div>
 
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <label className={styles.label}>
-            <FaEnvelope className={styles.icon} />
-            <input
-              type="email"
-              placeholder="Email Address"
-              className={styles.input}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
+          <form className={styles.form} onSubmit={handleSubmit}>
+            <label className={styles.label}>
+              <FaEnvelope className={styles.icon} />
+              <input
+                type="email"
+                placeholder="Email Address"
+                className={styles.input}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
 
-          {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
-          {successMsg && <p className={styles.successText}>{successMsg}</p>}
+            {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
+            {successMsg && <p className={styles.successText}>{successMsg}</p>}
 
-          <button type="submit" className={styles.submitButton} disabled={loading}>
-            {loading ? "Sending..." : "Send Verification Email"}
-          </button>
-        </form>
+            <button type="submit" className={styles.submitButton} disabled={loading}>
+              {loading ? "Sending..." : "Send Verification Email"}
+            </button>
+          </form>
 
-        <Link href="/user/register?type=login" className={styles.backLink}>
-          Back to Login
-        </Link>
+          <Link href="/user/login" className={styles.backLink}>
+            Back to Login
+          </Link>
+        </section>
       </section>
     </main>
   );

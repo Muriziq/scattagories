@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, FormEvent, Suspense } from "react";
+import { useState, FormEvent, Suspense, useRef, KeyboardEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaKey } from "react-icons/fa";
 import styles from "./reset-password.module.css";
+import { API_BASE_URL } from "../../../config/api";
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
@@ -18,6 +19,9 @@ function ResetPasswordContent() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,7 +43,7 @@ function ResetPasswordContent() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/user/reset-password", {
+      const res = await fetch(`${API_BASE_URL}/user/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword }),
@@ -60,6 +64,20 @@ function ResetPasswordContent() {
     }
   };
 
+  const handleNewPasswordKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmPasswordInputRef.current?.focus();
+    }
+  };
+
+  const handleConfirmPasswordKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      formRef.current?.requestSubmit();
+    }
+  };
+
   if (isSuccess) {
     return (
       <main className={styles.main}>
@@ -69,7 +87,7 @@ function ResetPasswordContent() {
           <p className={styles.description}>
             Your password has been updated successfully. You can now log in with your new password.
           </p>
-          <Link href="/user/register?type=login" className={styles.submitButton} style={{ textDecoration: "none" }}>
+          <Link href="/user/login" className={styles.submitButton} style={{ textDecoration: "none" }}>
             Log In Now
           </Link>
         </section>
@@ -88,7 +106,7 @@ function ResetPasswordContent() {
           </p>
         </div>
 
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.label}>
             <FaLock className={styles.icon} />
             <input
@@ -97,6 +115,7 @@ function ResetPasswordContent() {
               className={styles.input}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              onKeyDown={handleNewPasswordKeyDown}
             />
             <button
               type="button"
@@ -111,11 +130,13 @@ function ResetPasswordContent() {
           <label className={styles.label}>
             <FaLock className={styles.icon} />
             <input
+              ref={confirmPasswordInputRef}
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm New Password"
               className={styles.input}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              onKeyDown={handleConfirmPasswordKeyDown}
             />
             <button
               type="button"
@@ -135,7 +156,7 @@ function ResetPasswordContent() {
           </button>
         </form>
 
-        <Link href="/user/register?type=login" className={styles.backLink}>
+        <Link href="/user/login" className={styles.backLink}>
           Back to Login
         </Link>
       </section>

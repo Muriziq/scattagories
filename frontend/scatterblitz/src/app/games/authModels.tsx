@@ -33,7 +33,7 @@ export default function AuthModel({ modelFunction, cancelModal }: AuthModelProps
           <button
             type="button"
             className={styles.modalPrimaryBtn}
-            onClick={() => router.push("/user/register?type=login")}
+            onClick={() => router.push("/user/login")}
           >
             Log In / Sign Up
           </button>

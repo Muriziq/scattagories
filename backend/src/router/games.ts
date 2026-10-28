@@ -229,29 +229,67 @@ router.get("/room/:roomId", (req: Request, res: Response) => {
   });
 });
 
-// 4. GET GLOBAL LEADERBOARD: Returns top players ranked by wins and total score
+// ============================================================================
+// IN-MEMORY CACHE FOR LEADERBOARD
+// Avoids hammering PostgreSQL whenever visitors load the landing page
+// ============================================================================
+const LEADERBOARD_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+let cachedLeaderboard: any[] | null = null;
+let lastLeaderboardFetchTime = 0;
+let leaderboardInFlightPromise: Promise<any[]> | null = null;
+
+// Helper to invalidate cache when a game completes if immediate freshness is desired
+export function invalidateLeaderboardCache() {
+  lastLeaderboardFetchTime = 0;
+  cachedLeaderboard = null;
+}
+
+// 4. GET GLOBAL LEADERBOARD: Returns top players ranked by wins and total score (Cached for 30m)
 router.get("/leaderboard", async (req: Request, res: Response) => {
   try {
-    const leaderboardQuery = `
-      SELECT 
-        u.id,
-        u.username,
-        u.avatar_url,
-        COUNT(gp.id)::int AS matches_played,
-        COALESCE(SUM(CASE WHEN gp.is_winner = TRUE THEN 1 ELSE 0 END), 0)::int AS total_wins,
-        COALESCE(SUM(gp.score), 0)::int AS total_score,
-        COALESCE(MAX(gp.score), 0)::int AS high_score
-      FROM users u
-      JOIN game_players gp ON gp.user_id = u.id
-      WHERE u.deleted_at IS NULL
-      GROUP BY u.id
-      ORDER BY total_wins DESC, total_score DESC
-      LIMIT 20;
-    `;
-    const result = await pool.query(leaderboardQuery);
-    return res.status(200).json({ leaderboard: result.rows });
+    const now = Date.now();
+
+    // 1. Serve from in-memory cache if within the 30-minute window
+    if (cachedLeaderboard && now - lastLeaderboardFetchTime < LEADERBOARD_CACHE_TTL_MS) {
+      return res.status(200).json({ leaderboard: cachedLeaderboard, cached: true });
+    }
+
+    // 2. Prevent cache stampede if multiple requests arrive right as cache expires
+    if (!leaderboardInFlightPromise) {
+      leaderboardInFlightPromise = (async () => {
+        const leaderboardQuery = `
+          SELECT 
+            u.id,
+            u.username,
+            u.avatar_url,
+            COUNT(gp.id)::int AS matches_played,
+            COALESCE(SUM(CASE WHEN gp.is_winner = TRUE THEN 1 ELSE 0 END), 0)::int AS total_wins,
+            COALESCE(SUM(gp.score), 0)::int AS total_score,
+            COALESCE(MAX(gp.score), 0)::int AS high_score
+          FROM users u
+          JOIN game_players gp ON gp.user_id = u.id
+          WHERE u.deleted_at IS NULL
+          GROUP BY u.id
+          ORDER BY total_wins DESC, total_score DESC
+          LIMIT 20;
+        `;
+        const result = await pool.query(leaderboardQuery);
+        cachedLeaderboard = result.rows;
+        lastLeaderboardFetchTime = Date.now();
+        return result.rows;
+      })().finally(() => {
+        leaderboardInFlightPromise = null;
+      });
+    }
+
+    const leaderboardData = await leaderboardInFlightPromise;
+    return res.status(200).json({ leaderboard: leaderboardData, cached: false });
   } catch (error) {
     console.error("Error fetching leaderboard:", error);
+    // If DB is temporarily unavailable but we have previously cached data, fallback to it gracefully
+    if (cachedLeaderboard) {
+      return res.status(200).json({ leaderboard: cachedLeaderboard, cached: true, degraded: true });
+    }
     return res.status(500).json({ message: "Internal server error" });
   }
 });

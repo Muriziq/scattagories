@@ -4,6 +4,8 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { FaEnvelope, FaKey } from "react-icons/fa";
 import styles from "./forgot-password.module.css";
+import { API_BASE_URL } from "../../../config/api";
+import CanvasBackground from "../../components/CanvasBackground";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -23,7 +25,7 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/user/forgot-password", {
+      const res = await fetch(`${API_BASE_URL}/user/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),
@@ -45,38 +47,43 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className={styles.main}>
-      <section className={styles.card}>
-        <div className={styles.header}>
-          <FaKey size={64} className={styles.avatar} />
-          <h1 className={styles.title}>Forgot Password</h1>
-          <p className={styles.description}>
-            Enter your registered email address and we'll send you a link to reset your password.
-          </p>
-        </div>
+      <CanvasBackground />
+      <section className={styles.cardContainer}>
+        <section className={styles.card}>
+          <div className={styles.header}>
+            <div className={styles.iconCircle}>
+              <FaKey size={40} className={styles.avatar} />
+            </div>
+            <h1 className={styles.title}>Forgot Password</h1>
+            <p className={styles.description}>
+              Enter your registered email address and we&apos;ll send you a link to reset your password.
+            </p>
+          </div>
 
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <label className={styles.label}>
-            <FaEnvelope className={styles.icon} />
-            <input
-              type="email"
-              placeholder="Email Address"
-              className={styles.input}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
+          <form className={styles.form} onSubmit={handleSubmit}>
+            <label className={styles.label}>
+              <FaEnvelope className={styles.icon} />
+              <input
+                type="email"
+                placeholder="Email Address"
+                className={styles.input}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
 
-          {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
-          {successMsg && <p className={styles.successText}>{successMsg}</p>}
+            {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
+            {successMsg && <p className={styles.successText}>{successMsg}</p>}
 
-          <button type="submit" className={styles.submitButton} disabled={loading}>
-            {loading ? "Sending..." : "Send Reset Link"}
-          </button>
-        </form>
+            <button type="submit" className={styles.submitButton} disabled={loading}>
+              {loading ? "Sending..." : "Send Reset Link"}
+            </button>
+          </form>
 
-        <Link href="/user/register?type=login" className={styles.backLink}>
-          Back to Login
-        </Link>
+          <Link href="/user/login" className={styles.backLink}>
+            Back to Login
+          </Link>
+        </section>
       </section>
     </main>
   );

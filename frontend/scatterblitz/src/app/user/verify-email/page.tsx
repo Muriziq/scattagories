@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FaCheckCircle, FaExclamationCircle, FaSpinner } from "react-icons/fa";
 import styles from "./verify-email.module.css";
+import { API_BASE_URL } from "../../../config/api";
+import CanvasBackground from "../../components/CanvasBackground";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -22,7 +24,7 @@ function VerifyEmailContent() {
 
     const verifyToken = async () => {
       try {
-        const res = await fetch("http://localhost:5000/user/verify-email", {
+        const res = await fetch(`${API_BASE_URL}/user/verify-email`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -50,46 +52,49 @@ function VerifyEmailContent() {
 
   return (
     <main className={styles.main}>
-      <section className={styles.card}>
-        {status === "loading" && (
-          <>
-            <FaSpinner className={`${styles.icon} ${styles.loadingIcon}`} />
-            <h1 className={styles.title}>Verifying</h1>
-            <p className={styles.message}>{message}</p>
-          </>
-        )}
+      <CanvasBackground />
+      <section className={styles.cardContainer}>
+        <section className={styles.card}>
+          {status === "loading" && (
+            <>
+              <FaSpinner className={`${styles.icon} ${styles.loadingIcon}`} />
+              <h1 className={styles.title}>Verifying</h1>
+              <p className={styles.message}>{message}</p>
+            </>
+          )}
 
-        {status === "success" && (
-          <>
-            <FaCheckCircle size={100} className={`${styles.icon} ${styles.successIcon}`} />
-            <h1 className={styles.title}>Verified!</h1>
-            <p className={styles.message}>{message}</p>
-            <div className={styles.buttonGroup}>
-              <Link href="/user/register?type=login" className={styles.primaryButton}>
-                Log In Now
-              </Link>
-              <Link href="/" className={styles.secondaryButton}>
-                Home
-              </Link>
-            </div>
-          </>
-        )}
+          {status === "success" && (
+            <>
+              <FaCheckCircle size={100} className={`${styles.icon} ${styles.successIcon}`} />
+              <h1 className={styles.title}>Verified!</h1>
+              <p className={styles.message}>{message}</p>
+              <div className={styles.buttonGroup}>
+                <Link href="/user/login" className={styles.primaryButton}>
+                  Log In Now
+                </Link>
+                <Link href="/" className={styles.secondaryButton}>
+                  Home
+                </Link>
+              </div>
+            </>
+          )}
 
-        {status === "error" && (
-          <>
-            <FaExclamationCircle className={`${styles.icon} ${styles.errorIcon}`} size={100} />
-            <h1 className={styles.title}>Verification Failed</h1>
-            <p className={styles.message}>{message}</p>
-            <div className={styles.buttonGroup}>
-              <Link href="/user/send-verification" className={styles.primaryButton}>
-                Resend Email
-              </Link>
-              <Link href="/user/register?type=login" className={styles.secondaryButton}>
-                Log In
-              </Link>
-            </div>
-          </>
-        )}
+          {status === "error" && (
+            <>
+              <FaExclamationCircle className={`${styles.icon} ${styles.errorIcon}`} size={100} />
+              <h1 className={styles.title}>Verification Failed</h1>
+              <p className={styles.message}>{message}</p>
+              <div className={styles.buttonGroup}>
+                <Link href="/user/send-verification" className={styles.primaryButton}>
+                  Resend Email
+                </Link>
+                <Link href="/user/login" className={styles.secondaryButton}>
+                  Log In
+                </Link>
+              </div>
+            </>
+          )}
+        </section>
       </section>
     </main>
   );
@@ -100,9 +105,12 @@ export default function VerifyEmailPage() {
     <Suspense
       fallback={
         <main className={styles.main}>
-          <section className={styles.card}>
-            <FaSpinner className={`${styles.icon} ${styles.loadingIcon}`} />
-            <h1 className={styles.title}>Loading</h1>
+          <CanvasBackground />
+          <section className={styles.cardContainer}>
+            <section className={styles.card}>
+              <FaSpinner className={`${styles.icon} ${styles.loadingIcon}`} />
+              <h1 className={styles.title}>Loading</h1>
+            </section>
           </section>
         </main>
       }

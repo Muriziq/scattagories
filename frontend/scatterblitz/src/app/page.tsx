@@ -167,6 +167,20 @@ export default function Home() {
         </div>
       )}
 
+      {/* MINIMAL HEADER (RIGHT-ALIGNED AUTH BUTTON) */}
+      <header className={styles.header}>
+        {accessToken === "" && (
+          <nav className={styles.nav}>
+            <Link href="/user/login" className={styles.loginBtn}>
+              Log In
+            </Link>
+            <Link href="/user/register" className={styles.registerBtn}>
+              Sign Up
+            </Link>
+          </nav>
+        )}
+      </header>
+
       {/* MAIN HERO SECTION */}
       <main className={styles.main}>
         {/* Centered Profile Link above H1 (Only for Authenticated Users) */}
@@ -190,7 +204,7 @@ export default function Home() {
               </button>
 
               {isDropdownOpen && (
-                <div className={styles.userDropdown}>
+                <div className={styles.userDropdown} >
                   <div className={styles.dropdownHeader}>
                     <span className={styles.dropdownUsername}>@{user?.username || "player"}</span>
                     <span className={styles.dropdownSubtext}>
@@ -219,7 +233,7 @@ export default function Home() {
                   </Link>
 
                   <Link
-                    href="/games/rooms?type=join"
+                    href="/games/join"
                     className={styles.dropdownItem}
                     onClick={() => setIsDropdownOpen(false)}
                   >
@@ -279,10 +293,10 @@ export default function Home() {
             </form>
 
             <div className={styles.buttonGroup}>
-              <Link href="/games/rooms?type=create" className={styles.createBtn}>
+              <Link href="/games/create" className={styles.createBtn}>
                 <FaPlusCircle /> Host Game Room
               </Link>
-              <Link href="/games/rooms?type=join" className={styles.joinBtn}>
+              <Link href="/games/join" className={styles.joinBtn}>
                 <FaGamepad /> Browse Public Lobbies
               </Link>
             </div>
@@ -452,7 +466,7 @@ export default function Home() {
                 <FaTrophy className={styles.emptyIcon} />
                 <h3>No Global Champions Yet</h3>
                 <p>The arena is wide open. Join a room or host a game to claim your spot on the #1 podium!</p>
-                <Link href="/games/rooms?type=create" className={styles.joinBtn}>
+                <Link href="/games/create" className={styles.joinBtn}>
                   Play & Claim #1
                 </Link>
               </div>
@@ -511,7 +525,7 @@ export default function Home() {
           <h3 className={styles.footerCtaTitle}>Ready to test your reflexes and vocabulary?</h3>
           <p className={styles.footerCtaSub}>Jump into a live game room right now or host your own custom match!</p>
           <div className={styles.footerCtaButtons}>
-            <Link href="/games/rooms?type=create" className={styles.footerPlayBtn}>
+            <Link href="/games/create" className={styles.footerPlayBtn}>
               Host A Room <FaArrowRight />
             </Link>
           </div>
@@ -532,8 +546,8 @@ export default function Home() {
 
           <div className={styles.footerLinksCol}>
             <p className={styles.footerLinksTitle}>Play & Compete</p>
-            <Link href="/games/rooms?type=create" className={styles.footerLink}>Host Game Room</Link>
-            <Link href="/games/rooms?type=join" className={styles.footerLink}>Browse Public Lobbies</Link>
+            <Link href="/games/create" className={styles.footerLink}>Host Game Room</Link>
+            <Link href="/games/join" className={styles.footerLink}>Browse Public Lobbies</Link>
             <a href="#leaderboard" className={styles.footerLink}>Global Leaderboard</a>
           </div>
 
@@ -551,8 +565,8 @@ export default function Home() {
               </>
             ) : (
               <>
-                <Link href="/user/register?type=login" className={styles.footerLink}>Log In</Link>
-                <Link href="/user/register?type=register" className={styles.footerLink}>Sign Up Free</Link>
+                <Link href="/user/login" className={styles.footerLink}>Log In</Link>
+                <Link href="/user/register" className={styles.footerLink}>Sign Up Free</Link>
               </>
             )}
           </div>

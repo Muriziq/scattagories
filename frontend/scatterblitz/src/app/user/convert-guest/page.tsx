@@ -1,7 +1,7 @@
 "use client";
 
 import { FaUser, FaLock, FaEnvelope, FaEye, FaEyeSlash, FaFire, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "./convert.module.css";
@@ -20,6 +20,11 @@ export default function ConvertGuestPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [isConverted, setIsConverted] = useState(false);
+
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -78,6 +83,34 @@ export default function ConvertGuestPage() {
     }
   };
 
+  const handleUsernameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      emailInputRef.current?.focus();
+    }
+  };
+
+  const handleEmailKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      passwordInputRef.current?.focus();
+    }
+  };
+
+  const handlePasswordKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmPasswordInputRef.current?.focus();
+    }
+  };
+
+  const handleConfirmPasswordKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      formRef.current?.requestSubmit();
+    }
+  };
+
   return (
     <main className={styles.main}>
       <div className={styles.card}>
@@ -109,7 +142,7 @@ export default function ConvertGuestPage() {
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className={styles.form}>
+          <form ref={formRef} onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.inputGroup}>
               <label htmlFor="username" className={styles.label}>
                 Choose Username
@@ -124,6 +157,7 @@ export default function ConvertGuestPage() {
                   className={styles.input}
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                  onKeyDown={handleUsernameKeyDown}
                   required
                 />
               </div>
@@ -136,6 +170,7 @@ export default function ConvertGuestPage() {
               <div className={styles.inputWrap}>
                 <FaEnvelope className={styles.inputIcon} />
                 <input
+                  ref={emailInputRef}
                   type="email"
                   id="email"
                   name="email"
@@ -143,6 +178,7 @@ export default function ConvertGuestPage() {
                   className={styles.input}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={handleEmailKeyDown}
                   required
                 />
               </div>
@@ -155,6 +191,7 @@ export default function ConvertGuestPage() {
               <div className={styles.inputWrap}>
                 <FaLock className={styles.inputIcon} />
                 <input
+                  ref={passwordInputRef}
                   type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
@@ -162,6 +199,7 @@ export default function ConvertGuestPage() {
                   className={styles.input}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={handlePasswordKeyDown}
                   required
                 />
                 <button
@@ -182,6 +220,7 @@ export default function ConvertGuestPage() {
               <div className={styles.inputWrap}>
                 <FaLock className={styles.inputIcon} />
                 <input
+                  ref={confirmPasswordInputRef}
                   type={showConfirmPassword ? "text" : "password"}
                   id="confirmPassword"
                   name="confirmPassword"
@@ -189,6 +228,7 @@ export default function ConvertGuestPage() {
                   className={styles.input}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  onKeyDown={handleConfirmPasswordKeyDown}
                   required
                 />
                 <button
