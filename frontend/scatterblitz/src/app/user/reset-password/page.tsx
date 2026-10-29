@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaKey } from "react-icons/fa";
 import styles from "./reset-password.module.css";
 import { API_BASE_URL } from "../../../config/api";
+import CanvasBackground from "../../components/CanvasBackground";
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
@@ -78,87 +79,100 @@ function ResetPasswordContent() {
     }
   };
 
-  if (isSuccess) {
-    return (
-      <main className={styles.main}>
-        <section className={styles.card}>
-          <FaCheckCircle size={80} className={styles.successIcon} />
-          <h1 className={styles.title}>Password Reset!</h1>
-          <p className={styles.description}>
-            Your password has been updated successfully. You can now log in with your new password.
-          </p>
-          <Link href="/user/login" className={styles.submitButton} style={{ textDecoration: "none" }}>
-            Log In Now
-          </Link>
-        </section>
-      </main>
-    );
-  }
-
   return (
     <main className={styles.main}>
-      <section className={styles.card}>
-        <div className={styles.header}>
-          <FaKey size={64} className={styles.avatar} />
-          <h1 className={styles.title}>Reset Password</h1>
-          <p className={styles.description}>
-            Please enter your new password below.
-          </p>
+      <CanvasBackground />
+      <section className={styles.cardContainer}>
+        <div className={styles.cardWrapper}>
+          {isSuccess ? (
+            <section className={styles.card} style={{ gap: "0rem" }}>
+              <div className={styles.header} style={{ gap: "0.35rem" }}>
+                <FaCheckCircle size={80} className={styles.successIcon} />
+                <h1 className={styles.title}>Password Reset!</h1>
+              </div>
+
+              <section className={styles.formSection} style={{ textAlign: "center" }}>
+                <p className={styles.description}>
+                  Your password has been updated successfully. You can now log in with your new password.
+                </p>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", alignItems: "center", marginTop: "1rem" }}>
+                  <Link href="/user/login" className={`${styles.submitButton} ${styles.centerButton}`} style={{ textDecoration: "none" }}>
+                    Log In Now
+                  </Link>
+                </div>
+              </section>
+            </section>
+          ) : (
+            <section className={styles.card}>
+              <div className={styles.header}>
+                <div className={styles.iconCircle}>
+                  <FaKey size={40} className={styles.avatar} />
+                </div>
+                <h1 className={styles.title}>Reset Password</h1>
+                <p className={styles.description}>
+                  Please enter your new password below.
+                </p>
+              </div>
+
+              <section className={styles.formSection}>
+                <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
+                  <label className={styles.label}>
+                    <FaLock className={styles.icon} />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="New Password"
+                      className={styles.input}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      onKeyDown={handleNewPasswordKeyDown}
+                    />
+                    <button
+                      type="button"
+                      className={styles.togglePassword}
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </label>
+
+                  <label className={styles.label}>
+                    <FaLock className={styles.icon} />
+                    <input
+                      ref={confirmPasswordInputRef}
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm New Password"
+                      className={styles.input}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onKeyDown={handleConfirmPasswordKeyDown}
+                    />
+                    <button
+                      type="button"
+                      className={styles.togglePassword}
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    >
+                      {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </label>
+
+                  {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
+                  {successMsg && <p className={styles.successText}>{successMsg}</p>}
+
+                  <button type="submit" className={styles.submitButton} disabled={loading}>
+                    {loading ? "Resetting..." : "Reset Password"}
+                  </button>
+                </form>
+
+                <Link href="/user/login" className={styles.backLink}>
+                  Back to Login
+                </Link>
+              </section>
+            </section>
+          )}
         </div>
-
-        <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
-          <label className={styles.label}>
-            <FaLock className={styles.icon} />
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="New Password"
-              className={styles.input}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              onKeyDown={handleNewPasswordKeyDown}
-            />
-            <button
-              type="button"
-              className={styles.togglePassword}
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </label>
-
-          <label className={styles.label}>
-            <FaLock className={styles.icon} />
-            <input
-              ref={confirmPasswordInputRef}
-              type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm New Password"
-              className={styles.input}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              onKeyDown={handleConfirmPasswordKeyDown}
-            />
-            <button
-              type="button"
-              className={styles.togglePassword}
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-            >
-              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </label>
-
-          {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
-          {successMsg && <p className={styles.successText}>{successMsg}</p>}
-
-          <button type="submit" className={styles.submitButton} disabled={loading}>
-            {loading ? "Resetting..." : "Reset Password"}
-          </button>
-        </form>
-
-        <Link href="/user/login" className={styles.backLink}>
-          Back to Login
-        </Link>
       </section>
     </main>
   );

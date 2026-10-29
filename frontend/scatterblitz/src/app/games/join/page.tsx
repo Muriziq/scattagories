@@ -88,9 +88,6 @@ export default function JoinRoomPage() {
           <button type="button" onClick={handleBack} className={styles.backButton}>
             <FaArrowLeft /> Back
           </button>
-          <Link href="/games/create" className={styles.switchRouteLink}>
-            <FaPlusCircle /> Host a Game
-          </Link>
         </div>
       </header>
 
@@ -109,51 +106,7 @@ export default function JoinRoomPage() {
           </div>
         )}
 
-        {/* Direct Code Entry Card */}
-        <div className={styles.joinCard}>
-          <form onSubmit={handleJoinSubmit} className={styles.formGroup}>
-            <div className={styles.sectionHeaderRow} style={{ marginBottom: "0.5rem" }}>
-              <div className={styles.sectionLabel}>
-                <FaBolt /> Quick Join with Code
-              </div>
-              <button
-                type="button"
-                className={styles.joinPasswordToggle}
-                onClick={() => setIsPrivate(!isPrivate)}
-              >
-                {isPrivate ? "Hide Password Field" : "Have a Private Password?"}
-              </button>
-            </div>
 
-            <div className={styles.joinCodeRow}>
-              <input
-                type="text"
-                id="code"
-                placeholder="ENTER 5-LETTER CODE"
-                maxLength={5}
-                className={`${styles.input} ${styles.codeInput}`}
-                value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              />
-              <button type="submit" className={styles.joinSubmitBtn}>
-                <FaBolt /> ENTER ROOM
-              </button>
-            </div>
-
-            {isPrivate && (
-              <div className={styles.formGroup} style={{ marginTop: "0.75rem" }}>
-                <input
-                  type="password"
-                  id="joinPassword"
-                  placeholder="Enter room password"
-                  className={styles.input}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            )}
-          </form>
-        </div>
 
         {/* Public Lobbies Section */}
         <div className={styles.publicRoomsSection}>

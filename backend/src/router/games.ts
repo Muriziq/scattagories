@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import pool from "../db";
 import { verifyAccessToken, AuthRequest } from "../middleware/tokens";
-import { GameRoom, publicRooms, privateRooms, getRoom, getTotalRoomsCount, availableCategories } from "../model/gamesModel";
+import { GameRoom, publicRooms, privateRooms, getRoom, getTotalRoomsCount, availableCategories, deleteRoom } from "../model/gamesModel";
 import crypto from "crypto";
 
 dotenv.config();
@@ -120,6 +120,14 @@ router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: 
     } else {
       privateRooms.set(roomId, newRoom);
     }
+
+    // Auto-expire room after 30 minutes if host never connects via socket or starts game
+    newRoom.connectionTimeout = setTimeout(() => {
+      if (newRoom.status === "waiting") {
+        console.log(`[Auto-Expire] Evicting unjoined room ${roomId} after 30m inactivity`);
+        deleteRoom(roomId);
+      }
+    }, 30 * 60 * 1000);
 
     return res.status(201).json({ message: "Room created", roomId });
   } catch (error) {

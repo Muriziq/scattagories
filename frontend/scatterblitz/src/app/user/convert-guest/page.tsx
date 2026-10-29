@@ -1,21 +1,18 @@
 "use client";
 
-import { FaUser, FaLock, FaEnvelope, FaEye, FaEyeSlash, FaFire, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
+import { FaUser, FaLock, FaEnvelope, FaEye, FaEyeSlash, FaFire, FaPaperPlane } from "react-icons/fa";
 import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import styles from "./convert.module.css";
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
+import CanvasBackground from "../../components/CanvasBackground";
 
 export default function ConvertGuestPage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +20,6 @@ export default function ConvertGuestPage() {
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
-  const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -41,10 +37,6 @@ export default function ConvertGuestPage() {
     }
     if (!password || password.length < 6 || password.length > 20) {
       setErrorMsg("Password must be 6-20 characters long");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMsg("Passwords do not match");
       return;
     }
 
@@ -72,9 +64,6 @@ export default function ConvertGuestPage() {
         }
         setSuccessMsg(data.message || "Guest account converted successfully! Please verify your email.");
         setIsConverted(true);
-        setTimeout(() => {
-          router.push("/");
-        }, 3000);
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Server connection error");
@@ -100,160 +89,117 @@ export default function ConvertGuestPage() {
   const handlePasswordKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      confirmPasswordInputRef.current?.focus();
-    }
-  };
-
-  const handleConfirmPasswordKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
       formRef.current?.requestSubmit();
     }
   };
 
   return (
     <main className={styles.main}>
-      <div className={styles.card}>
-        <div className={styles.header}>
-          <div className={styles.iconWrap}>
-            <FaFire className={styles.headerIcon} />
-          </div>
-          <h1 className={styles.title}>Convert Guest Account</h1>
-          <p className={styles.subtitle}>
-            Upgrade your temporary guest session to a permanent account to keep all your match history, scores, and rank on the global leaderboard!
-          </p>
+      <CanvasBackground />
+      <section className={styles.cardContainer}>
+        <div className={styles.cardWrapper}>
+          {isConverted ? (
+            <section className={styles.card} style={{ gap: "0rem" }}>
+              <div className={styles.header} style={{ gap: "0.35rem" }}>
+                <div className={styles.iconCircle} style={{ marginBottom: "0.25rem" }}>
+                  <FaPaperPlane size={44} className={styles.avatar} style={{ transform: "translate(-2px, 2px)" }} />
+                </div>
+                <h1 className={styles.title}>Account Converted</h1>
+              </div>
+
+              <section className={styles.formSection} style={{ textAlign: "center" }}>
+                <p style={{ color: "var(--text-description)", fontSize: "0.95rem", lineHeight: "1.6", maxWidth: "480px" }}>
+                  Your temporary guest account has been converted! A verification link has been sent to <strong style={{ color: "var(--sunset)" }}>{email}</strong>. Please check your inbox to verify your email address.
+                </p>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", alignItems: "center", marginTop: "1rem" }}>
+                  <Link href="/" className={`${styles.submitButton} ${styles.centerButton}`} style={{ textDecoration: "none" }}>
+                    Back to Home Page
+                  </Link>
+                  <Link href="/user/send-verification" className={styles.resendLink}>
+                    Didn&apos;t receive email? Resend verification link
+                  </Link>
+                </div>
+              </section>
+            </section>
+          ) : (
+            <section className={styles.card}>
+              <div className={styles.header}>
+                <div className={styles.iconCircle}>
+                  <FaFire size={48} className={styles.avatar} />
+                </div>
+                <h1 className={styles.title}>Upgrade Account</h1>
+                <p className={styles.subtitle}>
+                  Convert your guest session into a permanent account to keep all your wins, high scores, and stats on the leaderboard!
+                </p>
+              </div>
+
+              <section className={styles.formSection}>
+                <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
+                  <label className={styles.label}>
+                    <FaUser className={styles.icon} />
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      className={styles.input}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                      onKeyDown={handleUsernameKeyDown}
+                    />
+                  </label>
+
+                  <label className={styles.label}>
+                    <FaEnvelope className={styles.icon} />
+                    <input
+                      ref={emailInputRef}
+                      type="email"
+                      placeholder="Email Address"
+                      className={styles.input}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onKeyDown={handleEmailKeyDown}
+                    />
+                  </label>
+
+                  <label className={`${styles.label} ${styles.fullWidth}`}>
+                    <FaLock className={styles.icon} />
+                    <input
+                      ref={passwordInputRef}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Password"
+                      className={styles.input}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={handlePasswordKeyDown}
+                    />
+                    <button
+                      type="button"
+                      className={styles.togglePassword}
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </label>
+
+                  {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
+                  {successMsg && <p className={styles.successText}>{successMsg}</p>}
+
+                  <button type="submit" className={styles.submitButton} disabled={loading}>
+                    {loading ? "Upgrading..." : "Save Account"}
+                  </button>
+                </form>
+
+                <p className={styles.switchPrompt}>
+                  <Link href="/" className={styles.cancelLink}>
+                    Cancel & Continue as Guest
+                  </Link>
+                </p>
+              </section>
+            </section>
+          )}
         </div>
-
-        {errorMsg && (
-          <div className={styles.errorMessage}>
-            <FaExclamationTriangle />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {isConverted ? (
-          <div className={styles.successCard}>
-            <FaCheckCircle className={styles.successIcon} />
-            <h2>Account Upgraded!</h2>
-            <p>{successMsg}</p>
-            <p className={styles.redirectNotice}>Redirecting you to the home arena...</p>
-            <Link href="/" className={styles.homeBtn}>
-              Back to Arena
-            </Link>
-          </div>
-        ) : (
-          <form ref={formRef} onSubmit={handleSubmit} className={styles.form}>
-            <div className={styles.inputGroup}>
-              <label htmlFor="username" className={styles.label}>
-                Choose Username
-              </label>
-              <div className={styles.inputWrap}>
-                <FaUser className={styles.inputIcon} />
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  placeholder="Enter unique username"
-                  className={styles.input}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                  onKeyDown={handleUsernameKeyDown}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="email" className={styles.label}>
-                Email Address
-              </label>
-              <div className={styles.inputWrap}>
-                <FaEnvelope className={styles.inputIcon} />
-                <input
-                  ref={emailInputRef}
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="Enter your email"
-                  className={styles.input}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={handleEmailKeyDown}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="password" className={styles.label}>
-                Password
-              </label>
-              <div className={styles.inputWrap}>
-                <FaLock className={styles.inputIcon} />
-                <input
-                  ref={passwordInputRef}
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  placeholder="Create a strong password"
-                  className={styles.input}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={handlePasswordKeyDown}
-                  required
-                />
-                <button
-                  type="button"
-                  className={styles.eyeBtn}
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label="Toggle password visibility"
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="confirmPassword" className={styles.label}>
-                Confirm Password
-              </label>
-              <div className={styles.inputWrap}>
-                <FaLock className={styles.inputIcon} />
-                <input
-                  ref={confirmPasswordInputRef}
-                  type={showConfirmPassword ? "text" : "password"}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  placeholder="Confirm your password"
-                  className={styles.input}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  onKeyDown={handleConfirmPasswordKeyDown}
-                  required
-                />
-                <button
-                  type="button"
-                  className={styles.eyeBtn}
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  aria-label="Toggle confirm password visibility"
-                >
-                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? "Upgrading Account..." : "Save Account & Transfer Stats"}
-            </button>
-
-            <div className={styles.cancelWrap}>
-              <Link href="/" className={styles.cancelLink}>
-                Cancel & Continue as Guest
-              </Link>
-            </div>
-          </form>
-        )}
-      </div>
+      </section>
     </main>
   );
 }

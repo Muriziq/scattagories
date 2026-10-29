@@ -19,7 +19,8 @@ import {
     FaGlobe,
     FaArrowLeft,
     FaShareAlt,
-    FaTimes
+    FaTimes,
+    FaTags
 } from "react-icons/fa";
 import styles from "./waitingRoom.module.css";
 import authStyles from "../authmodel.module.css";
@@ -205,13 +206,10 @@ function WaitingRoomContent() {
     );
 
     return (
-        <main className={styles.main}>
+        <div className={styles.pageWrapper}>
             <CanvasBackground />
-            <button onClick={handleLeaveRoom} className={styles.backBtn}>
-                        <FaArrowLeft /> Exit Lobby
-                    </button>
-<div className={styles.container}>
-            <div className={styles.lobbyContainer}>
+            <main className={styles.main}>
+                <div className={styles.lobbyContainer}>
 
 
                 {/* ERROR BANNER */}
@@ -358,7 +356,7 @@ function WaitingRoomContent() {
                         {categories.length > 0 && (
                             <div className={styles.actionBox}>
                                 <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                    Categories ({categories.length})
+                                    <FaTags style={{ color: "var(--amber)", fontSize: "0.95rem" }} /> Categories ({categories.length})
                                 </h3>
                                 <div className={styles.categories}>
                                     {categories.map((cat, i) => (
@@ -402,9 +400,8 @@ function WaitingRoomContent() {
                 handleGoToPrevRoom={handleGoToPrevRoom}
                 onCloseChangeRoomModal={handleGoToPrevRoom}
             />
-</div>
-
-        </main>
+            </main>
+        </div>
     );
 }
 

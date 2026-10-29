@@ -324,14 +324,15 @@ router.post("/forgot-password", authLimiter, async (req: Request, res: Response)
     );
 
     if (user.rows.length === 0) {
-      return res.status(404).json({ message: "User not found or account deactivated" });
+      // Uniform response prevents user account enumeration
+      return res.status(200).json({ message: "If an account with that email exists, a password reset link has been sent." });
     }
 
     const userAns = user.rows[0];
     const resetToken = signResetPasswordToken({ id: userAns.id });
 
     await sendPasswordResetEmail(userAns.username, userAns.email, resetToken);
-    return res.status(200).json({ message: "Check email for reset link." });
+    return res.status(200).json({ message: "If an account with that email exists, a password reset link has been sent." });
   } catch (err: any) {
     console.error("Forgot password error:", err);
     return res.status(500).json({ message: "Server error sending reset password email" });

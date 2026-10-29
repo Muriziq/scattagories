@@ -9,7 +9,15 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure storage with sanitized unique file names
+// Strict whitelist of safe image extensions and MIME mappings
+const MIME_EXTENSION_MAP: Record<string, string[]> = {
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/png": [".png"],
+  "image/webp": [".webp"],
+  "image/gif": [".gif"],
+};
+
+// Configure storage with sanitized unique file names and guaranteed safe extensions
 const storage = multer.diskStorage({
   destination: (req: Request, file: Express.Multer.File, cb) => {
     cb(null, uploadDir);
@@ -17,23 +25,27 @@ const storage = multer.diskStorage({
   filename: (req: Request, file: Express.Multer.File, cb) => {
     const user = (req as any).user;
     const userId = user?.id || "anonymous";
-    const ext = path.extname(file.originalname).toLowerCase();
+    const rawExt = path.extname(file.originalname).toLowerCase();
+    const validExts = MIME_EXTENSION_MAP[file.mimetype] || [".png"];
+    const ext = validExts.includes(rawExt) ? rawExt : validExts[0];
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     cb(null, `avatar-${userId}-${uniqueSuffix}${ext}`);
   },
 });
 
-// Validate image file formats
+// Validate image file formats and strictly check extensions against MIME types
 const fileFilter = (
   req: Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  const allowedExts = MIME_EXTENSION_MAP[file.mimetype];
+  const rawExt = path.extname(file.originalname).toLowerCase();
+
+  if (allowedExts && allowedExts.includes(rawExt)) {
     cb(null, true);
   } else {
-    cb(new Error("Only JPEG, PNG, WEBP, and GIF images are allowed"));
+    cb(new Error("Only JPEG, PNG, WEBP, and GIF images with matching extensions are allowed"));
   }
 };
 

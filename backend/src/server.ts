@@ -63,8 +63,23 @@ app.use("/user", register);
 app.use("/games", games);
 app.use("/refresh", refresh);
 
-// Comprehensive database and server health check endpoint
-app.get("/health", async (req, res) => {
+// 1. Public lightweight liveness probe (for uptime monitors & load balancers, zero DB load)
+app.get("/health", (req, res) => {
+  return res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 2. Protected diagnostics endpoint for admin & internal telemetry
+app.get("/health/detailed", async (req, res) => {
+  const monitoringKey = req.headers["x-monitoring-key"] || req.query.key;
+  const configuredKey = process.env.MONITORING_KEY;
+
+  if (!configuredKey || monitoringKey !== configuredKey) {
+    return res.status(403).json({ message: "Forbidden: Invalid credentials" });
+  }
+
   const startTime = Date.now();
   try {
     // Probe PostgreSQL connection and measure query response latency
@@ -99,7 +114,6 @@ app.get("/health", async (req, res) => {
       database: {
         status: "disconnected",
         latencyMs: dbLatencyMs,
-        error: error.message || "Failed to connect to PostgreSQL database",
       },
       activeRoomsCount: getTotalRoomsCount(),
     });
@@ -234,6 +248,11 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       }
     }
 
+    // Clear unjoined room timeout once host socket connects
+    if (socket.user.username === room.hostUsername) {
+      room.clearConnectionTimeout();
+    }
+
     socket.join(roomId);
     io.to(roomId).emit("room:participants", room.getRoomParticipantsData());
   });
@@ -281,6 +300,11 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     const participant = room.participants.get(socket.user.username);
     if (!participant) {
       return socket.emit("error", { message: "You are not a participant in this room.", type: "room" });
+    }
+
+    // Clear unjoined room timeout once host socket connects
+    if (socket.user.username === room.hostUsername) {
+      room.clearConnectionTimeout();
     }
 
     socket.join(roomId);

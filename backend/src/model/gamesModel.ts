@@ -87,6 +87,7 @@ export class GameRoom {
   isBoardLocked: boolean;
   roundTimer: NodeJS.Timeout | null;
   selectionTimer: NodeJS.Timeout | null;
+  connectionTimeout: NodeJS.Timeout | null;
   selectionTimeLimit: number;
   roundStartTime: number | null = null;
   selectionStartTime: number | null = null;
@@ -138,6 +139,7 @@ export class GameRoom {
 
     this.roundTimer = null;
     this.selectionTimer = null;
+    this.connectionTimeout = null;
     this.selectionTimeLimit = 15;
 
     this.status = "waiting";
@@ -181,6 +183,7 @@ export class GameRoom {
       delete this.userDbIds[username];
       // Destroy room if all participants left
       if (this.participants.size === 0) {
+        this.clearConnectionTimeout();
         this.clearSelectionTimer();
         this.clearRoundTimer();
         deleteRoom(this.id);
@@ -197,6 +200,7 @@ export class GameRoom {
       
       // If no active players remain, destroy room immediately
       if (activeParticipants.length === 0) {
+        this.clearConnectionTimeout();
         this.clearSelectionTimer();
         this.clearRoundTimer();
         deleteRoom(this.id);
@@ -280,6 +284,13 @@ export class GameRoom {
     const turnsPerPlayer = Math.floor(letterCount / playerCount);
     this.totalRound = turnsPerPlayer * playerCount;
     return this.totalRound;
+  }
+
+  public clearConnectionTimeout() {
+    if (this.connectionTimeout !== null) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
   }
 
   public clearSelectionTimer() {
@@ -467,6 +478,7 @@ export class GameRoom {
   public endGame(io: Server, socket: Socket) {
     if (this.status === "ended") return;
     this.status = "ended";
+    this.clearConnectionTimeout();
     this.clearSelectionTimer();
     this.clearRoundTimer();
 

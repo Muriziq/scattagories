@@ -13,6 +13,7 @@ import {
   FaPlusCircle,
   FaExclamationTriangle,
   FaCompass,
+  FaRobot,
 } from "react-icons/fa";
 import CanvasBackground from "../../components/CanvasBackground";
 import styles from "../gameRooms.module.css";
@@ -53,11 +54,13 @@ export default function CreateRoomPage() {
     password: string;
     maxPlayers: number;
     maxTimePerRound: number;
+    allowComputerHelper: boolean;
   }>({
     isPublic: true,
     password: "",
     maxPlayers: 5,
     maxTimePerRound: 60,
+    allowComputerHelper: true,
   });
 
   const changeSettings = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,26 +161,19 @@ export default function CreateRoomPage() {
           <button type="button" onClick={handleBack} className={styles.backButton}>
             <FaArrowLeft /> Back
           </button>
-          <Link href="/games/join" className={styles.switchRouteLink}>
-            <FaCompass /> Browse Lobbies
-          </Link>
         </div>
       </header>
 
       <main className={styles.main}>
         <div className={styles.hero}>
-          <h1 className={styles.title}>HOST GAME ROOM</h1>
+          <h1 className={styles.title}>Host Game <span style={{color: "var(--safety-orange)"}}>Room</span></h1>
           <p className={styles.subtitle}>
             Configure custom category decks, player limits, and round timers for your match.
           </p>
+          {/* <Link href="/games/join" className={styles.heroSwitchBtn}>
+            <FaCompass /> Browse Public Lobbies
+          </Link> */}
         </div>
-
-        {error && (
-          <div className={styles.errorMessage}>
-            <FaExclamationTriangle />
-            <span>{error}</span>
-          </div>
-        )}
 
         <div className={styles.formSection}>
           {/* Categories Box */}
@@ -256,6 +252,29 @@ export default function CreateRoomPage() {
               </label>
             </div>
 
+            {/* Computer Helper Toggle */}
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleTextCol}>
+                <div className={styles.toggleTitle}>
+                  <FaRobot style={{ color: "var(--amber)" }} />
+                  <span>Computer Helper</span>
+                </div>
+                <span className={styles.helperText}>
+                  Allow the computer to randomly pick letters when remaining letters exceed equal player turns
+                </span>
+              </div>
+              <label className={styles.switch}>
+                <input
+                  type="checkbox"
+                  name="allowComputerHelper"
+                  id="allowComputerHelper"
+                  checked={settings.allowComputerHelper}
+                  onChange={changeSettings}
+                />
+                <span className={styles.slider}></span>
+              </label>
+            </div>
+
             {/* Inputs Grid */}
             <div className={styles.controlsGrid}>
               {!settings.isPublic && (
@@ -316,6 +335,13 @@ export default function CreateRoomPage() {
               </div>
             </div>
           </div>
+
+          {error && (
+            <div className={styles.errorMessage} style={{ marginBottom: "0.5rem" }}>
+              <FaExclamationTriangle />
+              <span>{error}</span>
+            </div>
+          )}
 
           <button
             type="button"
