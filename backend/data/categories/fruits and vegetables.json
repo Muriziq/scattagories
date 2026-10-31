@@ -1,0 +1,254 @@
+{
+  "category": "fruits and vegetables",
+  "updatedAt": "2026-10-31T08:33:26.560Z",
+  "wordCount": 198,
+  "letters": {
+    "A": [
+      "acorn squash",
+      "alfalfa sprout",
+      "amaranth",
+      "anise",
+      "apple",
+      "apricot",
+      "artichoke",
+      "arugula",
+      "asparagus",
+      "aubergine",
+      "avocado",
+      "azuki bean"
+    ],
+    "B": [
+      "banana",
+      "banana squash",
+      "basil",
+      "bean sprout",
+      "beet",
+      "bell pepper",
+      "bilberry",
+      "black bean",
+      "black-eyed pea",
+      "blackberry",
+      "blackcurrant",
+      "blood orange",
+      "blueberry",
+      "bok choy",
+      "borlotti bean",
+      "boysenberry",
+      "breadfruit",
+      "broad beans",
+      "broccoflower",
+      "broccoli",
+      "brussels sprout",
+      "butternut squash"
+    ],
+    "C": [
+      "cabbage",
+      "calabrese",
+      "canary melon",
+      "cantaloupe",
+      "caraway",
+      "carrot",
+      "cauliflower",
+      "cayenne pepper",
+      "celeriac",
+      "celery",
+      "chamomile",
+      "chard",
+      "chayote",
+      "cherimoya",
+      "cherry",
+      "chickpea",
+      "chili pepper",
+      "chives",
+      "cilantro",
+      "clementine",
+      "cloudberry",
+      "coconut",
+      "collard green",
+      "corn",
+      "corn salad",
+      "courgette",
+      "cranberry",
+      "cucumber",
+      "currant"
+    ],
+    "D": [
+      "daikon",
+      "damson",
+      "date",
+      "delicata",
+      "dill",
+      "dragonfruit",
+      "durian"
+    ],
+    "E": [
+      "eggplant",
+      "elderberry",
+      "endive"
+    ],
+    "F": [
+      "feijoa",
+      "fennel",
+      "fiddlehead",
+      "fig",
+      "frisee"
+    ],
+    "G": [
+      "garlic",
+      "gem squash",
+      "ginger",
+      "goji berry",
+      "gooseberry",
+      "grape",
+      "grapefruit",
+      "green bean",
+      "green pepper",
+      "guava"
+    ],
+    "H": [
+      "habanero",
+      "herbs and spice",
+      "honeydew",
+      "horseradish",
+      "hubbard squash",
+      "huckleberry"
+    ],
+    "I": [],
+    "J": [
+      "jackfruit",
+      "jalapeno",
+      "jambul",
+      "jerusalem artichoke",
+      "jicama",
+      "jujube"
+    ],
+    "K": [
+      "kale",
+      "kidney bean",
+      "kiwi fruit",
+      "kohlrabi",
+      "kumquat"
+    ],
+    "L": [
+      "lavender",
+      "leek",
+      "legume",
+      "lemon",
+      "lemon grass",
+      "lentils",
+      "lettuce",
+      "lima bean",
+      "lime",
+      "loquat",
+      "lychee"
+    ],
+    "M": [
+      "mamey",
+      "mandarine",
+      "mangetout",
+      "mango",
+      "marjoram",
+      "mulberry",
+      "mung bean",
+      "mushroom",
+      "mustard green"
+    ],
+    "N": [
+      "navy bean",
+      "nectarine",
+      "new zealand spinach",
+      "nopale",
+      "nut"
+    ],
+    "O": [
+      "okra",
+      "olive",
+      "onion",
+      "orange",
+      "oregano"
+    ],
+    "P": [
+      "papaya",
+      "paprika",
+      "parsley",
+      "parsnip",
+      "passionfruit",
+      "patty pan",
+      "pea",
+      "peach",
+      "pear",
+      "persimmon",
+      "physalis",
+      "pineapple",
+      "pinto bean",
+      "plum",
+      "pomegranate",
+      "pomelo",
+      "potato",
+      "pumpkin",
+      "purple mangosteen"
+    ],
+    "Q": [
+      "quince"
+    ],
+    "R": [
+      "radicchio",
+      "radish",
+      "raisin",
+      "rambutan",
+      "raspberry",
+      "redcurrant",
+      "rhubarb",
+      "rock melon",
+      "rosemary",
+      "runner bean",
+      "rutabaga"
+    ],
+    "S": [
+      "sage",
+      "salal berry",
+      "satsuma",
+      "scallion",
+      "shallot",
+      "skirret",
+      "snap pea",
+      "soy bean",
+      "spaghetti squash",
+      "spinach",
+      "squash",
+      "star fruit",
+      "strawberry",
+      "sweet potato"
+    ],
+    "T": [
+      "tabasco pepper",
+      "tamarillo",
+      "tangerine",
+      "taro",
+      "tat soi",
+      "thyme",
+      "tomato",
+      "topinambur",
+      "tubers",
+      "turnip"
+    ],
+    "U": [
+      "ugli fruit"
+    ],
+    "V": [],
+    "W": [
+      "wasabi",
+      "water chestnut",
+      "watercress",
+      "watermelon",
+      "white radish"
+    ],
+    "X": [],
+    "Y": [
+      "yam"
+    ],
+    "Z": [
+      "zucchini"
+    ]
+  }
+}

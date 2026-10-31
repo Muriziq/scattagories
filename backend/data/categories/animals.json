@@ -1,0 +1,189 @@
+{
+  "category": "animals",
+  "updatedAt": "2026-10-31T08:33:26.529Z",
+  "wordCount": 134,
+  "letters": {
+    "A": [
+      "aardvark",
+      "alligator",
+      "alpaca",
+      "antelope",
+      "ape",
+      "armadillo"
+    ],
+    "B": [
+      "baboon",
+      "badger",
+      "bat",
+      "bear",
+      "beaver",
+      "bison",
+      "boar",
+      "buffalo",
+      "bull"
+    ],
+    "C": [
+      "camel",
+      "canary",
+      "capybara",
+      "cat",
+      "chameleon",
+      "cheetah",
+      "chimpanzee",
+      "chinchilla",
+      "chipmunk",
+      "cougar",
+      "cow",
+      "coyote",
+      "crocodile",
+      "crow"
+    ],
+    "D": [
+      "deer",
+      "dingo",
+      "dog",
+      "donkey",
+      "dromedary"
+    ],
+    "E": [
+      "elephant",
+      "elk",
+      "ewe"
+    ],
+    "F": [
+      "ferret",
+      "finch",
+      "fish",
+      "fox",
+      "frog"
+    ],
+    "G": [
+      "gazelle",
+      "gila monster",
+      "giraffe",
+      "gnu",
+      "goat",
+      "gopher",
+      "gorilla",
+      "grizzly bear",
+      "ground hog",
+      "guinea pig"
+    ],
+    "H": [
+      "hamster",
+      "hedgehog",
+      "hippopotamus",
+      "hog",
+      "horse",
+      "hyena"
+    ],
+    "I": [
+      "ibex",
+      "iguana",
+      "impala"
+    ],
+    "J": [
+      "jackal",
+      "jaguar"
+    ],
+    "K": [
+      "kangaroo",
+      "koala"
+    ],
+    "L": [
+      "lamb",
+      "lemur",
+      "leopard",
+      "lion",
+      "lizard",
+      "llama",
+      "lynx"
+    ],
+    "M": [
+      "mandrill",
+      "marmoset",
+      "mink",
+      "mole",
+      "mongoose",
+      "monkey",
+      "moose",
+      "mountain goat",
+      "mouse",
+      "mule",
+      "muskrat",
+      "mustang",
+      "mynah bird"
+    ],
+    "N": [
+      "newt"
+    ],
+    "O": [
+      "ocelot",
+      "opossum",
+      "orangutan",
+      "oryx",
+      "otter",
+      "ox"
+    ],
+    "P": [
+      "panda",
+      "panther",
+      "parakeet",
+      "parrot",
+      "pig",
+      "platypus",
+      "polar bear",
+      "porcupine",
+      "porpoise",
+      "prairie dog",
+      "puma"
+    ],
+    "Q": [],
+    "R": [
+      "rabbit",
+      "raccoon",
+      "ram",
+      "rat",
+      "reindeer",
+      "reptile",
+      "rhinoceros"
+    ],
+    "S": [
+      "salamander",
+      "seal",
+      "sheep",
+      "shrew",
+      "silver fox",
+      "skunk",
+      "sloth",
+      "snake",
+      "squirrel"
+    ],
+    "T": [
+      "tapir",
+      "tiger",
+      "toad",
+      "turtle"
+    ],
+    "U": [],
+    "V": [],
+    "W": [
+      "walrus",
+      "warthog",
+      "weasel",
+      "whale",
+      "wildcat",
+      "wolf",
+      "wolverine",
+      "wombat",
+      "woodchuck"
+    ],
+    "X": [],
+    "Y": [
+      "yak"
+    ],
+    "Z": [
+      "zebra"
+    ]
+  }
+}

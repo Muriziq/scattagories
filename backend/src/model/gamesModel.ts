@@ -1,9 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { AuthenticatedSocket } from "../server";
-import { countryLookup } from "./countries";
-import { capitalLookup } from "./capitals";
-import { currencyLookup } from "./currencies";
-import { stateLookup } from "./states";
+import { getAvailableCategories, isCategoryWordValid } from "../services/categoryManager";
 import pool from "../db";
 import { v7 as uuidv7 } from "uuid";
 
@@ -26,20 +23,14 @@ export function getTotalRoomsCount(): number {
   return publicRooms.size + privateRooms.size;
 }
 
+// Re-export dynamic category accessor for game creation and lookups
+export { getAvailableCategories };
 export const availableCategories = [
   "Countries",
   "Capitals",
   "Currencies",
   "States",
 ] as const;
-
-// Fast O(1) set lookup for validating category answers by selected letter
-const categoryLookups: Record<string, Record<string, Set<string>>> = {
-  Countries: countryLookup,
-  Capitals: capitalLookup,
-  Currencies: currencyLookup,
-  States: stateLookup,
-};
 
 // Strips diacritics, punctuation, and leading whitespace for normalized answer matching
 function normalizeText(str: string): string {
@@ -123,7 +114,7 @@ export class GameRoom {
     maxTimePerRound: number = 60,
     password: string | null = null,
     isPublic: boolean = true,
-    categories: string[] = [...availableCategories],
+    categories: string[] = [...getAvailableCategories()],
     allowComputerHelper: boolean = true
   ) {
     this.id = id;
@@ -546,7 +537,6 @@ export class GameRoom {
     if (!currentSubmissions) return null;
 
     for (const category of this.categories) {
-      const lookupMap = categoryLookups[category]?.[letter];
       const answerCounts: Record<string, number> = {};
 
       // First pass: Count valid answers starting with the round letter
@@ -557,7 +547,7 @@ export class GameRoom {
 
         const clean = normalizeText(raw);
         const firstChar = clean[0]?.toUpperCase();
-        if (firstChar === letter && lookupMap?.has(clean)) {
+        if (firstChar === letter && isCategoryWordValid(category, letter, clean)) {
           answerCounts[clean] = (answerCounts[clean] || 0) + 1;
         }
       }

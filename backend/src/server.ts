@@ -11,6 +11,11 @@ import games from "./router/games";
 import pool from "./db";
 import { getRoom, publicRooms, privateRooms, getTotalRoomsCount } from "./model/gamesModel";
 import { verifyAccessToken, UserPayload } from "./utils/jwt";
+import {
+  initCategoryManager,
+  getCategoryStats,
+  triggerBackgroundSync,
+} from "./services/categoryManager";
 
 import path from "path";
 
@@ -100,6 +105,7 @@ app.get("/health/detailed", async (req, res) => {
         },
       },
       activeRoomsCount: getTotalRoomsCount(),
+      categories: getCategoryStats(),
       memory: {
         rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
         heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
@@ -114,10 +120,25 @@ app.get("/health/detailed", async (req, res) => {
       database: {
         status: "disconnected",
         latencyMs: dbLatencyMs,
+        error: error.message,
       },
+      categories: getCategoryStats(),
       activeRoomsCount: getTotalRoomsCount(),
     });
   }
+});
+
+// 3. Protected endpoint to trigger on-demand category sync without waiting for 30-day interval
+app.post("/health/sync-categories", (req, res) => {
+  const monitoringKey = req.headers["x-monitoring-key"] || req.query.key;
+  const configuredKey = process.env.MONITORING_KEY;
+
+  if (!configuredKey || monitoringKey !== configuredKey) {
+    return res.status(403).json({ message: "Forbidden: Invalid credentials" });
+  }
+
+  const result = triggerBackgroundSync();
+  return res.status(result.started ? 200 : 409).json(result);
 });
 
 // Root welcome route
@@ -418,7 +439,18 @@ io.on("connection", (socket: AuthenticatedSocket) => {
   });
 });
 
+// Global error handling guards to prevent unhandled rejections/exceptions from crashing the server
+process.on("unhandledRejection", (reason: any) => {
+  console.error("[Process] Unhandled Promise Rejection:", reason?.stack || reason);
+});
+
+process.on("uncaughtException", (error: Error) => {
+  console.error("[Process] Uncaught Exception:", error.stack || error.message);
+});
+
 // Start Server
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  // Initialize background category manager & verify cache freshness
+  initCategoryManager();
 });

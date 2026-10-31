@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import pool from "../db";
 import { verifyAccessToken, AuthRequest } from "../middleware/tokens";
-import { GameRoom, publicRooms, privateRooms, getRoom, getTotalRoomsCount, availableCategories, deleteRoom } from "../model/gamesModel";
+import { GameRoom, publicRooms, privateRooms, getRoom, getTotalRoomsCount, deleteRoom } from "../model/gamesModel";
+import { getAvailableCategories, isCategoryAvailable } from "../services/categoryManager";
 import crypto from "crypto";
 
 dotenv.config();
@@ -48,7 +49,13 @@ const createRoomSchema = z
     password: z.string().trim().optional().nullable(),
     maxPlayers: z.number().min(2).max(10).default(5),
     maxTimePerRound: z.number().min(10).max(120).default(60),
-    categories: z.array(z.enum(availableCategories as unknown as [string, ...string[]])).min(1, "At least one category is required"),
+    categories: z
+      .array(z.string())
+      .min(1, "At least one category is required")
+      .refine(
+        (cats) => cats.every((c) => isCategoryAvailable(c)),
+        { message: "One or more selected categories are not supported." }
+      ),
     allowComputerHelper: z.boolean().default(true),
   })
   .refine(
@@ -68,7 +75,7 @@ const joinRoomSchema = z.object({
 
 // Returns the list of standard game categories available for selection
 router.get("/", (req: Request, res: Response) => {
-  return res.status(200).json({ categories: availableCategories });
+  return res.status(200).json({ categories: getAvailableCategories() });
 });
 
 // 1. CREATE ROOM: Initializes an in-memory game room and assigns creator as host (rate-limited)
