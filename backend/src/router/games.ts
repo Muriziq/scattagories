@@ -253,10 +253,65 @@ let cachedLeaderboard: any[] | null = null;
 let lastLeaderboardFetchTime = 0;
 let leaderboardInFlightPromise: Promise<any[]> | null = null;
 
-// Helper to invalidate cache when a game completes if immediate freshness is desired
-export function invalidateLeaderboardCache() {
-  lastLeaderboardFetchTime = 0;
-  cachedLeaderboard = null;
+// Helper to update a single user's stats in the cached leaderboard without full invalidation
+export function updateCachedLeaderboardUser(userStats: {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  total_games: number;
+  total_wins: number;
+  total_score?: number;
+  high_score: number;
+}) {
+  // If no cache exists yet or an initial fetch is in-flight, let the full fetch complete naturally
+  if (!cachedLeaderboard || leaderboardInFlightPromise) return;
+
+  const existingIndex = cachedLeaderboard.findIndex((entry) => entry.id === userStats.id);
+
+  if (existingIndex !== -1) {
+    // Update existing entry with latest stats
+    const currentEntry = cachedLeaderboard[existingIndex];
+    cachedLeaderboard[existingIndex] = {
+      ...currentEntry,
+      username: userStats.username,
+      avatar_url: userStats.avatar_url,
+      matches_played: userStats.total_games,
+      total_wins: userStats.total_wins,
+      high_score: userStats.high_score,
+      total_score: userStats.total_score !== undefined ? userStats.total_score : currentEntry.total_score,
+    };
+  } else {
+    // Check if this user qualifies for the top 20 list
+    const lowestEntry = cachedLeaderboard[cachedLeaderboard.length - 1];
+    const candidateScore = userStats.total_score || 0;
+    const qualifies =
+      cachedLeaderboard.length < 20 ||
+      (lowestEntry &&
+        (userStats.total_wins > lowestEntry.total_wins ||
+          (userStats.total_wins === lowestEntry.total_wins && candidateScore > lowestEntry.total_score)));
+
+    if (qualifies) {
+      cachedLeaderboard.push({
+        id: userStats.id,
+        username: userStats.username,
+        avatar_url: userStats.avatar_url,
+        matches_played: userStats.total_games,
+        total_wins: userStats.total_wins,
+        total_score: candidateScore,
+        high_score: userStats.high_score,
+      });
+    }
+  }
+
+  // Re-sort top 20 by wins, then total score
+  cachedLeaderboard.sort((a, b) => {
+    if (b.total_wins !== a.total_wins) return b.total_wins - a.total_wins;
+    return b.total_score - a.total_score;
+  });
+
+  if (cachedLeaderboard.length > 20) {
+    cachedLeaderboard = cachedLeaderboard.slice(0, 20);
+  }
 }
 
 // 4. GET GLOBAL LEADERBOARD: Returns top players ranked by wins and total score (Cached for 30m)

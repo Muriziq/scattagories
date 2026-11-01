@@ -135,8 +135,14 @@ export function verifyAndRotateSession(
     (s: RefreshTokenSession) => s.tokenHash !== oldHash && (s as any).token !== oldTokenRaw
   );
 
+  // Cap maximum concurrent sessions to 5 (evict oldest session if exceeding limit)
+  let allSessions = [...remainingSessions, newSession];
+  if (allSessions.length > 5) {
+    allSessions = allSessions.slice(-5);
+  }
+
   return {
-    updatedSessions: [...remainingSessions, newSession],
+    updatedSessions: allSessions,
     isReuseDetected: false,
   };
 }

@@ -12,15 +12,6 @@ const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
-// Test the connection when the file loads
-pool.connect((err, client, release) => {
-  if (err) {
-    return console.error('Error acquiring client', err.stack);
-  }
-  console.log('Successfully connected to PostgreSQL database!');
-  release();
-});
-
 // Prevent unhandled errors on idle database clients from crashing the server process
 pool.on('error', (err) => {
   console.error('Unexpected PostgreSQL idle client error:', err);

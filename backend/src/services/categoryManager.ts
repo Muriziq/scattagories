@@ -18,6 +18,7 @@ let cachedMetadata: {
 } | null = null;
 let isSyncInProgress = false;
 let activeWorkerProcess: ChildProcess | null = null;
+let dailyCheckTimer: NodeJS.Timeout | null = null;
 
 // Returns the path to backend/data/categories/ directory
 function getCategoriesDir(): string {
@@ -132,6 +133,7 @@ export function triggerBackgroundSync(): { started: boolean; message: string } {
 
   try {
     activeWorkerProcess = fork(workerScript, [], {
+      execArgv: isTypeScript ? ["--import", "tsx"] : [],
       stdio: ["inherit", "inherit", "inherit", "ipc"],
     });
 
@@ -220,6 +222,17 @@ export function initCategoryManager(): void {
 
   // 2. Check if background sync is needed (first boot or older than 30 days)
   checkSyncNeeded();
+
+  // 3. Schedule daily heartbeat check (runs once every 24 hours, safe from 32-bit overflow)
+  if (dailyCheckTimer) {
+    clearInterval(dailyCheckTimer);
+  }
+  dailyCheckTimer = setInterval(
+    () => {
+      checkSyncNeeded();
+    },
+    24 * 60 * 60 * 1000,
+  );
 }
 
 // Public accessors for game engine and routers

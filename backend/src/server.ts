@@ -58,8 +58,6 @@ export const generalLimiter = rateLimit({
 
 // Middlewares
 app.use(cors(corsOptions));
-// Serve static uploads with browser cache headers (exempt from general rate limiter)
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), { maxAge: "1d" }));
 app.use(generalLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -263,7 +261,8 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       }
       room.addParticipant(socket);
     } else {
-      // Reconnecting player: notify if game already began
+      // Reconnecting player: restore connection state and cancel pending forfeit/disconnect timers
+      room.handlePlayerReconnect(username, socket, io);
       if (room.status !== "waiting") {
         socket.emit("game:started", "Game Has Started");
       }
@@ -426,12 +425,18 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       const username = socket.user.username;
       console.log(`Socket disconnected: ${username} (${socket.id})`);
 
-      // Only clean up if participant was in a pre-game waiting lobby
       const allRooms = [...publicRooms.values(), ...privateRooms.values()];
       for (const room of allRooms) {
-        if (room.status === "waiting" && room.participants.has(username)) {
+        if (!room.participants.has(username)) continue;
+
+        if (room.status === "waiting") {
+          // Pre-game lobby: remove immediately
           room.removeParticipant(username, io, socket);
           io.to(room.id).emit("room:participants", room.getRoomParticipantsData());
+          break;
+        } else if (room.status !== "ended") {
+          // Active game: trigger 30s disconnect grace period without immediate removal
+          room.handlePlayerDisconnect(username, io);
           break;
         }
       }
@@ -449,8 +454,23 @@ process.on("uncaughtException", (error: Error) => {
 });
 
 // Start Server
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  // Initialize background category manager & verify cache freshness
+async function startServer() {
+  // 1. Initialize background category manager & verify cache freshness
   initCategoryManager();
-});
+
+  // 2. Verify database connection before accepting traffic
+  try {
+    const dbClient = await pool.connect();
+    console.log("Successfully connected to PostgreSQL database!");
+    dbClient.release();
+  } catch (err: any) {
+    console.error("[Database Warning] Failed to connect to PostgreSQL:", err.message);
+  }
+
+  // 3. Start HTTP and WebSocket listener
+  server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+startServer();

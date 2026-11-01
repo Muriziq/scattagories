@@ -26,10 +26,13 @@ import {
 } from "../utils/cookies";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
 import { uploadAvatar } from "../utils/upload";
-import fs from "fs";
-import path from "path";
+import { uploadToCloudinary, isCloudinaryConfigured } from "../utils/cloudinary";
+import { updateCachedLeaderboardUser } from "./games";
 
 const router = express.Router();
+
+// Dummy bcrypt hash for constant-time comparison to prevent user enumeration timing attacks
+const DUMMY_HASH = "$2a$10$abcdefghijklmnopqrstuvwxyze01234567890123456789012345678";
 
 // Rate limiter for authentication and sensitive operations (15 requests per 15 minutes)
 export const authLimiter = rateLimit({
@@ -136,7 +139,9 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
     `;
     const checkResult = await pool.query(checkQuery, [identifier, identifier]);
     if (checkResult.rows.length === 0) {
-      return res.status(404).json({ message: "Invalid Credentials" });
+      // Run dummy compare to match password verification duration (~100ms)
+      await bcrypt.compare(password, DUMMY_HASH);
+      return res.status(401).json({ message: "Invalid Credentials" });
     }
 
     const userAns = checkResult.rows[0];
@@ -148,13 +153,16 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
     const refreshToken = signRefreshToken({ id: userAns.id });
     const now = Date.now();
 
-    // Clean up expired sessions and append the new login session
+    // Clean up expired sessions, append new login session, and cap at 5 devices max
     const existingSessions = Array.isArray(userAns.refresh_tokens) ? userAns.refresh_tokens : [];
     const validSessions = existingSessions.filter(
       (s: any) => typeof s === "object" && s?.expiresAt && s.expiresAt > now
     );
     const newSession = createSessionObject(refreshToken, req, 7);
-    const updatedSessions = [...validSessions, newSession];
+    let updatedSessions = [...validSessions, newSession];
+    if (updatedSessions.length > 5) {
+      updatedSessions = updatedSessions.slice(-5);
+    }
 
     const updateRefreshQuery = `
       UPDATE users SET refresh_tokens = $1::jsonb
@@ -502,6 +510,16 @@ router.get("/profile", verifyAccessToken, async (req: AuthRequest, res: Response
     const totalWins = row.total_wins || 0;
     const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0;
 
+    // Incrementally check/update user's rank in leaderboard cache without full DB invalidation
+    updateCachedLeaderboardUser({
+      id: row.id,
+      username: row.username,
+      avatar_url: row.avatar_url,
+      total_games: totalGames,
+      total_wins: totalWins,
+      high_score: row.high_score,
+    });
+
     return res.status(200).json({
       user: {
         id: row.id,
@@ -586,7 +604,14 @@ router.get("/profile/matches", verifyAccessToken, async (req: AuthRequest, res: 
 router.post(
   "/profile/avatar",
   verifyAccessToken,
-  uploadAvatar.single("avatar"),
+  (req: Request, res: Response, next) => {
+    uploadAvatar.single("avatar")(req, res, (err: any) => {
+      if (err) {
+        return res.status(400).json({ message: err.message || "Failed to process image file" });
+      }
+      next();
+    });
+  },
   async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user?.id;
@@ -596,31 +621,28 @@ router.post(
         return res.status(400).json({ message: "No image file provided" });
       }
 
-      // 1. Retrieve existing avatar to remove older file from disk
-      const userQuery = `SELECT avatar_url FROM users WHERE id = $1 AND deleted_at IS NULL;`;
-      const userRes = await pool.query(userQuery, [userId]);
-      const oldAvatarUrl = userRes.rows[0]?.avatar_url;
-
-      if (oldAvatarUrl && oldAvatarUrl.startsWith("/uploads/avatars/")) {
-        const oldFilePath = path.join(process.cwd(), oldAvatarUrl);
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlink(oldFilePath, (err) => {
-            if (err) console.error("Error removing old avatar:", err);
-          });
-        }
+      if (!isCloudinaryConfigured()) {
+        return res.status(503).json({
+          message: "Avatar upload service is currently unavailable. Please try again later.",
+        });
       }
 
-      // 2. Relative static public URL
-      const relativeUrl = `/uploads/avatars/${req.file.filename}`;
+      // 1. Upload directly to Cloudinary
+      const cloudResult = await uploadToCloudinary(
+        req.file.buffer,
+        "scatterblitz/avatars",
+        `user-${userId}`
+      );
+      const avatarUrl = cloudResult.secure_url;
 
-      // 3. Update database record
+      // 2. Update database record
       const updateQuery = `
         UPDATE users
         SET avatar_url = $1, modified_at = CURRENT_TIMESTAMP
         WHERE id = $2 AND deleted_at IS NULL
         RETURNING id, username, email, is_email_verified, avatar_url;
       `;
-      const updateResult = await pool.query(updateQuery, [relativeUrl, userId]);
+      const updateResult = await pool.query(updateQuery, [avatarUrl, userId]);
       if (updateResult.rows.length === 0) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -630,7 +652,7 @@ router.post(
 
       return res.status(200).json({
         message: "Profile avatar updated successfully",
-        avatar_url: relativeUrl,
+        avatar_url: avatarUrl,
         user: updatedUser,
         accessToken: newAccessToken,
       });

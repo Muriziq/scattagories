@@ -76,9 +76,17 @@ export class GameRoom {
   availableLetters: string[];
   activeLetter: string | null;
   isBoardLocked: boolean;
+  // Timers and Grace Periods
   roundTimer: NodeJS.Timeout | null;
   selectionTimer: NodeJS.Timeout | null;
   connectionTimeout: NodeJS.Timeout | null;
+  forfeitTimer: NodeJS.Timeout | null = null;
+  pausedStateBeforeForfeit: {
+    status: "waiting" | "letter_selection" | "active_sprint" | "recap";
+    remainingSprintMs?: number;
+    remainingSelectionMs?: number;
+  } | null = null;
+  disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
   selectionTimeLimit: number;
   roundStartTime: number | null = null;
   selectionStartTime: number | null = null;
@@ -90,6 +98,7 @@ export class GameRoom {
     {
       score: number;
       hasLeft?: boolean;
+      isConnected?: boolean;
     }
   >;
 
@@ -161,6 +170,7 @@ export class GameRoom {
     this.participants.set(username, {
       score: 0,
       hasLeft: false,
+      isConnected: true,
     });
   }
 
@@ -168,6 +178,9 @@ export class GameRoom {
   public removeParticipant(username: string, io?: Server, socket?: Socket) {
     const participant = this.participants.get(username);
     if (!participant) return;
+
+    // Clear any pending disconnect timer for this user
+    this.clearDisconnectTimer(username);
 
     if (this.status === "waiting") {
       this.participants.delete(username);
@@ -177,6 +190,8 @@ export class GameRoom {
         this.clearConnectionTimeout();
         this.clearSelectionTimer();
         this.clearRoundTimer();
+        this.clearForfeitTimer();
+        this.clearAllDisconnectTimers();
         deleteRoom(this.id);
       } else if (this.hostUsername === username) {
         // Reassign host role to the next participant in the lobby
@@ -186,6 +201,7 @@ export class GameRoom {
     } else {
       // Mark as left during active game to maintain scoreboard consistency
       participant.hasLeft = true;
+      participant.isConnected = false;
 
       const activeParticipants = Array.from(this.participants.entries()).filter(([_, p]) => !p.hasLeft);
       
@@ -194,26 +210,204 @@ export class GameRoom {
         this.clearConnectionTimeout();
         this.clearSelectionTimer();
         this.clearRoundTimer();
+        this.clearForfeitTimer();
+        this.clearAllDisconnectTimers();
         deleteRoom(this.id);
         return;
       }
 
-      // If only 1 player remains, conclude the game immediately by default
-      if (activeParticipants.length === 1 && io && socket) {
-        this.clearSelectionTimer();
-        this.clearRoundTimer();
-        this.endGame(io, socket);
+      // If only 1 player remains and match is still active, trigger 15s forfeit grace period
+      if (activeParticipants.length === 1 && this.status !== "ended" && io) {
+        const remainingUsername = activeParticipants[0][0];
+        this.startForfeitCountdown(remainingUsername, io, socket);
         return;
       }
 
       // Recalculate remaining rounds dynamically so all remaining active players get equal turns
       this.recalculateRemainingRounds(io);
 
-      // If departing player held the current turn, advance immediately to next turn
-      if (io && socket && this.usersTurn === username && this.status !== "ended") {
+      // If departing player held the letter selection turn, advance immediately to next turn
+      if (io && this.usersTurn === username && this.status === "letter_selection") {
+        this.clearSelectionTimer();
         this.getNextUserTurn(io, socket);
       }
     }
+  }
+
+  // Gracefully handles mid-game disconnects with a 30s reconnect window
+  public handlePlayerDisconnect(username: string, io: Server) {
+    const participant = this.participants.get(username);
+    if (!participant || participant.hasLeft) return;
+
+    participant.isConnected = false;
+    this.clearDisconnectTimer(username);
+
+    // Notify room of participant connection status change
+    io.to(this.id).emit("room:participants", this.getRoomParticipantsData());
+
+    // Check if only 1 connected active player remains
+    const activeConnected = Array.from(this.participants.entries()).filter(
+      ([_, p]) => !p.hasLeft && p.isConnected !== false
+    );
+
+    if (activeConnected.length === 1 && this.status !== "ended") {
+      const remainingUsername = activeConnected[0][0];
+      this.startForfeitCountdown(remainingUsername, io);
+      // The 15s forfeit countdown governs the outcome; no redundant 30s disconnect timer needed
+      return;
+    }
+
+    // Set a 30-second disconnect timeout only if multiple players are still active
+    const timer = setTimeout(() => {
+      this.disconnectTimers.delete(username);
+      this.removeParticipant(username, io);
+      io.to(this.id).emit("room:participants", this.getRoomParticipantsData());
+    }, 30000);
+
+    this.disconnectTimers.set(username, timer);
+  }
+
+  // Restores a returning player if they reconnect within the grace period
+  public handlePlayerReconnect(username: string, socket: AuthenticatedSocket, io: Server) {
+    const participant = this.participants.get(username);
+    if (!participant) return;
+
+    this.clearDisconnectTimer(username);
+    participant.isConnected = true;
+    participant.hasLeft = false;
+
+    // Recalculate remaining rounds dynamically to re-include the returning player
+    this.recalculateRemainingRounds(io);
+
+    // If room was counting down to forfeit victory for the sole player, cancel it and resume accurately
+    if (this.forfeitTimer !== null) {
+      const paused = this.pausedStateBeforeForfeit;
+      this.clearForfeitTimer();
+
+      io.to(this.id).emit("room:forfeit_cancelled", {
+        message: `${username} reconnected. Resuming match!`,
+      });
+
+      // Resume exact paused game flow without skipping rounds or prematurely triggering recap
+      if (this.status !== "ended" && paused) {
+        if (paused.status === "letter_selection") {
+          this.status = "letter_selection";
+          const remainingSec = Math.max(
+            3,
+            Math.ceil((paused.remainingSelectionMs || this.selectionTimeLimit * 1000) / 1000)
+          );
+          this.selectionStartTime = Date.now();
+
+          io.to(this.id).emit("turn:change", {
+            usersTurn: this.usersTurn,
+            selectionTimeLimit: remainingSec,
+            selectionStartTime: this.selectionStartTime,
+          });
+
+          this.selectionTimer = setTimeout(() => {
+            if (this.status === "letter_selection" && this.availableLetters.length > 0) {
+              const randomLetter =
+                this.availableLetters[
+                  Math.floor(Math.random() * this.availableLetters.length)
+                ];
+              if (randomLetter) {
+                this.setActiveLetter(randomLetter, io, socket);
+              }
+            }
+          }, remainingSec * 1000);
+        } else if (paused.status === "active_sprint" && this.activeLetter) {
+          this.status = "active_sprint";
+          const remainingMs = Math.max(2000, paused.remainingSprintMs || this.maxTimePerRound * 1000);
+          this.roundStartTime = Date.now() - (this.maxTimePerRound * 1000 - remainingMs);
+
+          io.to(this.id).emit("letter:active", {
+            letter: this.activeLetter,
+            roundStartTime: this.roundStartTime,
+          });
+
+          this.roundTimer = setTimeout(() => {
+            this.submitStatus = "accepting";
+            io.to(this.id).emit("round:ended", { reason: "time_up" });
+            this.startRecapTimer(io, socket);
+          }, remainingMs);
+        } else if (paused.status === "recap") {
+          this.startRecapTimer(io, socket);
+        }
+      }
+    }
+
+    io.to(this.id).emit("room:participants", this.getRoomParticipantsData());
+  }
+
+  // Starts a 15-second forfeit countdown when only 1 active player remains
+  public startForfeitCountdown(remainingUsername: string, io: Server, socket?: Socket) {
+    // Prevent starting forfeit if game has already ended or timer is already running
+    if (this.status === "ended" || this.forfeitTimer !== null) return;
+
+    // Snapshot currently active phase and exact remaining timer durations before pausing
+    const now = Date.now();
+    let remainingSprintMs: number | undefined;
+    let remainingSelectionMs: number | undefined;
+
+    if (this.status === "active_sprint" && this.roundStartTime) {
+      const elapsed = now - this.roundStartTime;
+      remainingSprintMs = Math.max(0, this.maxTimePerRound * 1000 - elapsed);
+    } else if (this.status === "letter_selection" && this.selectionStartTime) {
+      const elapsed = now - this.selectionStartTime;
+      remainingSelectionMs = Math.max(0, this.selectionTimeLimit * 1000 - elapsed);
+    }
+
+    this.pausedStateBeforeForfeit = {
+      status: this.status,
+      remainingSprintMs,
+      remainingSelectionMs,
+    };
+
+    // Pause round/turn timers
+    this.clearSelectionTimer();
+    this.clearRoundTimer();
+
+    io.to(this.id).emit("room:forfeit_warning", {
+      remainingSeconds: 15,
+      remainingPlayer: remainingUsername,
+      message: "An opponent disconnected or left. Waiting 15s for reconnection...",
+    });
+
+    this.forfeitTimer = setTimeout(() => {
+      this.forfeitTimer = null;
+      this.pausedStateBeforeForfeit = null;
+      // Re-verify that only 1 player remains
+      const activePlayers = Array.from(this.participants.entries()).filter(
+        ([_, p]) => !p.hasLeft && p.isConnected !== false
+      );
+
+      if (activePlayers.length <= 1 && this.status !== "ended") {
+        this.endGame(io, socket, remainingUsername);
+      }
+    }, 15000);
+  }
+
+  public clearForfeitTimer() {
+    if (this.forfeitTimer !== null) {
+      clearTimeout(this.forfeitTimer);
+      this.forfeitTimer = null;
+    }
+    this.pausedStateBeforeForfeit = null;
+  }
+
+  public clearDisconnectTimer(username: string) {
+    const timer = this.disconnectTimers.get(username);
+    if (timer) {
+      clearTimeout(timer);
+      this.disconnectTimers.delete(username);
+    }
+  }
+
+  public clearAllDisconnectTimers() {
+    for (const [_, timer] of this.disconnectTimers.entries()) {
+      clearTimeout(timer);
+    }
+    this.disconnectTimers.clear();
   }
 
   // Recalculates total rounds dynamically after a player departs mid-game
@@ -247,7 +441,7 @@ export class GameRoom {
       score: p.score,
       isHost: username === this.hostUsername,
       hasLeft: !!p.hasLeft,
-      isConnected: !p.hasLeft,
+      isConnected: p.isConnected !== false && !p.hasLeft,
     }));
   }
 
@@ -292,7 +486,8 @@ export class GameRoom {
   }
 
   // Advances game to next player's letter selection, or ends game if rounds are exhausted
-  public getNextUserTurn(io: Server, socket: Socket) {
+  public getNextUserTurn(io: Server, socket?: Socket) {
+    this.status = "letter_selection";
     this.clearSelectionTimer();
     this.clearRoundTimer();
     const activeUsernames = Array.from(this.participants.entries())
@@ -350,12 +545,14 @@ export class GameRoom {
   }
 
   // Sets active round letter and transitions room into active sprint phase
-  public setActiveLetter(letter: string, io: Server, socket: Socket) {
+  public setActiveLetter(letter: string, io: Server, socket?: Socket) {
     if (!letter) return false;
     const newLetter = letter.toUpperCase();
     const isLetterRelevant = this.availableLetters.includes(newLetter);
     if (!isLetterRelevant) {
-      socket.emit("error", "Pls Select A Valid Letter");
+      if (socket) {
+        socket.emit("error", "Pls Select A Valid Letter");
+      }
       return false;
     }
     this.clearSelectionTimer();
@@ -389,7 +586,8 @@ export class GameRoom {
 
   // Persists the completed match and all player results to PostgreSQL using bulk insertion
   public async saveGameToDatabase(
-    standings: Array<{ username: string; score: number; isHost: boolean }>
+    standings: Array<{ username: string; score: number; isHost: boolean; hasLeft?: boolean }>,
+    forfeitWinnerUsername?: string
   ) {
     try {
       const hostDbId = this.hostUsername ? this.userDbIds[this.hostUsername] || null : null;
@@ -437,7 +635,10 @@ export class GameRoom {
         const p = standings[i];
         const userDbId = this.userDbIds[p.username] || null;
         const rank = i + 1;
-        const isWinner = p.score > 0 && p.score === topScore;
+        // If forfeit winner is specified, that player is the guaranteed winner; otherwise top score > 0
+        const isWinner = forfeitWinnerUsername
+          ? p.username === forfeitWinnerUsername
+          : p.score > 0 && p.score === topScore;
 
         valueClauses.push(
           `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5})`
@@ -466,29 +667,43 @@ export class GameRoom {
   }
 
   // Concludes match, broadcasts final rankings, persists to DB, and schedules room cleanup
-  public endGame(io: Server, socket: Socket) {
+  public endGame(io: Server, socket?: Socket, forfeitWinnerUsername?: string) {
     if (this.status === "ended") return;
     this.status = "ended";
     this.clearConnectionTimeout();
     this.clearSelectionTimer();
     this.clearRoundTimer();
+    this.clearForfeitTimer();
+    this.clearAllDisconnectTimers();
 
-    const standings = Array.from(this.participants.entries())
+    let standings = Array.from(this.participants.entries())
       .map(([username, p]) => ({
         username,
         score: p.score,
         isHost: username === this.hostUsername,
+        hasLeft: !!p.hasLeft,
       }))
       .sort((a, b) => b.score - a.score);
+
+    // If game ended via forfeit victory, prioritize the remaining player as Rank 1 / Winner
+    if (forfeitWinnerUsername) {
+      standings = standings.sort((a, b) => {
+        if (a.username === forfeitWinnerUsername) return -1;
+        if (b.username === forfeitWinnerUsername) return 1;
+        return b.score - a.score;
+      });
+    }
 
     // 1. Instantly notify connected players
     io.to(this.id).emit("game:ended", {
       submissions: this.detailedSubmissions,
       standings,
+      forfeit: !!forfeitWinnerUsername,
+      winner: forfeitWinnerUsername || (standings[0]?.username ?? null),
     });
 
     // 2. Persist to PostgreSQL asynchronously in the background
-    this.saveGameToDatabase(standings);
+    this.saveGameToDatabase(standings, forfeitWinnerUsername);
 
     // 3. Keep room alive for 15 minutes for post-game review, then clean up
     setTimeout(() => {
@@ -497,7 +712,7 @@ export class GameRoom {
   }
 
   // Brief recap window allowing answer submissions before computing and displaying scores
-  public startRecapTimer(io: Server, socket: Socket) {
+  public startRecapTimer(io: Server, socket?: Socket) {
     this.clearSelectionTimer();
     this.clearRoundTimer();
     this.submitStatus = "accepting";
@@ -529,48 +744,68 @@ export class GameRoom {
   }
 
   // Validates answers against category dictionaries: 5 pts for unique word, 2 pts for shared word.
+  // Defaults non-submitters and blank answers to 0 points for every category.
   // Returns the scored submissions for this round.
-  public calculateRoundScores(): Record<string, Record<string, { answer: string; score: number }>> | null {
-    if (!this.activeLetter) return null;
+  public calculateRoundScores(): Record<string, Record<string, { answer: string; score: number }>> {
+    if (!this.activeLetter) return {};
     const letter = this.activeLetter;
-    const currentSubmissions = this.detailedSubmissions[letter];
-    if (!currentSubmissions) return null;
 
+    if (!this.detailedSubmissions[letter]) {
+      this.detailedSubmissions[letter] = {};
+    }
+    const currentSubmissions = this.detailedSubmissions[letter];
+
+    // 1. Guarantee every participant has an entry for each category with default 0 points
+    for (const [username, p] of this.participants.entries()) {
+      if (!currentSubmissions[username]) {
+        currentSubmissions[username] = {};
+      }
+      for (const category of this.categories) {
+        if (!currentSubmissions[username][category]) {
+          currentSubmissions[username][category] = { answer: "", score: 0 };
+        }
+      }
+    }
+
+    const usernames = Object.keys(currentSubmissions);
+
+    // 2. Score each category
     for (const category of this.categories) {
       const answerCounts: Record<string, number> = {};
+      const normalizedAnswers: Record<string, string> = {};
 
-      // First pass: Count valid answers starting with the round letter
-      for (const username of Object.keys(currentSubmissions)) {
+      // Pass 1: Normalize answers and validate against category dictionary
+      for (const username of usernames) {
         const item = currentSubmissions[username]?.[category];
         const raw = item?.answer?.trim() || "";
         if (!raw) continue;
 
         const clean = normalizeText(raw);
+        normalizedAnswers[username] = clean;
+
         const firstChar = clean[0]?.toUpperCase();
         if (firstChar === letter && isCategoryWordValid(category, letter, clean)) {
           answerCounts[clean] = (answerCounts[clean] || 0) + 1;
         }
       }
 
-      // Second pass: Assign points based on answer uniqueness
-      for (const username of Object.keys(currentSubmissions)) {
-        const item = currentSubmissions[username]?.[category];
-        const raw = item?.answer?.trim() || "";
+      // Pass 2: Award 5 points for unique, 2 points for shared, 0 for invalid/empty
+      for (const username of usernames) {
+        const raw = currentSubmissions[username]?.[category]?.answer || "";
+        const clean = normalizedAnswers[username];
         let score = 0;
 
-        if (raw) {
-          const clean = normalizeText(raw);
-          const count = answerCounts[clean];
-          if (count !== undefined) {
-            score = count === 1 ? 5 : 2;
-          }
+        if (clean && answerCounts[clean] !== undefined) {
+          score = answerCounts[clean] === 1 ? 5 : 2;
         }
 
         currentSubmissions[username][category] = { answer: raw, score };
 
-        const participant = this.participants.get(username);
-        if (participant) {
-          participant.score += score;
+        if (score > 0) {
+          const participant = this.participants.get(username);
+          if (participant) {
+            participant.score += score;
+          }
         }
       }
     }
