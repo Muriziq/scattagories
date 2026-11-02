@@ -451,9 +451,9 @@ export default function Home() {
         {/* LEADERBOARD TEASER SECTION */}
         <section id="leaderboard" className={styles.leaderboardSection}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTag}>Rankings</span>
-            <h2 className={styles.featuresTitle}>Top Blitzers Worldwide</h2>
-            <p className={styles.sectionSubtitle}>
+  
+            <h2 className={styles.featuresTitle} style={{textTransform:"upperCase"}}>Top Blitzers Worldwide</h2>
+            <p className={styles.sectionSubtitle} >
               The fastest typists and sharpest minds dominating ScatterBlitz matches.
             </p>
           </div>
@@ -484,7 +484,7 @@ export default function Home() {
                   </thead>
                   <tbody>
                     {leaderboard.slice(0, 5).map((player, idx) => (
-                      <tr key={player.id}>
+                      <tr key={player.username || idx}>
                         <td className={styles.rankCell}>
                           {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
                         </td>

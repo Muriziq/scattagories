@@ -205,6 +205,10 @@ function WaitingRoomContent() {
         (participants.length > 0 && (participants[0]?.username === currentUser.username || participants[0] === currentUser.username))
     );
 
+    const shareUrl = typeof window !== "undefined"
+        ? `${window.location.origin}/games/${roomId}${password ? `?password=${encodeURIComponent(password)}` : ""}`
+        : `/games/${roomId}${password ? `?password=${encodeURIComponent(password)}` : ""}`;
+
     return (
         <div className={styles.pageWrapper}>
             <CanvasBackground />
@@ -234,13 +238,13 @@ function WaitingRoomContent() {
                  <h1 className={styles.roomTitle}>WAITING ROOM</h1>
                  <div className={styles.copyRow}>
                 <div className={styles.copyUrl} style={{margin:"0 1rem"}}>
-                    <p>Copy Url: <span>{typeof window !== "undefined" ? window.location.href : ""}</span> </p>  
+                    <p>Copy Url: <span>{shareUrl}</span> </p>  
                     {copiedKey === "url" ? (
                         <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
                     ) : (
                         <FaCopy 
                             className={styles.copyBtn} 
-                            onClick={() => handleCopyCode(typeof window !== "undefined" ? window.location.href : "", "url")} 
+                            onClick={() => handleCopyCode(shareUrl, "url")} 
                         />
                     )}
                 </div>
@@ -294,7 +298,15 @@ function WaitingRoomContent() {
                                     <div key={index} className={styles.playerCard}>
                                         <div className={styles.avatarWrapper}>
                                             <div className={styles.avatarCircle}>
-                                                <FaUserCircle />
+                                                {typeof participant === "object" && participant.avatar_url ? (
+                                                    <img
+                                                        src={participant.avatar_url}
+                                                        alt={username}
+                                                        style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                                                    />
+                                                ) : (
+                                                    <FaUserCircle />
+                                                )}
                                             </div>
                                             {isHostPlayer && (
                                                 <div className={styles.crownBadge} title="Host">

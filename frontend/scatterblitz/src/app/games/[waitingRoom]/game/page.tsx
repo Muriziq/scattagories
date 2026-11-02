@@ -20,10 +20,11 @@ import {
   FaUserCircle,
   FaBolt,
   FaSpellCheck,
+  FaForward,
 } from "react-icons/fa";
 import styles from "./game.module.css";
 import { useSocket } from "../SocketContext";
-import { getUserData, createNewGuest } from "../../../accessToken";
+import { getAccessToken, getUserData, createNewGuest } from "../../../accessToken";
 import AuthModel from "../../authModels";
 import ErrorModals from "../ErrorModals";
 import CanvasBackground from "../../../components/CanvasBackground";
@@ -58,7 +59,7 @@ function GameContent() {
     "waiting" | "letter_selection" | "active_sprint" | "recap" | "ended"
   >("letter_selection");
   const [participants, setParticipants] = useState<
-    { username: string; score: number }[]
+    { username: string; score: number; isConnected?: boolean; hasLeft?: boolean }[]
   >([]);
   const [allLetters, setAllLetters] = useState<string[]>([]);
   const [availableLetters, setAvailableLetters] = useState<string[]>([]);
@@ -87,11 +88,39 @@ function GameContent() {
   const selectionLimitRef = useRef<number>(15);
   selectionLimitRef.current = selectionTimeLimit;
 
+  // Track status and submission status in refs for atomic event handlers
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
+  const hasSubmittedRef = useRef<boolean>(false);
+  hasSubmittedRef.current = hasSubmitted;
+
   const answersRef = useRef<Record<string, string>>({});
   answersRef.current = answers;
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Round Recap State
+  const [roundRecapData, setRoundRecapData] = useState<{
+    letter: string;
+    round: number;
+    scores: Record<string, Record<string, { answer: string; score: number }>>;
+    roundStandings?: Array<{ username: string; roundPoints: number; cumulativeScore: number }>;
+    roundWinners?: string[];
+    recapDuration: number;
+  } | null>(null);
+
+  // Recap Skip Votes State
+  const [skipVotes, setSkipVotes] = useState<{ votes: number; total: number } | null>(null);
+  const [hasVotedSkip, setHasVotedSkip] = useState<boolean>(false);
+
+  // Forfeit Warning banner state
+  const [forfeitWarning, setForfeitWarning] = useState<{
+    remainingSeconds: number;
+    remainingPlayer: string;
+    message: string;
+  } | null>(null);
 
   // Game End & Review state
   const [endedData, setEndedData] = useState<{
@@ -100,17 +129,46 @@ function GameContent() {
       Record<string, Record<string, { answer: string; score: number }>>
     >;
     standings: Array<{ username: string; score: number; isHost: boolean }>;
+    forfeit?: boolean;
+    winner?: string | null;
   } | null>(null);
   const [reviewParticipant, setReviewParticipant] = useState<string | null>(
     null,
   );
   const [reviewRoundIndex, setReviewRoundIndex] = useState<number>(0);
 
+  // Helper to submit answers strictly once during the grace period buffer
+  const submitAnswers = (activeSocket: any) => {
+    if (!activeSocket) return;
+    if (hasSubmittedRef.current) return;
+
+    activeSocket.emit("answer:submit", {
+      roomID: roomId,
+      answers: answersRef.current,
+    });
+    setHasSubmitted(true);
+    hasSubmittedRef.current = true;
+
+    // Clear local storage draft once submitted
+    try {
+      sessionStorage.removeItem(`scatterblitz_draft_${roomId}`);
+    } catch (_) {}
+  };
+
+  // Helper to vote to skip the recap phase early
+  const handleVoteSkipRecap = () => {
+    if (!socket || hasVotedSkip) return;
+    socket.emit("recap:skip", roomId);
+    setHasVotedSkip(true);
+  };
+
   // Initialize user and socket setup
   useEffect(() => {
     const setup = async () => {
+      // Ensure user profile / accessToken is fresh before setting up socket
+      await getAccessToken();
       const userData = getUserData();
-      if (userData) {
+      if (userData && Object.keys(userData).length > 0) {
         setCurrentUser(userData);
       }
 
@@ -130,6 +188,10 @@ function GameContent() {
       activeSocket.off("turn:change");
       activeSocket.off("letter:active");
       activeSocket.off("round:ended");
+      activeSocket.off("round:recap");
+      activeSocket.off("recap:skip_update");
+      activeSocket.off("room:forfeit_warning");
+      activeSocket.off("room:forfeit_cancelled");
       activeSocket.off("game:ended");
       activeSocket.off("answer:success");
       activeSocket.off("error");
@@ -145,7 +207,6 @@ function GameContent() {
 
       // Synchronizes full game room snapshot upon entering or reconnecting
       activeSocket.on("room:state", (data: any) => {
-        // Calculate network round trip time (RTT) and one-way latency to sync clocks precisely
         if (data.serverTime && data.clientSendTime) {
           const t1 = Date.now();
           const rtt = Math.max(0, t1 - data.clientSendTime);
@@ -167,7 +228,10 @@ function GameContent() {
         if (data.totalRound !== undefined) setTotalRound(data.totalRound);
         if (data.usersTurn !== undefined) setUsersTurn(data.usersTurn);
         if (data.activeLetter !== undefined) setActiveLetter(data.activeLetter);
-        if (data.status) setStatus(data.status);
+        if (data.status) {
+          setStatus(data.status);
+          statusRef.current = data.status;
+        }
         if (data.maxTimePerRound !== undefined) {
           setMaxTimePerRound(data.maxTimePerRound);
           maxTimeRef.current = data.maxTimePerRound;
@@ -185,6 +249,19 @@ function GameContent() {
           data.selectionTimeLimit !== undefined
             ? data.selectionTimeLimit
             : selectionLimitRef.current;
+
+        // Restore cached draft answers if active sprint is ongoing
+        if (data.status === "active_sprint") {
+          try {
+            const cached = sessionStorage.getItem(`scatterblitz_draft_${roomId}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed?.letter === data.activeLetter && parsed?.answers) {
+                setAnswers(parsed.answers);
+              }
+            }
+          } catch (_) {}
+        }
 
         // Synchronize selection countdown target timestamp using synchronized server time
         if (data.selectionStartTime) {
@@ -240,9 +317,18 @@ function GameContent() {
         setSelectionTimerSeconds(remaining);
 
         setStatus("letter_selection");
+        statusRef.current = "letter_selection";
         setActiveLetter(null);
         setAnswers({});
         setHasSubmitted(false);
+        hasSubmittedRef.current = false;
+        setRoundRecapData(null);
+        setSkipVotes(null);
+        setHasVotedSkip(false);
+
+        try {
+          sessionStorage.removeItem(`scatterblitz_draft_${roomId}`);
+        } catch (_) {}
       });
 
       // Begins active sprint round once a letter has been selected
@@ -271,34 +357,77 @@ function GameContent() {
 
         setActiveLetter(letterStr);
         setStatus("active_sprint");
+        statusRef.current = "active_sprint";
         setAvailableLetters((prev) =>
           prev.filter((l) => l !== letterStr.toUpperCase()),
         );
+        setAnswers({});
         setTimerSeconds(remaining);
         setHasSubmitted(false);
+        hasSubmittedRef.current = false;
+        setRoundRecapData(null);
+        setSkipVotes(null);
+        setHasVotedSkip(false);
+
+        try {
+          sessionStorage.removeItem(`scatterblitz_draft_${roomId}`);
+        } catch (_) {}
       });
 
-      // Triggers recap phase and auto-submits current answers
+      // Triggers recap phase and auto-submits current answers once during buffer window
       activeSocket.on("round:ended", ({ reason }: { reason: string }) => {
         setStatus("recap");
+        statusRef.current = "recap";
         submitAnswers(activeSocket);
+      });
+
+      // Displays round scores and validation recap from backend
+      activeSocket.on("round:recap", (data: any) => {
+        if (data) {
+          setRoundRecapData(data);
+        }
+      });
+
+      // Early skip votes updates
+      activeSocket.on("recap:skip_update", (data: any) => {
+        if (data) {
+          setSkipVotes(data);
+        }
+      });
+
+      // Mid-game forfeit countdown notifications
+      activeSocket.on("room:forfeit_warning", (data: any) => {
+        setForfeitWarning(data);
+      });
+
+      activeSocket.on("room:forfeit_cancelled", (data: any) => {
+        setForfeitWarning(null);
       });
 
       // Finalizes match and displays final scores and submission breakdown
       activeSocket.on("game:ended", (data: any) => {
         setStatus("ended");
+        statusRef.current = "ended";
+        setForfeitWarning(null);
         if (data) {
           setEndedData(data);
         }
+        try {
+          sessionStorage.removeItem(`scatterblitz_draft_${roomId}`);
+        } catch (_) {}
       });
 
       activeSocket.on("answer:success", () => {
         setHasSubmitted(true);
+        hasSubmittedRef.current = true;
       });
 
       activeSocket.on("error", (err: any) => {
         const msg = typeof err === "object" ? err?.message : String(err || "");
         const type = typeof err === "object" ? err?.type : "";
+
+        // Suppress benign closed status toasts
+        if (msg === "Submit Status Closed") return;
 
         if (
           type === "authorization" ||
@@ -322,7 +451,7 @@ function GameContent() {
     setup();
   }, [roomId]);
 
-  // Accurate timer countdown effect during letter_selection using target timestamp adjusted for latency/clock offset
+  // Accurate timer countdown effect during letter_selection
   useEffect(() => {
     if (status !== "letter_selection" || !selectionTargetEndTime) return;
 
@@ -341,7 +470,7 @@ function GameContent() {
     return () => clearInterval(interval);
   }, [status, selectionTargetEndTime, serverOffset]);
 
-  // Accurate timer countdown effect during active_sprint using target timestamp adjusted for latency/clock offset
+  // Accurate timer countdown effect during active_sprint
   useEffect(() => {
     if (status !== "active_sprint" || !sprintTargetEndTime) return;
 
@@ -353,8 +482,9 @@ function GameContent() {
       );
       setTimerSeconds(remaining);
 
+      // When the sprint hits 0, auto-submit once to server
       if (remaining <= 0) {
-        if (socket) {
+        if (socket && !hasSubmittedRef.current) {
           submitAnswers(socket);
         }
       }
@@ -365,32 +495,6 @@ function GameContent() {
 
     return () => clearInterval(interval);
   }, [status, sprintTargetEndTime, socket, serverOffset]);
-
-  // Helper to submit answers (used for auto-sync and final round submission)
-  const submitAnswers = (activeSocket: any, isFinal: boolean = true) => {
-    if (!activeSocket) return;
-    activeSocket.emit("answer:submit", {
-      roomID: roomId,
-      answers: answersRef.current,
-    });
-    if (isFinal) {
-      setHasSubmitted(true);
-    }
-  };
-
-  // Debounced continuous auto-sync: sends draft answers after 800ms of inactivity so answers are never lost
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const queueAnswerSync = (updatedAnswers: Record<string, string>) => {
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = setTimeout(() => {
-      if (socket && status === "active_sprint") {
-        socket.emit("answer:submit", {
-          roomID: roomId,
-          answers: updatedAnswers,
-        });
-      }
-    }, 800);
-  };
 
   // User chooses a letter (when it's their turn)
   const handleSelectLetter = (letter: string) => {
@@ -442,7 +546,7 @@ function GameContent() {
     <main className={styles.main}>
       <CanvasBackground />
       <button onClick={handleExitGame} className={styles.exitBtn}>
-        <FaArrowLeft /> Lobby
+        <FaArrowLeft /> Back
       </button>
       <div className={styles.gameContainer}>
         {/* ERROR BANNER */}
@@ -453,6 +557,27 @@ function GameContent() {
             >
               <FaExclamationTriangle />
               <span>{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* FORFEIT WARNING BANNER */}
+        {forfeitWarning && (
+          <div
+            className={styles.errorBanner}
+            style={{
+              backgroundColor: "rgba(255, 183, 3, 0.15)",
+              borderColor: "var(--amber)",
+              color: "var(--amber)",
+            }}
+          >
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <FaClock />
+              <span>
+                {forfeitWarning.message} ({forfeitWarning.remainingSeconds}s)
+              </span>
             </div>
           </div>
         )}
@@ -540,7 +665,13 @@ function GameContent() {
                         [category]: e.target.value,
                       };
                       setAnswers(updated);
-                      queueAnswerSync(updated);
+                      // Cache locally in sessionStorage so refresh preserves all answers
+                      try {
+                        sessionStorage.setItem(
+                          `scatterblitz_draft_${roomId}`,
+                          JSON.stringify({ letter: activeLetter, answers: updated })
+                        );
+                      } catch (_) {}
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -570,13 +701,106 @@ function GameContent() {
         {status === "recap" && (
           <section className={styles.recapSection}>
             <div className={styles.recapBox}>
-              <FaSpinner className={styles.spinIcon} />
-              <h3 style={{ fontSize: "2rem", fontWeight: 800 }}>
-                Round Ended!
-              </h3>
-              <p style={{ color: "var(--text-muted)" }}>
-                Submitting answers and setting up the next round turn...
-              </p>
+              {!roundRecapData ? (
+                <>
+                  <FaSpinner className={styles.spinIcon} />
+                  <h3 style={{ fontSize: "2rem", fontWeight: 800 }}>
+                    Round Ended!
+                  </h3>
+                  <p style={{ color: "var(--text-muted)" }}>
+                    Collecting answers and calculating scores...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className={styles.recapHeader}>
+                    <span className={styles.roundLetterBadgePlain}>
+                      Round {roundRecapData.round} • Letter "{roundRecapData.letter}"
+                    </span>
+                    <h3 className={styles.recapTitle}>
+                      Round Recap
+                    </h3>
+                  </div>
+
+                  {/* ROUND SCORES & BREAKDOWN GRID */}
+                  <div className={styles.recapStandingsGrid}>
+                    {(
+                      roundRecapData.roundStandings ||
+                      participants.map((p) => ({
+                        username: p.username,
+                        roundPoints: 0,
+                        cumulativeScore: p.score,
+                      }))
+                    ).map((player, pIdx) => {
+                      const userAnswers = roundRecapData.scores[player.username] || {};
+                      const isWinner = roundRecapData.roundWinners?.includes(player.username);
+
+                      return (
+                        <div
+                          key={pIdx}
+                          className={`${styles.recapPlayerCard} ${
+                            isWinner ? styles.recapPlayerCardWinner : ""
+                          }`}
+                        >
+                          <div className={styles.recapPlayerTop}>
+                            <span className={styles.recapPlayerName}>
+                              {player.username}
+                            </span>
+                            <span className={styles.recapRoundPoints}>
+                              +{player.roundPoints} pts
+                            </span>
+                          </div>
+                          <span className={styles.recapCumulativeScore}>
+                            Total: {player.cumulativeScore} pts
+                          </span>
+
+                          <div className={styles.recapAnswersList}>
+                            {categories.map((cat, cIdx) => {
+                              const item = userAnswers[cat] || { answer: "", score: 0 };
+                              const pts = item.score;
+                              return (
+                                <div key={cIdx} className={styles.recapAnswerRow}>
+                                  <span className={styles.recapCategoryName}>
+                                    {cat}:
+                                  </span>
+                                  <span
+                                    className={styles.recapAnswerValue}
+                                    style={{
+                                      color:
+                                        pts === 5
+                                          ? "#4CAF50"
+                                          : pts > 0
+                                          ? "#8BC34A"
+                                          : item.answer
+                                          ? "#F44336"
+                                          : "var(--text-dim)",
+                                    }}
+                                  >
+                                    {item.answer ? `${item.answer} (+${pts})` : "— (0)"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* EARLY SKIP RECAP BUTTON */}
+                  <button
+                    type="button"
+                    className={styles.skipRecapBtn}
+                    onClick={handleVoteSkipRecap}
+                    disabled={hasVotedSkip}
+                  >
+                    <FaForward />
+                    {hasVotedSkip
+                      ? `Ready (${skipVotes?.votes || 1}/${skipVotes?.total || participants.length})`
+                      : `Skip to Next Round (${skipVotes?.votes || 0}/${skipVotes?.total || participants.length})`}
+                  </button>
+                </>
+              )}
             </div>
           </section>
         )}
@@ -593,6 +817,11 @@ function GameContent() {
                     <h2 style={{ fontSize: "3rem", fontWeight: 900 }}>
                       Match Completed!
                     </h2>
+                    {endedData?.forfeit && endedData?.winner && (
+                      <p style={{ color: "var(--amber)", fontSize: "1.1rem", fontWeight: 700 }}>
+                        🏆 Won by forfeit ({endedData.winner} remained standing)
+                      </p>
+                    )}
                   </div>
 
                   <div className={styles.standingsCard}>
@@ -605,9 +834,9 @@ function GameContent() {
                         endedData?.standings ||
                         participants
                           .map((p: any) => ({
-                            username: p.username || p.displayName,
+                            username: p.username,
                             score: p.score,
-                            isHost: p.isHost || false,
+                            isHost: false,
                           }))
                           .sort((a: any, b: any) => b.score - a.score)
                       ).map((p: any, idx: number) => {
@@ -653,7 +882,7 @@ function GameContent() {
                   </div>
 
                   <button onClick={handleExitGame} className={styles.returnBtn}>
-                    Return to Waiting Room
+                    Return to Home Page 
                   </button>
                 </>
               ) : (
@@ -675,10 +904,10 @@ function GameContent() {
                           <h2 className={styles.reviewTitle}>
                             Reviewing:{" "}
                             <span style={{ color: "var(--amber)" }}>
-                              {reviewParticipant}
+                              {reviewParticipant ? String(reviewParticipant).toUpperCase() : ""}
                             </span>
                           </h2>
-                          <span className={styles.roundLetterBadge}>
+                          <span className={styles.roundLetterBadgePlain}>
                             Round {reviewRoundIndex + 1} of{" "}
                             {letters.length || 1} • Letter "
                             {currentReviewLetter}"
@@ -695,33 +924,25 @@ function GameContent() {
                           const rawAns = entry.answer || "";
                           const score = entry.score || 0;
 
-                          let cardStyle = styles.reviewCardEmpty;
                           let badgeText = "0 pts";
                           let badgeColor = "#777777";
-                          let Icon = FaTimesCircle;
 
                           if (score === 5) {
-                            cardStyle = styles.reviewCardUnique;
                             badgeText = "+5 pts";
                             badgeColor = "#4CAF50";
-                            Icon = FaCheckCircle;
                           } else if (score > 0) {
-                            cardStyle = styles.reviewCardDuplicate;
                             badgeText = `+${score} pts`;
                             badgeColor = "#8BC34A";
-                            Icon = FaCheckCircle;
                           } else if (rawAns) {
-                            cardStyle = styles.reviewCardInvalid;
-                            badgeText = "0 pts ";
+                            badgeText = "0 pts";
                             badgeColor = "#F44336";
-                            Icon = FaTimesCircle;
                           }
 
                           return (
                             <label
                               key={catIdx}
                               className={styles.reviewDiv}
-                              style={{borderColor:badgeColor}}
+                              style={{ borderColor: badgeColor }}
                             >
                               {cat}:
                               <input
@@ -731,48 +952,51 @@ function GameContent() {
                                 value={rawAns || "(No Answer Submitted)"}
                                 className={styles.reviewInput}
                               />
-                                                              <span
-                                  className={styles.reviewScoreBadge}
-                                  style={{
-                                    color: badgeColor,
-                                    borderColor: badgeColor,
-                                  }}
-                                >
-                                  
-                                  {badgeText}
-                                </span>
+                              <span
+                                className={styles.reviewScoreBadge}
+                                style={{
+                                  color: badgeColor,
+                                  borderColor: badgeColor,
+                                }}
+                              >
+                                {badgeText}
+                              </span>
                             </label>
                           );
                         })}
                       </div>
 
                       <div className={styles.reviewNavFooter}>
-                        <button
-                          className={styles.navRoundBtn}
-                          disabled={reviewRoundIndex === 0}
-                          onClick={() =>
-                            setReviewRoundIndex((prev) => Math.max(0, prev - 1))
-                          }
-                        >
-                          <FaChevronLeft />
-                        </button>
-                        <button
-                          className={styles.stopReviewBtn}
-                          onClick={() => setReviewParticipant(null)}
-                        >
-                          Stop Review
-                        </button>
-                        <button
-                          className={styles.navRoundBtn}
-                          disabled={reviewRoundIndex >= letters.length - 1}
-                          onClick={() =>
-                            setReviewRoundIndex((prev) =>
-                              Math.min(letters.length - 1, prev + 1),
-                            )
-                          }
-                        >
-                         <FaChevronRight />
-                        </button>
+                        {reviewRoundIndex > 0 && (
+                          <button
+                            className={styles.navRoundBtn}
+                            onClick={() =>
+                              setReviewRoundIndex((prev) => Math.max(0, prev - 1))
+                            }
+                          >
+                            <FaChevronLeft />
+                          </button>
+                        )}
+
+                        {reviewRoundIndex >= letters.length - 1 ? (
+                          <button
+                            className={styles.stopReviewBtn}
+                            onClick={() => setReviewParticipant(null)}
+                          >
+                            Stop Review
+                          </button>
+                        ) : (
+                          <button
+                            className={styles.navRoundBtn}
+                            onClick={() =>
+                              setReviewRoundIndex((prev) =>
+                                Math.min(letters.length - 1, prev + 1),
+                              )
+                            }
+                          >
+                            <FaChevronRight />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

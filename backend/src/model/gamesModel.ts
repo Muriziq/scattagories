@@ -45,9 +45,10 @@ function normalizeText(str: string): string {
 
 export const alphabets = {
   en: [
-    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-    "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-    "U", "V", "W", "X", "Y", "Z"
+    "A", "B", "C", "D", "E",
+    //  "F", "G", "H", "I", "J",
+    // "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+    // "U", "V", "W", "X", "Y", "Z"
   ],
 } as const;
 
@@ -87,6 +88,7 @@ export class GameRoom {
     remainingSelectionMs?: number;
   } | null = null;
   disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
+  recapSkipVotes: Set<string> = new Set();
   selectionTimeLimit: number;
   roundStartTime: number | null = null;
   selectionStartTime: number | null = null;
@@ -97,6 +99,7 @@ export class GameRoom {
     string,
     {
       score: number;
+      avatar_url?: string | null;
       hasLeft?: boolean;
       isConnected?: boolean;
     }
@@ -169,6 +172,7 @@ export class GameRoom {
     this.userDbIds[username] = socket.user.id;
     this.participants.set(username, {
       score: 0,
+      avatar_url: socket.user.avatar_url || null,
       hasLeft: false,
       isConnected: true,
     });
@@ -275,6 +279,9 @@ export class GameRoom {
     this.clearDisconnectTimer(username);
     participant.isConnected = true;
     participant.hasLeft = false;
+    if (socket.user?.avatar_url) {
+      participant.avatar_url = socket.user.avatar_url;
+    }
 
     // Recalculate remaining rounds dynamically to re-include the returning player
     this.recalculateRemainingRounds(io);
@@ -439,6 +446,7 @@ export class GameRoom {
     return Array.from(this.participants.entries()).map(([username, p]) => ({
       username,
       score: p.score,
+      avatar_url: p.avatar_url || null,
       isHost: username === this.hostUsername,
       hasLeft: !!p.hasLeft,
       isConnected: p.isConnected !== false && !p.hasLeft,
@@ -717,30 +725,97 @@ export class GameRoom {
     this.clearRoundTimer();
     this.submitStatus = "accepting";
     this.status = "recap";
+    this.recapSkipVotes.clear();
 
-    // Phase 1: 2.0s buffer gives in-flight mobile/Wi-Fi submissions time to flush
+    // Phase 1: 3.5s buffer gives in-flight mobile/Wi-Fi submissions time to flush
     this.roundTimer = setTimeout(() => {
       this.submitStatus = "notAccepting";
       const roundScores = this.calculateRoundScores();
 
+      // Compute round points and rank players for this specific round
+      const roundPointsSummary = Object.keys(roundScores || {}).map((uname) => {
+        const userCatScores = roundScores[uname] || {};
+        const roundTotal = Object.values(userCatScores).reduce(
+          (sum, cat) => sum + (cat?.score || 0),
+          0
+        );
+        const participant = this.participants.get(uname);
+        return {
+          username: uname,
+          roundPoints: roundTotal,
+          cumulativeScore: participant?.score || 0,
+        };
+      }).sort((a, b) => b.roundPoints - a.roundPoints);
+
+      const topRoundScore = roundPointsSummary[0]?.roundPoints || 0;
+      const roundWinners = topRoundScore > 0
+        ? roundPointsSummary.filter((p) => p.roundPoints === topRoundScore).map((p) => p.username)
+        : [];
+
       // Broadcast updated cumulative standings for sidebars
       io.to(this.id).emit("room:participants", this.getRoomParticipantsData());
 
-      // Broadcast this round's scored submissions so all players can review answers and points
+      // Broadcast this round's scored submissions so all players can review answers, round winners and points
       io.to(this.id).emit("round:recap", {
         letter: this.activeLetter,
         round: this.currentRound,
         scores: roundScores || {},
+        roundStandings: roundPointsSummary,
+        roundWinners,
         recapDuration: 6,
       });
 
       // Phase 2: 6.0s review period so players can inspect answers and points before advancing
       this.roundTimer = setTimeout(() => {
-        this.status = "letter_selection";
         this.clearRoundTimer();
-        this.getNextUserTurn(io, socket);
+        this.recapSkipVotes.clear();
+
+        // If this was the final round, conclude match directly
+        if (
+          this.currentRound >= this.totalRound &&
+          (!this.allowComputerHelper || this.availableLetters.length === 0)
+        ) {
+          this.endGame(io, socket);
+        } else {
+          this.status = "letter_selection";
+          this.getNextUserTurn(io, socket);
+        }
       }, 6000);
-    }, 2000);
+    }, 3500);
+  }
+
+  // Handles a player voting to skip the 6-second recap review window early
+  public handleRecapSkip(username: string, io: Server, socket?: Socket) {
+    if (this.status !== "recap" || this.submitStatus === "accepting") return;
+    const participant = this.participants.get(username);
+    if (!participant || participant.hasLeft) return;
+
+    this.recapSkipVotes.add(username);
+
+    const activePlayers = Array.from(this.participants.entries()).filter(
+      ([_, p]) => !p.hasLeft && p.isConnected !== false
+    );
+
+    io.to(this.id).emit("recap:skip_update", {
+      votes: this.recapSkipVotes.size,
+      total: activePlayers.length,
+    });
+
+    // If every active connected player has voted to skip, advance immediately
+    if (this.recapSkipVotes.size >= activePlayers.length) {
+      this.clearRoundTimer();
+      this.recapSkipVotes.clear();
+
+      if (
+        this.currentRound >= this.totalRound &&
+        (!this.allowComputerHelper || this.availableLetters.length === 0)
+      ) {
+        this.endGame(io, socket);
+      } else {
+        this.status = "letter_selection";
+        this.getNextUserTurn(io, socket);
+      }
+    }
   }
 
   // Validates answers against category dictionaries: 5 pts for unique word, 2 pts for shared word.
@@ -817,7 +892,8 @@ export class GameRoom {
   saveAnswers(
     username: string,
     answers: Record<string, string>,
-    socket: Socket
+    socket: Socket,
+    io?: Server
   ) {
     if (!this.activeLetter)
       return socket.emit("error", "No Active Letter Selected");
@@ -826,6 +902,11 @@ export class GameRoom {
 
     const participant = this.participants.get(username);
     if (!participant) return socket.emit("error", "Participant Not Found");
+
+    // Enforce strictly one submission per letter round to prevent tamper/race conditions
+    if (this.detailedSubmissions[this.activeLetter]?.[username]) {
+      return socket.emit("error", "You have already submitted your answers for this round.");
+    }
 
     // Validate that submitted keys belong to configured room categories
     const answersKey = Object.keys(answers);
@@ -843,11 +924,8 @@ export class GameRoom {
       this.detailedSubmissions[this.activeLetter] = {};
     }
 
-    if (!this.detailedSubmissions[this.activeLetter][username]) {
-      this.detailedSubmissions[this.activeLetter][username] = {};
-    }
+    this.detailedSubmissions[this.activeLetter][username] = {};
 
-    // Incrementally merge new answers with any previously synced answers for this round
     for (const [cat, word] of Object.entries(answers)) {
       this.detailedSubmissions[this.activeLetter][username][cat] = {
         answer: word,
@@ -858,5 +936,20 @@ export class GameRoom {
     socket.emit("answer:success", {
       message: "Your answers have been submitted successfully",
     });
+
+    // Check if every active player has now submitted for this round
+    const activePlayers = Array.from(this.participants.entries()).filter(
+      ([_, p]) => !p.hasLeft && p.isConnected !== false
+    );
+    const submittedCount = Object.keys(this.detailedSubmissions[this.activeLetter]).length;
+
+    if (submittedCount >= activePlayers.length && io) {
+      // Early trigger: everyone finished! Advance immediately into recap
+      if (this.status === "active_sprint") {
+        this.clearRoundTimer();
+        io.to(this.id).emit("round:ended", { reason: "all_submitted" });
+        this.startRecapTimer(io, socket);
+      }
+    }
   }
 }

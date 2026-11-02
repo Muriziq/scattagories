@@ -89,6 +89,7 @@ router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: 
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
     const hostId = req.user.id;
     const hostUsername = req.user.username;
+    const hostAvatar = req.user.avatar_url || null;
 
     const { isPublic, password, maxPlayers, maxTimePerRound, categories, allowComputerHelper } = validation.data;
 
@@ -119,6 +120,9 @@ router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: 
     // Register host as the first participant keyed by username
     newRoom.participants.set(hostUsername, {
       score: 0,
+      avatar_url: hostAvatar,
+      isConnected: true,
+      hasLeft: false,
     });
 
     // Store into the appropriate map based on room privacy
@@ -255,7 +259,6 @@ let leaderboardInFlightPromise: Promise<any[]> | null = null;
 
 // Helper to update a single user's stats in the cached leaderboard without full invalidation
 export function updateCachedLeaderboardUser(userStats: {
-  id: string;
   username: string;
   avatar_url: string | null;
   total_games: number;
@@ -266,7 +269,7 @@ export function updateCachedLeaderboardUser(userStats: {
   // If no cache exists yet or an initial fetch is in-flight, let the full fetch complete naturally
   if (!cachedLeaderboard || leaderboardInFlightPromise) return;
 
-  const existingIndex = cachedLeaderboard.findIndex((entry) => entry.id === userStats.id);
+  const existingIndex = cachedLeaderboard.findIndex((entry) => entry.username === userStats.username);
 
   if (existingIndex !== -1) {
     // Update existing entry with latest stats
@@ -290,17 +293,18 @@ export function updateCachedLeaderboardUser(userStats: {
         (userStats.total_wins > lowestEntry.total_wins ||
           (userStats.total_wins === lowestEntry.total_wins && candidateScore > lowestEntry.total_score)));
 
-    if (qualifies) {
-      cachedLeaderboard.push({
-        id: userStats.id,
-        username: userStats.username,
-        avatar_url: userStats.avatar_url,
-        matches_played: userStats.total_games,
-        total_wins: userStats.total_wins,
-        total_score: candidateScore,
-        high_score: userStats.high_score,
-      });
+    if (!qualifies) {
+      return;
     }
+
+    cachedLeaderboard.push({
+      username: userStats.username,
+      avatar_url: userStats.avatar_url,
+      matches_played: userStats.total_games,
+      total_wins: userStats.total_wins,
+      total_score: candidateScore,
+      high_score: userStats.high_score,
+    });
   }
 
   // Re-sort top 20 by wins, then total score
@@ -329,7 +333,6 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
       leaderboardInFlightPromise = (async () => {
         const leaderboardQuery = `
           SELECT 
-            u.id,
             u.username,
             u.avatar_url,
             COUNT(gp.id)::int AS matches_played,

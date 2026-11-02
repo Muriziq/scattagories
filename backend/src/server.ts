@@ -322,12 +322,15 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       return socket.emit("error", { message: "You are not a participant in this room.", type: "room" });
     }
 
+    socket.join(roomId);
+
+    // Reconnecting player in active game: restore connection state and cancel pending forfeit/disconnect timers
+    room.handlePlayerReconnect(socket.user.username, socket, io);
+
     // Clear unjoined room timeout once host socket connects
     if (socket.user.username === room.hostUsername) {
       room.clearConnectionTimeout();
     }
-
-    socket.join(roomId);
 
     socket.emit("room:state", {
       serverTime: Date.now(),
@@ -402,7 +405,17 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     const room = getRoom(roomId);
     const participant = room?.participants.get(socket.user.username);
     if (!participant) return socket.emit("error", "Participant not found");
-    room?.saveAnswers(socket.user.username, answers, socket);
+    room?.saveAnswers(socket.user.username, answers, socket, io);
+  });
+
+  // Skip review vote during recap phase
+  socket.on("recap:skip", (roomID: string) => {
+    if (!socket.user) return;
+    const roomId = roomID?.toUpperCase();
+    const room = getRoom(roomId);
+    if (room && socket.user) {
+      room.handleRecapSkip(socket.user.username, io, socket);
+    }
   });
 
   // Explicitly leaves room and updates remaining participants

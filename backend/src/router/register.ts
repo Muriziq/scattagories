@@ -512,7 +512,6 @@ router.get("/profile", verifyAccessToken, async (req: AuthRequest, res: Response
 
     // Incrementally check/update user's rank in leaderboard cache without full DB invalidation
     updateCachedLeaderboardUser({
-      id: row.id,
       username: row.username,
       avatar_url: row.avatar_url,
       total_games: totalGames,
