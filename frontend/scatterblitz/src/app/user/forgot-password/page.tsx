@@ -63,8 +63,8 @@ export default function ForgotPasswordPage() {
               </p>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", alignItems: "center", marginTop: "0.5rem" }}>
-              <Link href="/user/login" className={`${styles.submitButton} ${styles.centerButton}`} style={{ textDecoration: "none" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", alignItems: "center" }}>
+              <Link href="/user/login" className={`${styles.submitButton} ${styles.centerButton}`} style={{ textDecoration: "none", alignSelf:"center" }}>
                 Back to Login
               </Link>
               <button

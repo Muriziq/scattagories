@@ -160,7 +160,7 @@
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--amber);
+  border: none;
 }
 
 .userAvatarFallback {
@@ -874,7 +874,7 @@
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid var(--amber);
+  border: none;
 }
 
 .tableAvatarFallback {

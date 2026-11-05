@@ -719,6 +719,63 @@ export class GameRoom {
     }, 15 * 60 * 1000);
   }
 
+  // Computes round scores, broadcasts recap to all players, and starts the 6.0s review period
+  public executeRoundRecap(io: Server, socket?: Socket) {
+    this.clearRoundTimer();
+    this.submitStatus = "notAccepting";
+    const roundScores = this.calculateRoundScores();
+
+    // Compute round points and rank players for this specific round
+    const roundPointsSummary = Object.keys(roundScores || {}).map((uname) => {
+      const userCatScores = roundScores[uname] || {};
+      const roundTotal = Object.values(userCatScores).reduce(
+        (sum, cat) => sum + (cat?.score || 0),
+        0
+      );
+      const participant = this.participants.get(uname);
+      return {
+        username: uname,
+        roundPoints: roundTotal,
+        cumulativeScore: participant?.score || 0,
+      };
+    }).sort((a, b) => b.roundPoints - a.roundPoints);
+
+    const topRoundScore = roundPointsSummary[0]?.roundPoints || 0;
+    const roundWinners = topRoundScore > 0
+      ? roundPointsSummary.filter((p) => p.roundPoints === topRoundScore).map((p) => p.username)
+      : [];
+
+    // Broadcast updated cumulative standings for sidebars
+    io.to(this.id).emit("room:participants", this.getRoomParticipantsData());
+
+    // Broadcast this round's scored submissions so all players can review answers, round winners and points
+    io.to(this.id).emit("round:recap", {
+      letter: this.activeLetter,
+      round: this.currentRound,
+      scores: roundScores || {},
+      roundStandings: roundPointsSummary,
+      roundWinners,
+      recapDuration: 6,
+    });
+
+    // Phase 2: 6.0s review period so players can inspect answers and points before advancing
+    this.roundTimer = setTimeout(() => {
+      this.clearRoundTimer();
+      this.recapSkipVotes.clear();
+
+      // If this was the final round, conclude match directly
+      if (
+        this.currentRound >= this.totalRound &&
+        (!this.allowComputerHelper || this.availableLetters.length === 0)
+      ) {
+        this.endGame(io, socket);
+      } else {
+        this.status = "letter_selection";
+        this.getNextUserTurn(io, socket);
+      }
+    }, 6000);
+  }
+
   // Brief recap window allowing answer submissions before computing and displaying scores
   public startRecapTimer(io: Server, socket?: Socket) {
     this.clearSelectionTimer();
@@ -729,58 +786,7 @@ export class GameRoom {
 
     // Phase 1: 3.5s buffer gives in-flight mobile/Wi-Fi submissions time to flush
     this.roundTimer = setTimeout(() => {
-      this.submitStatus = "notAccepting";
-      const roundScores = this.calculateRoundScores();
-
-      // Compute round points and rank players for this specific round
-      const roundPointsSummary = Object.keys(roundScores || {}).map((uname) => {
-        const userCatScores = roundScores[uname] || {};
-        const roundTotal = Object.values(userCatScores).reduce(
-          (sum, cat) => sum + (cat?.score || 0),
-          0
-        );
-        const participant = this.participants.get(uname);
-        return {
-          username: uname,
-          roundPoints: roundTotal,
-          cumulativeScore: participant?.score || 0,
-        };
-      }).sort((a, b) => b.roundPoints - a.roundPoints);
-
-      const topRoundScore = roundPointsSummary[0]?.roundPoints || 0;
-      const roundWinners = topRoundScore > 0
-        ? roundPointsSummary.filter((p) => p.roundPoints === topRoundScore).map((p) => p.username)
-        : [];
-
-      // Broadcast updated cumulative standings for sidebars
-      io.to(this.id).emit("room:participants", this.getRoomParticipantsData());
-
-      // Broadcast this round's scored submissions so all players can review answers, round winners and points
-      io.to(this.id).emit("round:recap", {
-        letter: this.activeLetter,
-        round: this.currentRound,
-        scores: roundScores || {},
-        roundStandings: roundPointsSummary,
-        roundWinners,
-        recapDuration: 6,
-      });
-
-      // Phase 2: 6.0s review period so players can inspect answers and points before advancing
-      this.roundTimer = setTimeout(() => {
-        this.clearRoundTimer();
-        this.recapSkipVotes.clear();
-
-        // If this was the final round, conclude match directly
-        if (
-          this.currentRound >= this.totalRound &&
-          (!this.allowComputerHelper || this.availableLetters.length === 0)
-        ) {
-          this.endGame(io, socket);
-        } else {
-          this.status = "letter_selection";
-          this.getNextUserTurn(io, socket);
-        }
-      }, 6000);
+      this.executeRoundRecap(io, socket);
     }, 3500);
   }
 
@@ -944,11 +950,10 @@ export class GameRoom {
     const submittedCount = Object.keys(this.detailedSubmissions[this.activeLetter]).length;
 
     if (submittedCount >= activePlayers.length && io) {
-      // Early trigger: everyone finished! Advance immediately into recap
-      if (this.status === "active_sprint") {
-        this.clearRoundTimer();
-        io.to(this.id).emit("round:ended", { reason: "all_submitted" });
-        this.startRecapTimer(io, socket);
+      // Early trigger: every active player has submitted!
+      // If we are waiting out the recap submission buffer, immediately execute score calculation and review
+      if (this.status === "recap" && this.submitStatus === "accepting") {
+        this.executeRoundRecap(io, socket);
       }
     }
   }

@@ -574,6 +574,7 @@ router.get("/profile/matches", verifyAccessToken, async (req: AuthRequest, res: 
         gp.is_winner,
         g.categories,
         g.total_rounds,
+        g.rounds_data,
         g.ended_at
       FROM game_players gp
       JOIN games g ON gp.game_id = g.id
@@ -615,6 +616,9 @@ router.post(
     try {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      if (req.user?.role === "guest") {
+        return res.status(403).json({ message: "Guest accounts cannot upload a profile avatar. Please convert your account first." });
+      }
 
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
@@ -626,11 +630,24 @@ router.post(
         });
       }
 
-      // 1. Upload directly to Cloudinary
+      // 1. Determine public_id: if user already has an avatar in Cloudinary, reuse its public_id to overwrite in-place
+      let existingPublicId: string | undefined;
+      const currentAvatar = req.user?.avatar_url;
+
+      if (currentAvatar && currentAvatar.includes("scatterblitz/avatars/")) {
+        // Extract public_id after "scatterblitz/avatars/" without file extension
+        const match = currentAvatar.match(/scatterblitz\/avatars\/([^./?#]+)/);
+        if (match?.[1]) {
+          existingPublicId = match[1];
+        }
+      }
+
+      const avatarPublicId = existingPublicId || `avatar-${crypto.randomUUID()}`;
+
       const cloudResult = await uploadToCloudinary(
         req.file.buffer,
         "scatterblitz/avatars",
-        `user-${userId}`
+        avatarPublicId
       );
       const avatarUrl = cloudResult.secure_url;
 
@@ -681,6 +698,9 @@ router.patch("/profile", verifyAccessToken, async (req: AuthRequest, res: Respon
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (req.user?.role === "guest") {
+      return res.status(403).json({ message: "Guest accounts cannot update profile details. Please convert your account first." });
+    }
 
     const parseResult = updateProfileSchema.safeParse(req.body);
     if (!parseResult.success) {

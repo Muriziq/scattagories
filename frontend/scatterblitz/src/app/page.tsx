@@ -13,6 +13,7 @@ import {
   FaPlusCircle, 
   FaUsers, 
   FaTrophy, 
+  FaMedal,
   FaStopwatch, 
   FaExclamationTriangle,
   FaSignOutAlt,
@@ -224,13 +225,15 @@ export default function Home() {
                     </Link>
                   )}
 
-                  <Link
-                    href="/user/profile"
-                    className={styles.dropdownItem}
-                    onClick={() => setIsDropdownOpen(false)}
-                  >
-                    <FaUserCircle /> Profile & Match History
-                  </Link>
+                  {!isGuest && (
+                    <Link
+                      href="/user/profile"
+                      className={styles.dropdownItem}
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      <FaUserCircle /> Profile & Match History
+                    </Link>
+                  )}
 
                   <Link
                     href="/games/join"
@@ -477,7 +480,7 @@ export default function Home() {
                     <tr>
                       <th style={{ width: "60px" }}>Rank</th>
                       <th>Player</th>
-                      <th>Wins</th>
+                      <th>Won</th>
                       <th>Matches</th>
                       <th style={{ textAlign: "right" }}>Total Points</th>
                     </tr>
@@ -486,7 +489,15 @@ export default function Home() {
                     {leaderboard.slice(0, 5).map((player, idx) => (
                       <tr key={player.username || idx}>
                         <td className={styles.rankCell}>
-                          {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
+                          {idx === 0 ? (
+                            <FaMedal size={20} style={{ color: "#FFD700" }} title="1st Place" />
+                          ) : idx === 1 ? (
+                            <FaMedal size={20} style={{ color: "#C0C0C0" }} title="2nd Place" />
+                          ) : idx === 2 ? (
+                            <FaMedal size={20} style={{ color: "#CD7F32" }} title="3rd Place" />
+                          ) : (
+                            `#${idx + 1}`
+                          )}
                         </td>
                         <td className={styles.playerCell}>
                           <div className={styles.playerInfo}>
@@ -503,7 +514,7 @@ export default function Home() {
                           </div>
                         </td>
                         <td className={styles.winsCell}>
-                          <strong>{player.total_wins}</strong> wins
+                          <strong>{player.total_wins}</strong> {player.total_wins === 1 ? "win" : "wins"}
                         </td>
                         <td>{player.matches_played}</td>
                         <td style={{ textAlign: "right", color: "var(--amber)", fontWeight: 700 }}>
