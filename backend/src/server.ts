@@ -398,15 +398,43 @@ io.on("connection", (socket: AuthenticatedSocket) => {
   });
 
   // Submits category answers for the active round
-  socket.on("answer:submit", ({ roomID, answers }: { roomID: string; answers: Record<string, string> }) => {
-    if (!socket.user) {
-      return socket.emit("error", "Unauthorized: Authentication required");
+  socket.on(
+    "answer:submit",
+    ({
+      roomID,
+      answers,
+      telemetry,
+    }: {
+      roomID: string;
+      answers: Record<string, string>;
+      telemetry?: {
+        pasteAttempts?: number;
+        blurCount?: number;
+        totalBlurDurationMs?: number;
+      };
+    }) => {
+      if (!socket.user) {
+        return socket.emit("error", "Unauthorized: Authentication required");
+      }
+      const roomId = roomID?.toUpperCase();
+      const room = getRoom(roomId);
+      const participant = room?.participants.get(socket.user.username);
+      if (!participant) return socket.emit("error", "Participant not found");
+      room?.saveAnswers(socket.user.username, answers, socket, io, telemetry);
     }
-    const roomId = roomID?.toUpperCase();
-    const room = getRoom(roomId);
-    const participant = room?.participants.get(socket.user.username);
-    if (!participant) return socket.emit("error", "Participant not found");
-    room?.saveAnswers(socket.user.username, answers, socket, io);
+  );
+
+  // Real-time category input focus / blur events for server-side anti-cheat verification
+  socket.on("input:focus", ({ roomID, category }: { roomID: string; category: string }) => {
+    if (!socket.user || !roomID || !category) return;
+    const room = getRoom(roomID.toUpperCase());
+    room?.recordInputFocus(socket.user.username, category);
+  });
+
+  socket.on("input:blur", ({ roomID, category }: { roomID: string; category: string }) => {
+    if (!socket.user || !roomID || !category) return;
+    const room = getRoom(roomID.toUpperCase());
+    room?.recordInputBlur(socket.user.username, category);
   });
 
   // Skip review vote during recap phase

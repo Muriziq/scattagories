@@ -20,6 +20,7 @@ import {
 } from "react-icons/fa";
 import styles from "./profile.module.css";
 import CanvasBackground from "../../components/CanvasBackground";
+import Toast from "../../components/Toast";
 import { API_BASE_URL } from "../../../config/api";
 import {
   authFetch,
@@ -109,9 +110,6 @@ export default function Profile() {
 
   const showToast = (text: string, type: "success" | "error") => {
     setToast({ text, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
   };
 
   const fetchProfile = async () => {
@@ -670,16 +668,13 @@ export default function Profile() {
         </>
       )}
 
-      {/* TOAST FEEDBACK */}
-      {toast && (
-        <div
-          className={`${styles.toast} ${
-            toast.type === "success" ? styles.toastSuccess : styles.toastError
-          }`}
-        >
-          {toast.text}
-        </div>
-      )}
+      {/* TOAST FEEDBACK WITH TIMER PROGRESS BAR */}
+      <Toast
+        message={toast?.text || null}
+        type={toast?.type || "error"}
+        duration={4000}
+        onClose={() => setToast(null)}
+      />
     </main>
   );
 }

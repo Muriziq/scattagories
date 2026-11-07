@@ -20,7 +20,8 @@ import {
     FaArrowLeft,
     FaShareAlt,
     FaTimes,
-    FaTags
+    FaTags,
+    FaShieldAlt
 } from "react-icons/fa";
 import styles from "./waitingRoom.module.css";
 import authStyles from "../authmodel.module.css";
@@ -29,6 +30,7 @@ import AuthModel from "../authModels";
 import { useSocket } from "./SocketContext";
 import ErrorModals from "./ErrorModals";
 import CanvasBackground from "../../components/CanvasBackground";
+import Toast from "../../components/Toast";
 
 function WaitingRoomContent() {
     const params = useParams();
@@ -215,25 +217,6 @@ function WaitingRoomContent() {
             <main className={styles.main}>
                 <div className={styles.lobbyContainer}>
 
-
-                {/* ERROR BANNER */}
-                {error && (
-                    <div className={styles.errorMessage}>
-                        <div className={styles.errorMessageContent}>
-                            <FaExclamationTriangle size={18} />
-                            <span>{error}</span>
-                        </div>
-                        <button 
-                            type="button" 
-                            className={styles.closeErrorBtn}
-                            onClick={() => setError(null)}
-                            title="Dismiss notification"
-                        >
-                            <FaTimes size={14} />
-                        </button>
-                    </div>
-                )}
-
                 {/* ROOM HERO HEADER CARD */}
                  <h1 className={styles.roomTitle}>WAITING ROOM</h1>
                  <div className={styles.copyRow}>
@@ -274,6 +257,29 @@ function WaitingRoomContent() {
 
                  </div>
 
+                {/* FAIR PLAY & ANTI-CHEAT REMINDER NOTIFICATION BANNER */}
+                <div 
+                    style={{
+                        width: "100%",
+                        background: "rgba(255, 183, 3, 0.05)",
+                  
+                        borderLeft: "4px solid var(--amber)",
+                       
+                        padding: "0.75rem 1.25rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.85rem",
+                        boxSizing: "border-box"
+                    }}
+                >
+                    <FaShieldAlt style={{ color: "var(--amber)", fontSize: "1.2rem", flexShrink: 0 }} />
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.4rem", fontSize: "0.85rem", lineHeight: "1.4" }}>
+                        <span style={{ fontWeight: 800, color: "var(--amber)" }}>Fair Play Active:</span>
+                        <span style={{ color: "var(--text-secondary)" }}>
+                            Copy-pasting, tab-switching during active rounds, and automated typing are strictly prohibited and will void your round score (0 pts).
+                        </span>
+                    </div>
+                </div>
 
                 {/* CONTENT GRID */}
                 <div className={styles.contentGrid}>
@@ -373,7 +379,7 @@ function WaitingRoomContent() {
                                 <div className={styles.categories}>
                                     {categories.map((cat, i) => (
                                         <span key={i} className={styles.categoriesSpan} >
-                                            {cat}
+                                             {cat}
                                         </span>
                                     ))}
                                 </div>
@@ -411,6 +417,14 @@ function WaitingRoomContent() {
                 handleLeavePrevAndJoinNew={handleLeavePrevAndJoinNew}
                 handleGoToPrevRoom={handleGoToPrevRoom}
                 onCloseChangeRoomModal={handleGoToPrevRoom}
+            />
+
+            {/* BOTTOM-RIGHT AUTO-DISMISSING TOAST WITH TIMER BAR */}
+            <Toast
+                message={error}
+                type="error"
+                duration={3500}
+                onClose={() => setError(null)}
             />
             </main>
         </div>

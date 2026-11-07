@@ -28,6 +28,7 @@ import { getAccessToken, getUserData, createNewGuest } from "../../../accessToke
 import AuthModel from "../../authModels";
 import ErrorModals from "../ErrorModals";
 import CanvasBackground from "../../../components/CanvasBackground";
+import Toast from "../../../components/Toast";
 
 function GameContent() {
   const params = useParams();
@@ -47,6 +48,14 @@ function GameContent() {
   const [currentUser, setCurrentUser] = useState<Record<string, any>>({});
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cheatNotice, setCheatNotice] = useState<string | null>(null);
+
+  // Anti-Cheat Telemetry Tracking
+  const pasteAttemptsRef = useRef<number>(0);
+  const blurCountRef = useRef<number>(0);
+  const blurStartTimeRef = useRef<number | null>(null);
+  const totalBlurDurationRef = useRef<number>(0);
+  const isAwayRef = useRef<boolean>(false);
 
   // Modal states for game errors
   const [showRoomModal, setShowRoomModal] = useState(false);
@@ -145,6 +154,11 @@ function GameContent() {
     activeSocket.emit("answer:submit", {
       roomID: roomId,
       answers: answersRef.current,
+      telemetry: {
+        pasteAttempts: pasteAttemptsRef.current,
+        blurCount: blurCountRef.current,
+        totalBlurDurationMs: totalBlurDurationRef.current,
+      },
     });
     setHasSubmitted(true);
     hasSubmittedRef.current = true;
@@ -194,6 +208,7 @@ function GameContent() {
       activeSocket.off("room:forfeit_cancelled");
       activeSocket.off("game:ended");
       activeSocket.off("answer:success");
+      activeSocket.off("player:cheatPenalty");
       activeSocket.off("error");
 
       // Updates participant roster and scores when emitted by server
@@ -368,6 +383,14 @@ function GameContent() {
         setRoundRecapData(null);
         setSkipVotes(null);
         setHasVotedSkip(false);
+        setCheatNotice(null);
+
+        // Reset telemetry for the new active round
+        pasteAttemptsRef.current = 0;
+        blurCountRef.current = 0;
+        blurStartTimeRef.current = null;
+        totalBlurDurationRef.current = 0;
+        isAwayRef.current = false;
 
         try {
           sessionStorage.removeItem(`scatterblitz_draft_${roomId}`);
@@ -422,6 +445,12 @@ function GameContent() {
         hasSubmittedRef.current = true;
       });
 
+      // Dedicated anti-cheat penalty notification from backend
+      activeSocket.on("player:cheatPenalty", (data: any) => {
+        const msg = data?.message || "Your score for this round was voided (0 pts) due to suspicious activity.";
+        setCheatNotice(msg);
+      });
+
       activeSocket.on("error", (err: any) => {
         const msg = typeof err === "object" ? err?.message : String(err || "");
         const type = typeof err === "object" ? err?.type : "";
@@ -443,7 +472,6 @@ function GameContent() {
           setShowRoomModal(true);
         } else {
           setError(msg);
-          setTimeout(() => setError(null), 1000);
         }
       });
     };
@@ -474,6 +502,45 @@ function GameContent() {
   useEffect(() => {
     if (status !== "active_sprint" || !sprintTargetEndTime) return;
 
+    // Attach blur and visibilitychange listeners with an atomic isAway guard to prevent duplicate counts
+    const markAway = () => {
+      if (!isAwayRef.current) {
+        isAwayRef.current = true;
+        blurCountRef.current += 1;
+        blurStartTimeRef.current = Date.now();
+      }
+    };
+
+    const markBack = () => {
+      if (isAwayRef.current) {
+        isAwayRef.current = false;
+        if (blurStartTimeRef.current) {
+          totalBlurDurationRef.current += Date.now() - blurStartTimeRef.current;
+          blurStartTimeRef.current = null;
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        markAway();
+      } else if (document.visibilityState === "visible") {
+        markBack();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      markAway();
+    };
+
+    const handleWindowFocus = () => {
+      markBack();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("focus", handleWindowFocus);
+
     const updateSprintTimer = () => {
       const synchronizedNow = Date.now() - serverOffsetRef.current;
       const remaining = Math.max(
@@ -493,7 +560,12 @@ function GameContent() {
     updateSprintTimer();
     const interval = setInterval(updateSprintTimer, 200);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
   }, [status, sprintTargetEndTime, socket, serverOffset]);
 
   // User chooses a letter (when it's their turn)
@@ -549,18 +621,6 @@ function GameContent() {
         <FaArrowLeft /> Back
       </button>
       <div className={styles.gameContainer}>
-        {/* ERROR BANNER */}
-        {error && (
-          <div className={styles.errorBanner}>
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-            >
-              <FaExclamationTriangle />
-              <span>{error}</span>
-            </div>
-          </div>
-        )}
-
         {/* FORFEIT WARNING BANNER */}
         {forfeitWarning && (
           <div
@@ -658,6 +718,26 @@ function GameContent() {
                     type="text"
                     className={styles.categoryInput}
                     placeholder={`Type a ${category} starting with ${activeLetter}...`}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    data-form-type="other"
+                    onFocus={() => {
+                      if (socket) {
+                        socket.emit("input:focus", { roomID: roomId, category });
+                      }
+                    }}
+                    onBlur={() => {
+                      if (socket) {
+                        socket.emit("input:blur", { roomID: roomId, category });
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      pasteAttemptsRef.current += 1;
+                      setError("Copy & paste is not allowed in ScatterBlitz! Please type your answer.");
+                    }}
                     value={answers[category] || ""}
                     onChange={(e) => {
                       const updated = {
@@ -756,8 +836,13 @@ function GameContent() {
 
                           <div className={styles.recapAnswersList}>
                             {categories.map((cat, cIdx) => {
-                              const item = userAnswers[cat] || { answer: "", score: 0 };
+                              const item = (userAnswers[cat] || { answer: "", score: 0 }) as {
+                                answer: string;
+                                score: number;
+                                cheated?: boolean;
+                              };
                               const pts = item.score;
+                              const isCheated = item.cheated;
                               return (
                                 <div key={cIdx} className={styles.recapAnswerRow}>
                                   <span className={styles.recapCategoryName}>
@@ -766,17 +851,22 @@ function GameContent() {
                                   <span
                                     className={styles.recapAnswerValue}
                                     style={{
-                                      color:
-                                        pts === 5
-                                          ? "#4CAF50"
-                                          : pts > 0
-                                          ? "#8BC34A"
-                                          : item.answer
-                                          ? "#F44336"
-                                          : "var(--text-dim)",
+                                      color: isCheated
+                                        ? "#ff6b6b"
+                                        : pts === 5
+                                        ? "#4CAF50"
+                                        : pts > 0
+                                        ? "#8BC34A"
+                                        : item.answer
+                                        ? "#F44336"
+                                        : "var(--text-dim)",
                                     }}
                                   >
-                                    {item.answer ? `${item.answer} (+${pts})` : "— (0)"}
+                                    {isCheated && item.answer
+                                      ? `${item.answer} (0 - Voided)`
+                                      : item.answer
+                                      ? `${item.answer} (+${pts})`
+                                      : "— (0)"}
                                   </span>
                                 </div>
                               );
@@ -917,17 +1007,21 @@ function GameContent() {
 
                       <div className={styles.reviewCategoryGrid}>
                         {categories.map((cat, catIdx) => {
-                          const entry = participantAnswers[cat] || {
+                          const entry = (participantAnswers[cat] || {
                             answer: "",
                             score: 0,
-                          };
+                          }) as { answer: string; score: number; cheated?: boolean };
                           const rawAns = entry.answer || "";
                           const score = entry.score || 0;
+                          const isCheated = entry.cheated;
 
                           let badgeText = "0 pts";
                           let badgeColor = "#777777";
 
-                          if (score === 5) {
+                          if (isCheated && rawAns) {
+                            badgeText = "Voided (Cheat)";
+                            badgeColor = "#ff6b6b";
+                          } else if (score === 5) {
                             badgeText = "+5 pts";
                             badgeColor = "#4CAF50";
                           } else if (score > 0) {
@@ -1019,6 +1113,20 @@ function GameContent() {
         showNotStartedModal={showNotStartedModal}
         notStartedMsg={notStartedMsg}
         onCloseNotStartedModal={() => router.push(`/games/${roomId}`)}
+      />
+
+      {/* BOTTOM-RIGHT AUTO-DISMISSING TOASTS WITH TIMER BARS */}
+      <Toast
+        message={error}
+        type="error"
+        duration={3500}
+        onClose={() => setError(null)}
+      />
+      <Toast
+        message={cheatNotice}
+        type="error"
+        duration={6000}
+        onClose={() => setCheatNotice(null)}
       />
     </main>
   );

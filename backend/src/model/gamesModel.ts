@@ -105,18 +105,27 @@ export class GameRoom {
     }
   >;
 
+  // Tracks usernames flagged for anti-cheat violations in the active round (reset each round)
+  flaggedCheaters: Set<string> = new Set();
+
   // Internal mapping of username to database UUID for post-game PostgreSQL persistence
   userDbIds: Record<string, string>;
 
-  // Submissions structured as: { Letter: { participantName: { Category: { answer, score } } } }
+  // Submissions structured as: { Letter: { participantName: { Category: { answer, score, cheated?: boolean } } } }
   detailedSubmissions: Record<
     string,
     Record<
       string,
-      Record<string, { answer: string; score: number }>
+      Record<string, { answer: string; score: number; cheated?: boolean }>
     >
   >;
   submitStatus: "accepting" | "notAccepting";
+
+  // Per-round input telemetry tracking: username -> { category -> { focusedAt?: number, totalDurationMs: number, blurCount: number } }
+  inputActivity: Map<
+    string,
+    Map<string, { focusedAt?: number; totalDurationMs: number; blurCount: number }>
+  > = new Map();
 
   constructor(
     id: string,
@@ -157,6 +166,7 @@ export class GameRoom {
     this.availableLetters = [...this.getAllLetters()];
 
     this.participants = new Map();
+    this.flaggedCheaters = new Set();
     this.userDbIds = { [hostUsername]: hostDbId };
     this.detailedSubmissions = {};
   }
@@ -571,6 +581,8 @@ export class GameRoom {
     this.status = "active_sprint";
     this.roundStartTime = Date.now();
     this.selectionStartTime = null;
+    this.flaggedCheaters.clear();
+    this.inputActivity.clear();
 
     // Start round sprint countdown
     this.roundTimer = setTimeout(() => {
@@ -589,6 +601,31 @@ export class GameRoom {
     if (this.roundTimer !== null) {
       clearTimeout(this.roundTimer);
       this.roundTimer = null;
+    }
+  }
+
+  // Records player input focus to track human interaction timing per category
+  public recordInputFocus(username: string, category: string) {
+    if (this.status !== "active_sprint") return;
+    if (!this.inputActivity.has(username)) {
+      this.inputActivity.set(username, new Map());
+    }
+    const userMap = this.inputActivity.get(username)!;
+    const current = userMap.get(category) || { totalDurationMs: 0, blurCount: 0 };
+    current.focusedAt = Date.now();
+    userMap.set(category, current);
+  }
+
+  // Records player input blur to aggregate interaction duration per category
+  public recordInputBlur(username: string, category: string) {
+    if (this.status !== "active_sprint") return;
+    const userMap = this.inputActivity.get(username);
+    if (!userMap) return;
+    const current = userMap.get(category);
+    if (current && current.focusedAt) {
+      current.totalDurationMs += Date.now() - current.focusedAt;
+      current.focusedAt = undefined;
+      current.blurCount += 1;
     }
   }
 
@@ -874,13 +911,19 @@ export class GameRoom {
       for (const username of usernames) {
         const raw = currentSubmissions[username]?.[category]?.answer || "";
         const clean = normalizedAnswers[username];
+        const isUserCheating = this.flaggedCheaters.has(username);
         let score = 0;
 
-        if (clean && answerCounts[clean] !== undefined) {
+        // Anti-Cheat: If user was flagged for cheating in this round, their score is 0
+        if (!isUserCheating && clean && answerCounts[clean] !== undefined) {
           score = answerCounts[clean] === 1 ? 5 : 2;
         }
 
-        currentSubmissions[username][category] = { answer: raw, score };
+        currentSubmissions[username][category] = {
+          answer: raw,
+          score,
+          cheated: isUserCheating,
+        };
 
         if (score > 0) {
           const participant = this.participants.get(username);
@@ -899,7 +942,12 @@ export class GameRoom {
     username: string,
     answers: Record<string, string>,
     socket: Socket,
-    io?: Server
+    io?: Server,
+    telemetry?: {
+      pasteAttempts?: number;
+      blurCount?: number;
+      totalBlurDurationMs?: number;
+    }
   ) {
     if (!this.activeLetter)
       return socket.emit("error", "No Active Letter Selected");
@@ -924,6 +972,71 @@ export class GameRoom {
       if (!this.categories.includes(key)) {
         return socket.emit("error", "Category Not Found");
       }
+    }
+
+    // --- ANTI-CHEAT DETECTION LOGIC ---
+    let isCheatingDetected = false;
+    let cheatReason = "";
+
+    const pasteAttempts = telemetry?.pasteAttempts || 0;
+    const blurCount = telemetry?.blurCount || 0;
+    const blurDurationMs = telemetry?.totalBlurDurationMs || 0;
+
+    // 1. Paste Detection: Pasting is strictly prohibited
+    if (pasteAttempts > 0) {
+      isCheatingDetected = true;
+      cheatReason = "Pasting answers into category fields is not allowed.";
+    }
+
+    // 2. Tab switching / blur detection while typing answers
+    // If user switched tabs multiple times (>=2) or was away for more than 4 seconds
+    const totalChars = Object.values(answers).reduce(
+      (sum, val) => sum + (typeof val === "string" ? val.trim().length : 0),
+      0
+    );
+
+    if (!isCheatingDetected && totalChars > 0) {
+      if (blurCount >= 2 || blurDurationMs > 4000) {
+        isCheatingDetected = true;
+        cheatReason = "Excessive tab switching or leaving the game during an active round.";
+      }
+    }
+
+
+    // 4. Input Focus & Interaction Cadence Verification (Server-Authoritative Anti-Bot)
+    // Every category with an answer must have genuine user focus interaction recorded on the server
+    if (!isCheatingDetected && totalChars > 0) {
+      const userActivity = this.inputActivity.get(username);
+      for (const [cat, word] of Object.entries(answers)) {
+        const trimmed = (word || "").trim();
+        if (trimmed.length > 0) {
+          const catMetric = userActivity?.get(cat);
+          // If no focus was ever registered for this category, it was injected programmatically
+          if (!catMetric || (!catMetric.focusedAt && catMetric.totalDurationMs === 0)) {
+            isCheatingDetected = true;
+            cheatReason = "Automated submission detected (no input interaction recorded).";
+            break;
+          }
+          // Calculate active interaction time including currently open focus
+          const currentDuration =
+            catMetric.totalDurationMs +
+            (catMetric.focusedAt ? Date.now() - catMetric.focusedAt : 0);
+          // A human cannot type a word of >= 3 chars in under 250 milliseconds
+          if (trimmed.length >= 3 && currentDuration < 250) {
+            isCheatingDetected = true;
+            cheatReason = "Abnormal typing speed on category input.";
+            break;
+          }
+        }
+      }
+    }
+
+    if (isCheatingDetected) {
+      this.flaggedCheaters.add(username);
+      socket.emit("player:cheatPenalty", {
+        message: `Your score for this round was voided (0 pts): ${cheatReason}`,
+        reason: cheatReason,
+      });
     }
 
     if (!this.detailedSubmissions[this.activeLetter]) {
