@@ -16,6 +16,7 @@ import {
   getCategoryStats,
   triggerBackgroundSync,
 } from "./services/categoryManager";
+import { initAccountCleanup } from "./services/accountCleanup";
 
 import path from "path";
 
@@ -470,6 +471,7 @@ process.on("uncaughtException", (error: Error) => {
 async function startServer() {
   // 1. Initialize background category manager & verify cache freshness
   initCategoryManager();
+  initAccountCleanup();
 
   // 2. Verify database connection before accepting traffic
   try {

@@ -480,8 +480,8 @@ export default function Home() {
                     <tr>
                       <th style={{ width: "60px" }}>Rank</th>
                       <th>Player</th>
-                      <th>Won</th>
-                      <th>Matches</th>
+                      <th>Games Won</th>
+                      <th>Match Played</th>
                       <th style={{ textAlign: "right" }}>Total Points</th>
                     </tr>
                   </thead>

@@ -26,7 +26,7 @@ import {
 } from "../utils/cookies";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
 import { uploadAvatar } from "../utils/upload";
-import { uploadToCloudinary, isCloudinaryConfigured } from "../utils/cloudinary";
+import { uploadToCloudinary, isCloudinaryConfigured, getAvatarPublicId } from "../utils/cloudinary";
 import { updateCachedLeaderboardUser } from "./games";
 
 const router = express.Router();
@@ -630,23 +630,12 @@ router.post(
         });
       }
 
-      // 1. Determine public_id: if user already has an avatar in Cloudinary, reuse its public_id to overwrite in-place
-      let existingPublicId: string | undefined;
-      const currentAvatar = req.user?.avatar_url;
-
-      if (currentAvatar && currentAvatar.includes("scatterblitz/avatars/")) {
-        // Extract public_id after "scatterblitz/avatars/" without file extension
-        const match = currentAvatar.match(/scatterblitz\/avatars\/([^./?#]+)/);
-        if (match?.[1]) {
-          existingPublicId = match[1];
-        }
-      }
-
-      const avatarPublicId = existingPublicId || `avatar-${crypto.randomUUID()}`;
+      // 1. Deterministically name avatar using hashed userId so updates overwrite in-place without exposing primary keys
+      const avatarPublicId = getAvatarPublicId(userId);
 
       const cloudResult = await uploadToCloudinary(
         req.file.buffer,
-        "scatterblitz/avatars",
+        undefined,
         avatarPublicId
       );
       const avatarUrl = cloudResult.secure_url;

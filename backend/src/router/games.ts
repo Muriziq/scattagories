@@ -94,7 +94,7 @@ router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: 
     const { isPublic, password, maxPlayers, maxTimePerRound, categories, allowComputerHelper } = validation.data;
 
     // Reset counter if there are currently no active rooms
-    if (getTotalRoomsCount() === 0) {
+    if (getTotalRoomsCount() === 0 && roomSequence > 50) {
       roomSequence = 1;
     }
 
@@ -151,6 +151,7 @@ router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: 
 const publicRoomsQuerySchema = z.object({
   search: z.string().trim().optional(),
   category: z.string().trim().optional(),
+  categories: z.union([z.string(), z.array(z.string())]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
@@ -163,9 +164,20 @@ router.get("/rooms/public", (req: Request, res: Response) => {
       return res.status(400).json({ errors: queryValidation.error.format() });
     }
 
-    const { search, category, page, limit } = queryValidation.data;
+    const { search, category, categories, page, limit } = queryValidation.data;
     const searchFilter = search?.toLowerCase();
-    const categoryFilter = category?.toLowerCase();
+
+    // Normalize category filters into an array of lowercase strings
+    const categoryFilters: string[] = [];
+    if (categories) {
+      const rawList = Array.isArray(categories) ? categories : categories.split(",");
+      rawList.forEach((c) => {
+        const trimmed = c.trim().toLowerCase();
+        if (trimmed && !categoryFilters.includes(trimmed)) categoryFilters.push(trimmed);
+      });
+    } else if (category) {
+      categoryFilters.push(category.trim().toLowerCase());
+    }
 
     const matchingRooms: any[] = [];
 
@@ -184,10 +196,11 @@ router.get("/rooms/public", (req: Request, res: Response) => {
         if (!matchesCode && !matchesHost) continue;
       }
 
-      // Filter by category if requested
-      if (categoryFilter) {
-        const hasCategory = room.categories.some((cat) => cat.toLowerCase().includes(categoryFilter));
-        if (!hasCategory) continue;
+      // Filter by categories if requested (room must have at least one of the selected categories)
+      if (categoryFilters.length > 0) {
+        const roomCatsLower = room.categories.map((c) => c.toLowerCase());
+        const hasMatch = categoryFilters.some((f) => roomCatsLower.some((rc) => rc.includes(f)));
+        if (!hasMatch) continue;
       }
 
       matchingRooms.push({
@@ -221,31 +234,6 @@ router.get("/rooms/public", (req: Request, res: Response) => {
     console.error("Error fetching public rooms:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
-
-// 3. GET ROOM DETAILS: Checks room status, privacy, and player capacity before joining
-router.get("/room/:roomId", (req: Request, res: Response) => {
-  const rawRoomId = req.params.roomId;
-  const roomId = typeof rawRoomId === "string" ? rawRoomId.toUpperCase() : undefined;
-  if (!roomId || roomId.length !== 5) {
-    return res.status(400).json({ message: "Invalid room code format" });
-  }
-
-  const room = getRoom(roomId);
-  if (!room) {
-    return res.status(404).json({ message: "Room not found or has expired" });
-  }
-
-  return res.status(200).json({
-    roomId: room.id,
-    isPublic: room.isPublic,
-    hasPassword: Boolean(!room.isPublic && room.password),
-    status: room.status,
-    playerCount: room.participants.size,
-    maxPlayers: room.maxPlayers,
-    hostUsername: room.hostUsername,
-    categories: room.categories,
-  });
 });
 
 // ============================================================================
