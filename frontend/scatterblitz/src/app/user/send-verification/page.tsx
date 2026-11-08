@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FaEnvelope, FaPaperPlane } from "react-icons/fa";
 import styles from "./send-verification.module.css";
 import { API_BASE_URL } from "../../../config/api";
+import { isValidEmail } from "../../utils/validation";
 import CanvasBackground from "../../components/CanvasBackground";
 
 export default function SendVerificationPage() {
@@ -19,7 +20,7 @@ export default function SendVerificationPage() {
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (!email.trim() || !email.includes("@")) {
+    if (!isValidEmail(email)) {
       setErrorMsg("Please enter a valid email address");
       return;
     }

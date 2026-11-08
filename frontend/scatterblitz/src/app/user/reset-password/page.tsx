@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, Suspense, useRef, KeyboardEvent } from "react";
+import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaKey } from "react-icons/fa";
@@ -179,9 +179,5 @@ function ResetPasswordContent() {
 }
 
 export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<main className={styles.main}></main>}>
-      <ResetPasswordContent />
-    </Suspense>
-  );
+  return <ResetPasswordContent />;
 }

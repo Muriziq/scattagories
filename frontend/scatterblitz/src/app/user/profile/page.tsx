@@ -17,11 +17,15 @@ import {
   FaChevronRight,
   FaTimes,
   FaEye,
+  FaEdit,
+  FaEnvelope,
+  FaLock,
 } from "react-icons/fa";
 import styles from "./profile.module.css";
 import CanvasBackground from "../../components/CanvasBackground";
 import Toast from "../../components/Toast";
 import { API_BASE_URL } from "../../../config/api";
+import { isValidEmail } from "../../utils/validation";
 import {
   authFetch,
   getAccessToken,
@@ -61,12 +65,6 @@ interface MatchHistoryItem {
   ended_at: string;
 }
 
-const getOrdinal = (n: number): string => {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-};
-
 const getOrdinalParts = (n: number): { num: number; suffix: string } => {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
@@ -104,6 +102,13 @@ export default function Profile() {
   // Avatar upload state
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit Profile Modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editUsername, setEditUsername] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editCurrentPassword, setEditCurrentPassword] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Toast feedback
   const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -184,14 +189,27 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      showToast("Please select a valid image file", "error");
+    // Allowed extensions and MIME types matching backend upload whitelist
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".jfif"];
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    const isAllowedExt = allowedExtensions.includes(ext);
+    const isAllowedMime = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ].includes(file.type.toLowerCase());
+
+    if (!isAllowedExt && !isAllowedMime) {
+      showToast("Only JPEG, PNG, WEBP, GIF, and JFIF image files are allowed", "error");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     // 2MB limit as requested
     if (file.size > 2 * 1024 * 1024) {
       showToast("Image must be smaller than 2MB", "error");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
@@ -219,6 +237,85 @@ export default function Profile() {
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleOpenEditModal = () => {
+    setEditUsername(user?.username || "");
+    setEditEmail(user?.email || "");
+    setEditCurrentPassword("");
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (savingProfile) return;
+
+    const trimmedUsername = editUsername.trim();
+    const trimmedEmail = editEmail.trim();
+
+    if (!trimmedUsername && !trimmedEmail) {
+      showToast("Please provide a username or email to update", "error");
+      return;
+    }
+
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+      showToast("Please enter a valid email address", "error");
+      return;
+    }
+
+    if (!editCurrentPassword) {
+      showToast("Current password is required to save changes", "error");
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const payload: Record<string, string> = {
+        currentPassword: editCurrentPassword,
+      };
+      if (trimmedUsername && trimmedUsername !== user?.username) {
+        payload.username = trimmedUsername;
+      }
+      if (trimmedEmail && trimmedEmail.toLowerCase() !== (user?.email || "").toLowerCase()) {
+        payload.email = trimmedEmail;
+      }
+
+      if (!payload.username && !payload.email) {
+        setShowEditModal(false);
+        showToast("No changes detected", "error");
+        setSavingProfile(false);
+        return;
+      }
+
+      const res = await authFetch(`${API_BASE_URL}/user/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.user) {
+        setUser((prev) => (prev ? { ...prev, ...data.user } : data.user));
+        updateUserData({
+          username: data.user.username,
+          avatar_url: data.user.avatar_url,
+        });
+
+        if (data.accessToken) {
+          saveAccessToken(data.accessToken);
+        }
+
+        showToast(data.message || "Profile updated successfully!", "success");
+        setShowEditModal(false);
+      } else {
+        showToast(data.message || "Failed to update profile", "error");
+      }
+    } catch (err) {
+      console.error("Profile update error:", err);
+      showToast("Network error updating profile", "error");
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -483,7 +580,7 @@ export default function Profile() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,.jfif"
                 className={styles.fileInput}
                 onChange={handleAvatarFileChange}
               />
@@ -492,22 +589,40 @@ export default function Profile() {
             <h1 className={styles.username}>{user?.username || "Player"}</h1>
 
             <div className={styles.userMeta}>
+              {!isGuest && user?.email && (
+                <div className={styles.emailContainer}>
+                  <span className={styles.userEmail}>
+                    <FaEnvelope style={{ marginRight: "0.4rem", color: "var(--amber)" }} />
+                    {user.email}
+                  </span>
+                  <span className={styles.emailBadge}>
+                    {user.is_email_verified ? (
+                      <span className={styles.verifiedBadge}>
+                        <FaCheckCircle size={13} /> Verified
+                      </span>
+                    ) : (
+                      <span className={styles.unverifiedBadge}>
+                        Unverified
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+
               <span className={styles.joinDate}>
                 <FaCalendarAlt style={{ marginRight: "0.4rem", color: "var(--amber)" }} />
                 Joined {user?.created_at ? new Date(user.created_at).toLocaleDateString() : "Recently"}
               </span>
+
               {!isGuest && (
-                <span className={styles.emailBadge}>
-                  {user?.is_email_verified ? (
-                    <span className={styles.verifiedBadge}>
-                      <FaCheckCircle size={13} /> Verified
-                    </span>
-                  ) : (
-                    <span className={styles.unverifiedBadge}>
-                      Unverified
-                    </span>
-                  )}
-                </span>
+                <button
+                  type="button"
+                  className={styles.editProfileBtn}
+                  onClick={handleOpenEditModal}
+                  title="Edit profile details"
+                >
+                  <FaEdit /> Edit Profile
+                </button>
               )}
             </div>
           </section>
@@ -574,7 +689,6 @@ export default function Profile() {
                         : "—";
 
                       const rankNum = item.rank || (is1st ? 1 : 0);
-                      const placementText = rankNum > 0 ? getOrdinal(rankNum) : "Finished";
                       const placementColor = getPlacementColor(rankNum, is1st);
 
                       const roundCount = item.total_rounds || 1;
@@ -666,6 +780,104 @@ export default function Profile() {
             )}
           </section>
         </>
+      )}
+
+      {/* EDIT PROFILE MODAL */}
+      {showEditModal && (
+        <div className={styles.modalOverlay} onClick={() => !savingProfile && setShowEditModal(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>
+                <FaEdit style={{ color: "var(--amber)", marginRight: "0.5rem" }} />
+                Edit Profile
+              </h2>
+              <button
+                type="button"
+                className={styles.modalCloseIconBtn}
+                onClick={() => !savingProfile && setShowEditModal(false)}
+                disabled={savingProfile}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className={styles.editForm}>
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Username</label>
+                <div className={styles.inputWrapper}>
+                  <FaUser className={styles.fieldIcon} />
+                  <input
+                    type="text"
+                    className={styles.textInput}
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    placeholder="Enter new username"
+                    maxLength={30}
+                    required
+                    disabled={savingProfile}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Email Address</label>
+                <div className={styles.inputWrapper}>
+                  <FaEnvelope className={styles.fieldIcon} />
+                  <input
+                    type="email"
+                    className={styles.textInput}
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="Enter new email address"
+                    required
+                    disabled={savingProfile}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Current Password</label>
+                <div className={styles.inputWrapper}>
+                  <FaLock className={styles.fieldIcon} />
+                  <input
+                    type="password"
+                    className={styles.textInput}
+                    value={editCurrentPassword}
+                    onChange={(e) => setEditCurrentPassword(e.target.value)}
+                    placeholder="Enter current password to save changes"
+                    required
+                    disabled={savingProfile}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.cancelBtn}
+                  onClick={() => setShowEditModal(false)}
+                  disabled={savingProfile}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={styles.submitBtn}
+                  disabled={savingProfile}
+                >
+                  {savingProfile ? (
+                    <>
+                      <FaSpinner className="spin" style={{ marginRight: "0.5rem" }} />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* TOAST FEEDBACK WITH TIMER PROGRESS BAR */}

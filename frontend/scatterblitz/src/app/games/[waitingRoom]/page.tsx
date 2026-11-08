@@ -2,7 +2,7 @@
 
 import { io, Socket } from "socket.io-client";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { 
     FaBolt, 
@@ -107,7 +107,7 @@ function WaitingRoomContent() {
         if (previousRoomId) {
             router.push(`/games/${previousRoomId}`);
         } else {
-            router.push("/games/rooms");
+            router.push("/games/join");
         }
     };
 
@@ -404,13 +404,13 @@ function WaitingRoomContent() {
                 handlePasswordSubmit={handlePasswordSubmit}
                 onClosePasswordModal={() => {
                     setShowPasswordModal(false);
-                    router.push("/games/rooms");
+                    router.push("/games/join");
                 }}
                 showRoomModal={showRoomModal}
                 roomErrorMsg={roomErrorMsg}
                 onCloseRoomModal={() => {
                     setShowRoomModal(false);
-                    router.push("/games/rooms");
+                    router.push("/games/join");
                 }}
                 showChangeRoomModal={showChangeRoomModal}
                 previousRoomId={previousRoomId}
@@ -432,17 +432,6 @@ function WaitingRoomContent() {
 }
 
 export default function WaitingRoom() {
-    return (
-        <Suspense fallback={
-            <main className={styles.main}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem", color: "var(--amber)" }}>
-                    <FaSpinner className={styles.spinIcon} size={32} />
-                    <h2>Loading Waiting Room...</h2>
-                </div>
-            </main>
-        }>
-            <WaitingRoomContent />
-        </Suspense>
-    );
+    return <WaitingRoomContent />;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   FaArrowLeft,
   FaClock,
@@ -1109,7 +1109,7 @@ function GameContent() {
         onCloseAuthModal={() => router.push("/")}
         showRoomModal={showRoomModal}
         roomErrorMsg={roomErrorMsg}
-        onCloseRoomModal={() => router.push("/games/rooms")}
+        onCloseRoomModal={() => router.push("/games/join")}
         showNotStartedModal={showNotStartedModal}
         notStartedMsg={notStartedMsg}
         onCloseNotStartedModal={() => router.push(`/games/${roomId}`)}
@@ -1133,25 +1133,5 @@ function GameContent() {
 }
 
 export default function GamePage() {
-  return (
-    <Suspense
-      fallback={
-        <main className={styles.main}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "1rem",
-              color: "var(--amber)",
-            }}
-          >
-            <FaSpinner className={styles.spinIcon} size={32} />
-            <h2>Loading Game Board...</h2>
-          </div>
-        </main>
-      }
-    >
-      <GameContent />
-    </Suspense>
-  );
+  return <GameContent />;
 }

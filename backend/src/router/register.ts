@@ -669,19 +669,11 @@ router.post(
 );
 
 // 14. UPDATE PROFILE DETAILS: Updates username and/or email (requires password to change email)
-const updateProfileSchema = z
-  .object({
-    username: z.string().min(3).max(20).trim().toLowerCase().optional(),
-    email: z.string().email().trim().toLowerCase().optional(),
-    currentPassword: z.string().optional(),
-  })
-  .refine(
-    (data) => !data.email || (data.email && typeof data.currentPassword === "string" && data.currentPassword.length > 0),
-    {
-      message: "Current password is required to change your email address.",
-      path: ["currentPassword"],
-    }
-  );
+const updateProfileSchema = z.object({
+  username: z.string().min(3).max(20).trim().toLowerCase().optional(),
+  email: z.string().email().trim().toLowerCase().optional(),
+  currentPassword: z.string().min(1, "Current password is required to update profile details."),
+});
 
 router.patch("/profile", verifyAccessToken, async (req: AuthRequest, res: Response) => {
   try {
@@ -713,15 +705,13 @@ router.patch("/profile", verifyAccessToken, async (req: AuthRequest, res: Respon
     }
     const currentUser = userResult.rows[0];
 
-    // 2. If email is changing, verify current password
-    let isEmailChanging = false;
-    if (email && email !== currentUser.email) {
-      isEmailChanging = true;
-      const isPasswordValid = await bcrypt.compare(currentPassword!, currentUser.password_hash);
-      if (!isPasswordValid) {
-        return res.status(401).json({ message: "Incorrect current password" });
-      }
+    // 2. Always verify current password before making any profile changes
+    const isPasswordValid = await bcrypt.compare(currentPassword, currentUser.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Incorrect current password" });
     }
+
+    let isEmailChanging = Boolean(email && email !== currentUser.email);
 
     // 3. Build dynamic SQL update statements
     const updates: string[] = [];

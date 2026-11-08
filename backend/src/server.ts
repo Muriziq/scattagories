@@ -23,6 +23,7 @@ import path from "path";
 dotenv.config();
 
 const app = express();
+app.disable("x-powered-by");
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 5000;
@@ -60,8 +61,8 @@ export const generalLimiter = rateLimit({
 // Middlewares
 app.use(cors(corsOptions));
 app.use(generalLimiter);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50kb" }));
+app.use(express.urlencoded({ extended: true, limit: "50kb" }));
 app.use(cookieParser());
 app.use("/user", register);
 app.use("/games", games);

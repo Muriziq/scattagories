@@ -78,7 +78,7 @@ export default function ErrorModals({
                         <button
                             type="button"
                             className={authStyles.closeModalBtn}
-                            onClick={onClosePasswordModal || (() => router.push("/games/rooms"))}
+                            onClick={onClosePasswordModal || (() => router.push("/games/join"))}
                             aria-label="Close modal"
                         >
                             <FaTimes />
@@ -105,7 +105,7 @@ export default function ErrorModals({
                                 <button
                                     type="button"
                                     className={authStyles.modalSecondaryBtn}
-                                    onClick={onClosePasswordModal || (() => router.push("/games/rooms"))}
+                                    onClick={onClosePasswordModal || (() => router.push("/games/join"))}
                                 >
                                     Cancel
                                 </button>
@@ -122,7 +122,7 @@ export default function ErrorModals({
                         <button
                             type="button"
                             className={authStyles.closeModalBtn}
-                            onClick={onCloseRoomModal || (() => router.push("/games/rooms"))}
+                            onClick={onCloseRoomModal || (() => router.push("/games/join"))}
                             aria-label="Close modal"
                         >
                             <FaTimes />
@@ -136,7 +136,7 @@ export default function ErrorModals({
                             <button
                                 type="button"
                                 className={authStyles.modalPrimaryBtn}
-                                onClick={() => router.push("/games/rooms")}
+                                onClick={() => router.push("/games/join")}
                             >
                                 Join a New Room
                             </button>
@@ -196,7 +196,7 @@ export default function ErrorModals({
                         <button
                             type="button"
                             className={authStyles.closeModalBtn}
-                            onClick={handleGoToPrevRoom || (() => router.push("/games/rooms"))}
+                            onClick={handleGoToPrevRoom || (() => router.push("/games/join"))}
                             aria-label="Close modal"
                         >
                             <FaTimes />

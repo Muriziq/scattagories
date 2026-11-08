@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FaCheckCircle, FaExclamationCircle, FaSpinner } from "react-icons/fa";
@@ -101,21 +101,5 @@ function VerifyEmailContent() {
 }
 
 export default function VerifyEmailPage() {
-  return (
-    <Suspense
-      fallback={
-        <main className={styles.main}>
-          <CanvasBackground />
-          <section className={styles.cardContainer}>
-            <section className={styles.card}>
-              <FaSpinner className={`${styles.icon} ${styles.loadingIcon}`} />
-              <h1 className={styles.title}>Loading</h1>
-            </section>
-          </section>
-        </main>
-      }
-    >
-      <VerifyEmailContent />
-    </Suspense>
-  );
+  return <VerifyEmailContent />;
 }

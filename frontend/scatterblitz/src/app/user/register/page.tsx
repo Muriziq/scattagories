@@ -6,6 +6,7 @@ import styles from "./register.module.css";
 import { useRouter } from 'next/navigation';
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
+import { isValidEmail } from "../../utils/validation";
 import CanvasBackground from "../../components/CanvasBackground";
 
 export default function Register() {
@@ -33,8 +34,8 @@ export default function Register() {
       setErrorMsg("Username must be 3-20 characters long");
       return;
     }
-    if (!email.trim() || !email.includes("@")) {
-      setErrorMsg("Please enter a valid Email address");
+    if (!isValidEmail(email)) {
+      setErrorMsg("Please enter a valid email address");
       return;
     }
     if (!password || password.length < 6 || password.length > 20) {

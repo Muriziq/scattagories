@@ -184,6 +184,14 @@
   display: none;
 }
 
+.usernameRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
 .username {
   font-size: 2.6rem;
   font-weight: 900;
@@ -194,15 +202,56 @@
   line-height: 1.15;
 }
 
+.editProfileBtn {
+  margin-top: 0.4rem;
+  background: rgba(255, 183, 3, 0.08);
+  border: 1px solid rgba(255, 183, 3, 0.28);
+  color: var(--amber);
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editProfileBtn:hover {
+  background: rgba(255, 183, 3, 0.18);
+  border-color: var(--amber);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(255, 183, 3, 0.25);
+}
+
 /* User Meta: Centered vertically and horizontally */
 .userMeta {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.55rem;
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+.emailContainer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.userEmail {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.88rem;
 }
 
 .joinDate {
@@ -698,4 +747,182 @@
   color: var(--text-muted);
   margin-left: 2px;
   vertical-align: super;
+}
+
+/* Edit Profile Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 4, 3, 0.82);
+  backdrop-filter: blur(12px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalCard {
+  background: linear-gradient(145deg, #1f100c 0%, #160a08 100%);
+  border: 1px solid rgba(250, 115, 1, 0.3);
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 560px;
+  padding: 2.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 30px rgba(250, 115, 1, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-sizing: border-box;
+  animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(242, 204, 136, 0.14);
+  padding-bottom: 1rem;
+}
+
+.modalTitle {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  letter-spacing: -0.01em;
+}
+
+.modalCloseIconBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modalCloseIconBtn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: rotate(90deg);
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.inputLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(10, 4, 3, 0.55);
+  border: 1.5px solid rgba(242, 204, 136, 0.18);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--amber);
+  background: rgba(10, 4, 3, 0.75);
+  box-shadow: 0 0 0 3px rgba(255, 183, 3, 0.15);
+}
+
+.fieldIcon {
+  color: var(--amber);
+  font-size: 1rem;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.textInput {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.94rem;
+  font-family: inherit;
+  width: 100%;
+  outline: none;
+}
+
+.textInput::placeholder {
+  color: var(--text-dim);
+}
+
+.helperText {
+  font-size: 0.76rem;
+  color: var(--amber);
+  margin-top: 0.25rem;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.modalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(242, 204, 136, 0.12);
+}
+
+.cancelBtn {
+  composes: btn-3d btn-secondary from global;
+  padding: 0.7rem 1.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submitBtn {
+  composes: btn-3d btn-primary from global;
+  padding: 0.7rem 1.6rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
