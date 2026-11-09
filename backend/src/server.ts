@@ -411,7 +411,6 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       telemetry?: {
         pasteAttempts?: number;
         blurCount?: number;
-        totalBlurDurationMs?: number;
       };
     }) => {
       if (!socket.user) {

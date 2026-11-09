@@ -747,8 +747,14 @@ export class GameRoom {
       winner: forfeitWinnerUsername || (standings[0]?.username ?? null),
     });
 
-    // 2. Persist to PostgreSQL asynchronously in the background
-    this.saveGameToDatabase(standings, forfeitWinnerUsername);
+    // 2. Persist to PostgreSQL asynchronously in the background only if there are 2 or more players
+    // Solo matches are practice matches and do not affect competitive database statistics or leaderboards
+    const totalParticipantsCount = this.participants.size;
+    if (totalParticipantsCount >= 2) {
+      this.saveGameToDatabase(standings, forfeitWinnerUsername);
+    } else {
+      console.log(`[Practice Match] Room ${this.id} finished with ${totalParticipantsCount} player(s). Skipped DB persistence.`);
+    }
 
     // 3. Keep room alive for 15 minutes for post-game review, then clean up
     setTimeout(() => {
@@ -946,7 +952,6 @@ export class GameRoom {
     telemetry?: {
       pasteAttempts?: number;
       blurCount?: number;
-      totalBlurDurationMs?: number;
     }
   ) {
     if (!this.activeLetter)
@@ -980,7 +985,6 @@ export class GameRoom {
 
     const pasteAttempts = telemetry?.pasteAttempts || 0;
     const blurCount = telemetry?.blurCount || 0;
-    const blurDurationMs = telemetry?.totalBlurDurationMs || 0;
 
     // 1. Paste Detection: Pasting is strictly prohibited
     if (pasteAttempts > 0) {
@@ -989,14 +993,14 @@ export class GameRoom {
     }
 
     // 2. Tab switching / blur detection while typing answers
-    // If user switched tabs multiple times (>=2) or was away for more than 4 seconds
+    // If user switched tabs multiple times (>=2) while answers are populated
     const totalChars = Object.values(answers).reduce(
       (sum, val) => sum + (typeof val === "string" ? val.trim().length : 0),
       0
     );
 
     if (!isCheatingDetected && totalChars > 0) {
-      if (blurCount >= 2 || blurDurationMs > 4000) {
+      if (blurCount >= 2) {
         isCheatingDetected = true;
         cheatReason = "Excessive tab switching or leaving the game during an active round.";
       }

@@ -35,7 +35,7 @@ export default function PrivacyPage() {
             Comprehensive disclosure of how ScatterBlitz collects, uses, protects, and handles your
             personal data under global privacy frameworks (GDPR, NDPR, CCPA).
           </p>
-          <span className={styles.dateBadge}>Effective Date: October 28, 2026</span>
+          <span className={styles.dateBadge}>Last Updated: November 9, 2026</span>
         </div>
 
         <div className={styles.articlesContainer}>
@@ -50,9 +50,8 @@ export default function PrivacyPage() {
               </p>
               <ul className={styles.bulletList}>
                 <li><strong>Service / Platform:</strong> ScatterBlitz (<Link href="/" style={{ color: "var(--amber)" }}>https://scatterblitz.com</Link>)</li>
-                <li><strong>Designated Privacy Email:</strong> <a href="mailto:privacy@scatterblitz.com" style={{ color: "var(--amber)" }}>privacy@scatterblitz.com</a></li>
-                <li><strong>Support Contact:</strong> <a href="mailto:support@scatterblitz.com" style={{ color: "var(--amber)" }}>support@scatterblitz.com</a></li>
-                <li><strong>Effective Date:</strong> October 28, 2026</li>
+                <li><strong>Official Privacy &amp; Support Contact:</strong> <a href="mailto:scatterblitz1@gmail.com" style={{ color: "var(--amber)" }}>scatterblitz1@gmail.com</a></li>
+                <li><strong>Effective Date:</strong> November 9, 2026</li>
               </ul>
             </div>
           </section>
@@ -148,9 +147,10 @@ export default function PrivacyPage() {
                 We share data only with trusted third-party service providers bound by strict confidentiality and data-processing agreements:
               </p>
               <ul className={styles.bulletList}>
-                <li><strong>Cloud Infrastructure &amp; Hosting:</strong> Cloud server providers (e.g., AWS, DigitalOcean, or Render) that host our PostgreSQL database, Node.js WebSocket engine, and static avatar file stores.</li>
-                <li><strong>Transactional Email Services:</strong> Compliant email delivery gateways (e.g., Resend, SendGrid, or AWS SES) used solely to dispatch account verification tokens and password reset instructions.</li>
-                <li><strong>Payment Processors:</strong> Tier-1 PCI-DSS certified payment processors (e.g., Stripe) handling payment card authorizations. We never access raw card numbers.</li>
+                <li><strong>Cloud Infrastructure &amp; Hosting:</strong> Cloud server and database hosting providers that host our PostgreSQL database, Node.js WebSocket engine, and web services.</li>
+                <li><strong>Media Asset Storage (Cloudinary):</strong> Cloudinary Inc., our media asset hosting provider, stores user-uploaded avatar images via secure, encrypted content delivery networks (CDNs). Avatar assets are referenced using pseudonymized identifiers without exposing internal database primary keys.</li>
+                <li><strong>Transactional Email Services:</strong> Compliant email delivery gateways (e.g., Gmail SMTP / Nodemailer) used solely to dispatch account verification tokens and password reset instructions.</li>
+                <li><strong>Payment Processors:</strong> Tier-1 PCI-DSS certified payment processors (e.g., Stripe) if and when optional payments are enabled. We never access or store raw card numbers.</li>
                 <li><strong>Legal Authorities:</strong> Law enforcement or judicial bodies only when subpoenaed or legally required under enforceable warrants.</li>
               </ul>
             </div>
@@ -168,7 +168,7 @@ export default function PrivacyPage() {
               <ul className={styles.bulletList}>
                 <li><strong>Client / Browser Storage:</strong> Secure HTTP-only, SameSite cookies store authentication refresh tokens (`refreshToken`, `guestToken`), isolating credentials from client-side script access (XSS mitigation). Anonymous device IDs are held in <code>localStorage</code>.</li>
                 <li><strong>Server-Side Storage:</strong> Account records, game match histories, and dictionary sets reside in encrypted PostgreSQL databases behind private VPC boundaries.</li>
-                <li><strong>Avatar Media Storage:</strong> Custom profile pictures are sanitized, validated against malicious payloads, stored in dedicated directories (<code>/uploads/avatars/</code>), and served with static browser cache headers. When you upload a replacement avatar, the former file is purged from disk.</li>
+                <li><strong>Avatar Media Storage:</strong> Custom profile pictures are sanitized, validated against strict MIME whitelists (JPEG, PNG, WebP, GIF, JFIF under 2MB), and hosted securely via Cloudinary using pseudonymized asset IDs. When you update or remove your avatar, the previous asset is automatically overwritten or purged.</li>
                 <li><strong>In-Transit Encryption:</strong> All client-server traffic, including HTTPS REST calls and WSS real-time WebSocket frames, is encrypted using TLS 1.3 / SSL.</li>
                 <li><strong>Rate Limiting &amp; Anti-Abuse:</strong> Rate limiters on both HTTP routes and WebSocket connections mitigate brute-force and denial-of-service threats.</li>
               </ul>
@@ -186,7 +186,7 @@ export default function PrivacyPage() {
               </p>
               <ul className={styles.bulletList}>
                 <li><strong>Registered Accounts:</strong> Active user profiles are maintained until you initiate an account deletion request.</li>
-                <li><strong>Guest Sessions:</strong> Anonymous guest records, guest JWTs, and temporary game room associations expire automatically after 7 days of inactivity.</li>
+                <li><strong>Guest Sessions:</strong> Anonymous guest records, guest JWTs, and temporary game room associations expire automatically after 1 day (24 hours) of inactivity.</li>
                 <li><strong>Soft Delete &amp; 30-Day Purge:</strong> When you delete your account, your profile is marked as deleted (<code>deleted_at</code> timestamp), your session tokens are revoked, and your email/password hash is scrubbed or permanently erased from active databases within 30 days. Historical match scores are anonymized to protect public match balance.</li>
               </ul>
             </div>
@@ -211,7 +211,7 @@ export default function PrivacyPage() {
                 <li><strong>Right to Lodge a Complaint:</strong> File a grievance with your local data protection supervisory authority (e.g., your national DPA or the Nigeria Data Protection Commission).</li>
               </ul>
               <div className={styles.callout}>
-                <strong>How to Exercise Your Rights:</strong> You can manage profile data directly within your account settings or submit a formal data request by emailing <a href="mailto:privacy@scatterblitz.com" style={{ color: "var(--amber)" }}>privacy@scatterblitz.com</a>. We respond to all verified requests within 30 days without charge.
+                <strong>How to Exercise Your Rights:</strong> You can manage profile data directly within your account settings or submit a formal data request by emailing <a href="mailto:scatterblitz1@gmail.com" style={{ color: "var(--amber)" }}>scatterblitz1@gmail.com</a>. We respond to all verified requests within 30 days without charge.
               </div>
             </div>
           </section>
@@ -240,10 +240,10 @@ export default function PrivacyPage() {
             </div>
             <div className={styles.sectionContentCol}>
               <p className={styles.paragraph}>
-                ScatterBlitz is designed for general audiences and is <strong>not directed at children under the age of 13</strong> (or 16 for residents within the European Economic Area).
+                ScatterBlitz is designed for general audiences and is <strong>not directed to or intended for children under the age of 13</strong> (or 16 for residents within the European Economic Area / UK).
               </p>
               <p className={styles.paragraph}>
-                We do not knowingly collect, solicit, or store personal information from individuals below these minimum statutory ages. If we learn that personal data of a child has been collected without verified parental consent, we will take immediate measures to delete that information from our records. Parents or guardians who believe their child has registered an account may contact us at <a href="mailto:privacy@scatterblitz.com" style={{ color: "var(--amber)" }}>privacy@scatterblitz.com</a>.
+                In strict compliance with the Children&apos;s Online Privacy Protection Act (COPPA), GDPR Article 8, and the Nigeria Data Protection Act (NDPA), we do not knowingly collect, solicit, or maintain personal information from individuals below these minimum statutory thresholds. If we discover that personal data of a child under 13 has been collected without verifiable parental consent, we take immediate measures to permanently expunge that information from our active databases and media hosts. Parents or legal guardians who believe their child has registered an account may contact us at <a href="mailto:scatterblitz1@gmail.com" style={{ color: "var(--amber)" }}>scatterblitz1@gmail.com</a> for immediate account removal.
               </p>
             </div>
           </section>
@@ -289,9 +289,8 @@ export default function PrivacyPage() {
               </p>
               <div className={styles.callout}>
                 <strong>ScatterBlitz Privacy &amp; Data Protection Office</strong><br />
-                Email: <a href="mailto:privacy@scatterblitz.com" style={{ color: "var(--amber)" }}>privacy@scatterblitz.com</a><br />
-                General Inquiries: <a href="mailto:support@scatterblitz.com" style={{ color: "var(--amber)" }}>support@scatterblitz.com</a><br />
-                Response Commitment: Within 30 days of request receipt
+                Official Contact: <a href="mailto:scatterblitz1@gmail.com" style={{ color: "var(--amber)" }}>scatterblitz1@gmail.com</a><br />
+                Response Commitment: Inquiries and rights requests are addressed within 30 days of receipt without charge.
               </div>
             </div>
           </section>

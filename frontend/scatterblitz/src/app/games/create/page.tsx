@@ -301,12 +301,12 @@ export default function CreateRoomPage() {
                   <span className={styles.labelSpan}>
                     <FaUsers /> Max Players
                   </span>
-                  <span className={styles.helperText}>2–8 Players</span>
+                  <span className={styles.helperText}>1–8 Players</span>
                 </label>
                 <input
                   type="number"
                   id="maxPlayers"
-                  min={2}
+                  min={1}
                   max={8}
                   name="maxPlayers"
                   className={styles.input}
@@ -320,12 +320,12 @@ export default function CreateRoomPage() {
                   <span className={styles.labelSpan}>
                     <FaClock /> Round Timer
                   </span>
-                  <span className={styles.helperText}>10–120s</span>
+                  <span className={styles.helperText}>5–120s</span>
                 </label>
                 <input
                   type="number"
                   id="maxTimePerRound"
-                  min={10}
+                  min={5}
                   max={120}
                   name="maxTimePerRound"
                   className={styles.input}

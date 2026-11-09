@@ -53,8 +53,6 @@ function GameContent() {
   // Anti-Cheat Telemetry Tracking
   const pasteAttemptsRef = useRef<number>(0);
   const blurCountRef = useRef<number>(0);
-  const blurStartTimeRef = useRef<number | null>(null);
-  const totalBlurDurationRef = useRef<number>(0);
   const isAwayRef = useRef<boolean>(false);
 
   // Modal states for game errors
@@ -157,7 +155,6 @@ function GameContent() {
       telemetry: {
         pasteAttempts: pasteAttemptsRef.current,
         blurCount: blurCountRef.current,
-        totalBlurDurationMs: totalBlurDurationRef.current,
       },
     });
     setHasSubmitted(true);
@@ -388,8 +385,6 @@ function GameContent() {
         // Reset telemetry for the new active round
         pasteAttemptsRef.current = 0;
         blurCountRef.current = 0;
-        blurStartTimeRef.current = null;
-        totalBlurDurationRef.current = 0;
         isAwayRef.current = false;
 
         try {
@@ -507,18 +502,11 @@ function GameContent() {
       if (!isAwayRef.current) {
         isAwayRef.current = true;
         blurCountRef.current += 1;
-        blurStartTimeRef.current = Date.now();
       }
     };
 
     const markBack = () => {
-      if (isAwayRef.current) {
-        isAwayRef.current = false;
-        if (blurStartTimeRef.current) {
-          totalBlurDurationRef.current += Date.now() - blurStartTimeRef.current;
-          blurStartTimeRef.current = null;
-        }
-      }
+      isAwayRef.current = false;
     };
 
     const handleVisibilityChange = () => {

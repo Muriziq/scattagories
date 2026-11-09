@@ -2,87 +2,119 @@
   min-height: 100vh;
   width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+  padding: 2rem;
+  box-sizing: border-box;
+  overflow: hidden;
+    background: var(--bg-dark);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.loadingCard {
   position: relative;
   z-index: 1;
-  color: var(--text-primary);
-  gap: 1.5rem;
+  border-radius: 1.75rem;
+  padding: 3rem 2.5rem;
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  animation: cardFade 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.spinnerWrapper {
-  position: relative;
+@keyframes cardFade {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.iconCircle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(255, 183, 3, 0.1);
+  border: 2px solid rgba(255, 183, 3, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--amber);
+  box-shadow: 0 0 30px rgba(255, 183, 3, 0.25);
+  animation: iconPulse 2s ease-in-out infinite alternate;
 }
 
-.outerRing {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border: 3px solid rgba(255, 183, 3, 0.15);
-  border-top-color: var(--amber);
-  border-right-color: var(--safety-orange);
-  animation: spinRing 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+@keyframes iconPulse {
+  from {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(255, 183, 3, 0.2);
+  }
+  to {
+    transform: scale(1.06);
+    box-shadow: 0 0 35px rgba(250, 115, 1, 0.45);
+  }
 }
 
-.innerPulse {
-  position: absolute;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
-  animation: pulseGlow 1.5s ease-in-out infinite alternate;
-}
-
-.loadingText {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.brandTitle {
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  color: var(--text-primary);
+  text-transform: uppercase;
 }
 
-.dots {
-  display: inline-flex;
-  animation: dotBlink 1.4s infinite;
+.brandHighlight {
+  color: var(--safety-orange);
 }
 
-@keyframes spinRing {
+.progressBarTrack {
+  width: 100%;
+  height: 4px;
+  background: rgba(242, 204, 136, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBarFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, var(--safety-orange), var(--gold));
+  border-radius: 999px;
+  box-shadow: 0 0 10px var(--gold);
+  animation: shimmerProgress 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmerProgress {
   0% {
-    transform: rotate(0deg);
+    left: -40%;
+    width: 30%;
+  }
+  50% {
+    width: 60%;
   }
   100% {
-    transform: rotate(360deg);
+    left: 100%;
+    width: 30%;
   }
 }
 
-@keyframes pulseGlow {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.4;
-  }
-  100% {
-    transform: scale(1.3);
-    opacity: 0.9;
-  }
+.loadingSubtext {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
 }
-
-@keyframes dotBlink {
-  0%, 20% {
-    opacity: 0;
-  }
-  40% {
-    opacity: 0.5;
-  }
-  60%, 100% {
-    opacity: 1;
-  }
-}
-

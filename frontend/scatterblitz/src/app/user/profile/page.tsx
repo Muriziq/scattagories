@@ -20,16 +20,20 @@ import {
   FaEdit,
   FaEnvelope,
   FaLock,
+  FaSignOutAlt,
+  FaTrashAlt,
 } from "react-icons/fa";
 import styles from "./profile.module.css";
 import CanvasBackground from "../../components/CanvasBackground";
 import Toast from "../../components/Toast";
+import Loading from "../../loading";
 import { API_BASE_URL } from "../../../config/api";
 import { isValidEmail } from "../../utils/validation";
 import {
   authFetch,
   getAccessToken,
   saveAccessToken,
+  clearAccessToken,
   updateUserData,
 } from "../../accessToken";
 
@@ -109,6 +113,12 @@ export default function Profile() {
   const [editEmail, setEditEmail] = useState("");
   const [editCurrentPassword, setEditCurrentPassword] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // Delete Account Modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Toast feedback
   const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -224,9 +234,13 @@ export default function Profile() {
       });
       const data = await res.json();
 
-      if (res.ok && data.success) {
-        setUser((prev) => (prev ? { ...prev, avatar_url: data.avatar_url } : null));
-        updateUserData({ avatar_url: data.avatar_url });
+      if (res.ok && (data.avatar_url || data.success || data.user)) {
+        const newAvatar = data.avatar_url || data.user?.avatar_url;
+        setUser((prev) => (prev ? { ...prev, avatar_url: newAvatar } : null));
+        updateUserData({ avatar_url: newAvatar });
+        if (data.accessToken) {
+          saveAccessToken(data.accessToken);
+        }
         showToast("Avatar updated successfully!", "success");
       } else {
         showToast(data.message || "Avatar upload failed", "error");
@@ -319,6 +333,55 @@ export default function Profile() {
     }
   };
 
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await fetch(`${API_BASE_URL}/user/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Sign out error:", err);
+    } finally {
+      clearAccessToken();
+      router.push("/");
+    }
+  };
+
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (deletingAccount) return;
+
+    if (!isGuest && !deletePassword.trim()) {
+      showToast("Please enter your current password to confirm deletion", "error");
+      return;
+    }
+
+    setDeletingAccount(true);
+    try {
+      const res = await authFetch(`${API_BASE_URL}/user/delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        clearAccessToken();
+        setShowDeleteModal(false);
+        router.push("/user/login?deleted=true");
+      } else {
+        showToast(data.message || "Failed to delete account", "error");
+      }
+    } catch (err) {
+      console.error("Delete account error:", err);
+      showToast("Network error deleting account", "error");
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   const openInspectView = (match: MatchHistoryItem) => {
     setInspectMatch(match);
     setInspectLetterIdx(0);
@@ -350,15 +413,7 @@ export default function Profile() {
       : Object.keys(playerAnswers);
 
   if (loading) {
-    return (
-      <main className={styles.main}>
-        <CanvasBackground />
-        <div className={styles.loadingWrapper}>
-          <FaSpinner className="spin" size={40} style={{ color: "var(--amber)" }} />
-          <p style={{ marginTop: "1rem", color: "var(--text-muted)" }}>Loading your profile...</p>
-        </div>
-      </main>
-    );
+    return <Loading />;
   }
 
   return (
@@ -500,6 +555,36 @@ export default function Profile() {
             <button type="button" onClick={() => router.push("/")} className={styles.backButton}>
               <FaArrowLeft /> Back
             </button>
+            <div className={styles.navActions}>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className={styles.signOutBtn}
+                title="Sign out of your account"
+              >
+                {signingOut ? (
+                  <FaSpinner className="spin" size={13} />
+                ) : (
+                  <>
+                    <FaSignOutAlt /> Sign Out
+                  </>
+                )}
+              </button>
+              {!isGuest && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeletePassword("");
+                    setShowDeleteModal(true);
+                  }}
+                  className={styles.deleteAccountBtn}
+                  title="Permanently delete your account"
+                >
+                  <FaTrashAlt /> Delete Account
+                </button>
+              )}
+            </div>
           </div>
 
           {/* GUEST BANNER */}
@@ -873,6 +958,84 @@ export default function Profile() {
                   ) : (
                     "Save Changes"
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE ACCOUNT MODAL */}
+      {showDeleteModal && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => !deletingAccount && setShowDeleteModal(false)}
+        >
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle} style={{ color: "#ef4444" }}>
+                <FaTrashAlt style={{ marginRight: "0.5rem" }} />
+                Delete Account
+              </h2>
+              <button
+                type="button"
+                className={styles.modalCloseIconBtn}
+                onClick={() => !deletingAccount && setShowDeleteModal(false)}
+                disabled={deletingAccount}
+                title="Close"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <form onSubmit={handleDeleteAccount} className={styles.editForm}>
+              <p style={{ color: "var(--text-secondary)", lineHeight: "1.6", margin: "0 0 0.5rem 0", fontSize: "0.95rem" }}>
+                Are you sure you want to delete your account? This action is <strong>permanent</strong>.
+                Your profile, stats, and saved credentials will be deactivated immediately and purged in 30 days.
+              </p>
+
+              {!isGuest && (
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>
+                    Confirm Password <span style={{ color: "var(--blood-orange)" }}>*</span>
+                  </label>
+                  <div className={styles.inputWrapper}>
+                    <FaLock className={styles.fieldIcon} />
+                    <input
+                      type="password"
+                      className={styles.textInput}
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      placeholder="Enter current password to confirm deletion"
+                      required
+                      disabled={deletingAccount}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.modalActions}>
+                <button
+                  type="submit"
+                  className={styles.deleteConfirmBtn}
+                  disabled={deletingAccount}
+                >
+                  {deletingAccount ? (
+                    <>
+                      <FaSpinner className="spin" style={{ marginRight: "0.5rem" }} />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Permanently Delete"
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className={styles.cancelBtn}
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deletingAccount}
+                >
+                  Cancel
                 </button>
               </div>
             </form>

@@ -9,16 +9,15 @@ export default function NotFound() {
       <CanvasBackground />
 
       <div className={styles.contentCard}>
-        <div className={styles.iconCircle}>
-          <FaSearchLocation size={44} />
-        </div>
 
-        <h1 className={styles.errorCode}>404</h1>
+        <h1 className={styles.errorCode}>
+          4<span className={styles.zeroGradient}>0</span>4
+        </h1>
 
-        <h2 className={styles.title}>Word Not in Dictionary!</h2>
+        <h2 className={styles.title}>Lost in the Blitz</h2>
 
         <p className={styles.description}>
-          The page or game room you are looking for does not exist, has been deleted, or may have already expired.
+          Looks like this word, room, or page evaporated into the volcanic fog. Let&apos;s get you back into the action.
         </p>
 
         <div className={styles.actionsRow}>
@@ -26,11 +25,10 @@ export default function NotFound() {
             <FaHome /> Return Home
           </Link>
           <Link href="/games/join" className={styles.secondaryBtn}>
-            <FaGamepad /> Browse Rooms
+            <FaGamepad /> Find Matches
           </Link>
         </div>
       </div>
     </main>
   );
 }
-

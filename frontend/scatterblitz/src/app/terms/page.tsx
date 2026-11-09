@@ -35,7 +35,7 @@ export default function TermsPage() {
             Legally binding rules governing real-time multiplayer gameplay, account standards,
             intellectual property, disclaimers, liability limits, and dispute resolution on ScatterBlitz.
           </p>
-          <span className={styles.dateBadge}>Effective Date: October 28, 2026</span>
+          <span className={styles.dateBadge}>Last Updated: November 9, 2026</span>
         </div>
 
         <div className={styles.articlesContainer}>
@@ -49,7 +49,7 @@ export default function TermsPage() {
                 By accessing, browsing, registering an account, playing matches, or using any services provided through ScatterBlitz (&quot;the Service&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;), you confirm that you have read, understood, and agreed to be bound by these Terms of Service.
               </p>
               <p className={styles.paragraph}>
-                If you do not agree to these Terms in their entirety, you must discontinue using ScatterBlitz immediately. These Terms took effect on <strong>October 28, 2026</strong>.
+                If you do not agree to these Terms in their entirety, you must discontinue using ScatterBlitz immediately. These Terms were last revised and took effect on <strong>November 9, 2026</strong>.
               </p>
             </div>
           </section>
@@ -61,10 +61,10 @@ export default function TermsPage() {
             </div>
             <div className={styles.sectionContentCol}>
               <p className={styles.paragraph}>
-                ScatterBlitz is a fast-paced, real-time multiplayer word game and category sprint platform. Players compete in timed rounds to submit valid words matching randomly rolled letters across distinct categories, scored through automated dictionary validation and peer reviews.
+                ScatterBlitz is a fast-paced, real-time multiplayer word game and category sprint platform. Players compete in timed rounds (5 to 120 seconds) to submit valid words matching randomly rolled letters across distinct categories, scored through automated dictionary validation and peer reviews.
               </p>
               <p className={styles.paragraph}>
-                The Service is built for casual and competitive players worldwide who wish to test their vocabulary, speed, and creative thinking against friends or public lobbies.
+                The Service supports both competitive multiplayer matches (2 or more players) and solo practice lobbies. To preserve competitive leaderboard integrity, solo practice matches (1 player) are strictly unranked and do not record lifetime wins or stats to the database.
               </p>
             </div>
           </section>
@@ -79,9 +79,9 @@ export default function TermsPage() {
                 To access or use ScatterBlitz, you represent and warrant that:
               </p>
               <ul className={styles.bulletList}>
-                <li>You are at least <strong>13 years old</strong> (or at least <strong>16 years old</strong> if you reside within the European Economic Area or UK).</li>
+                <li>You are at least <strong>13 years old</strong> (or at least <strong>16 years old</strong> if you reside within the European Economic Area or UK, as required by applicable child data protection laws including COPPA and GDPR). The Service is strictly not directed to, marketed to, or intended for children under 13.</li>
                 <li>You possess the legal capacity to enter into a binding agreement under the laws of your jurisdiction.</li>
-                <li>If you are between the minimum statutory age and the age of legal majority in your country, your parent or legal guardian has reviewed and agreed to these Terms on your behalf.</li>
+                <li>If you are between the age of 13 and the legal age of majority in your jurisdiction, you represent that your parent or legal guardian has reviewed, understood, and consented to these Terms on your behalf.</li>
                 <li>You have not been previously banned, suspended, or barred from using ScatterBlitz.</li>
               </ul>
             </div>
@@ -99,7 +99,7 @@ export default function TermsPage() {
               <ul className={styles.bulletList}>
                 <li><strong>Credential Security:</strong> You are solely responsible for preserving the confidentiality of your login credentials and for all activities that take place under your account.</li>
                 <li><strong>Information Accuracy:</strong> You agree to provide true, accurate, and up-to-date registration details (including a valid email address for account recovery).</li>
-                <li><strong>Guest Sessions:</strong> Anonymous guest accounts are tied to temporary browser tokens. Inactive guest sessions expire after 7 days unless converted into permanent accounts.</li>
+                <li><strong>Guest Sessions:</strong> Anonymous guest accounts are tied to temporary browser tokens. Inactive guest sessions expire after 1 day (24 hours) unless converted into permanent accounts.</li>
                 <li><strong>Right to Suspend or Terminate:</strong> We reserve the right to suspend, lock, or delete accounts that provide fraudulent information or breach our rules.</li>
               </ul>
             </div>
@@ -115,14 +115,14 @@ export default function TermsPage() {
                 You agree to use ScatterBlitz only for lawful, intended gameplay. The following actions are strictly prohibited:
               </p>
               <ul className={styles.bulletList}>
-                <li><strong>Cheating &amp; Bots:</strong> Using optical character recognition (OCR), automated dictionary scraper scripts, browser bot extensions, or socket script injections to submit answers.</li>
-                <li><strong>Service Abuse &amp; Overloading:</strong> Exceeding socket event limits (maximum 30 socket actions per second), launching denial-of-service attempts, or bypassing rate limiters.</li>
+                <li><strong>Cheating &amp; Bots:</strong> Pasting answers into category inputs, switching browser tabs during active sprint countdowns, using automated word-dictionary scripts, optical character recognition (OCR), artificial intelligence browser bots, or socket packet injection to populate responses.</li>
+                <li><strong>Service Abuse &amp; Overloading:</strong> Exceeding socket event limits (maximum 30 socket actions per second), launching denial-of-service attempts, probing server vulnerabilities, or bypassing API rate limiters.</li>
                 <li><strong>Reverse Engineering:</strong> Decompiling, reverse engineering, disassembling, or extracting the source code, game engine logic, or dictionary scoring algorithms.</li>
-                <li><strong>Multi-Client Ringing:</strong> Operating multiple guest sessions in a single room to rig peer vote tallies or manipulate leaderboard standings.</li>
+                <li><strong>Multi-Client Ringing:</strong> Operating multiple guest sessions in a single room to manipulate round outcomes, inflate scores, or rig peer vote tallies.</li>
                 <li><strong>Unlawful Content &amp; Privacy Violations:</strong> Uploading or transmitting defamatory, hateful, abusive, obscene, or infringing material, or sharing personal data belonging to others without their express consent.</li>
               </ul>
               <div className={styles.callout}>
-                <strong>Anti-Cheat Enforcement:</strong> Any confirmed attempt to cheat, scrape, or exploit socket connections results in immediate disqualification, leaderboard score forfeiture, and permanent blacklisting of associated accounts and device IDs.
+                <strong>Anti-Cheat Enforcement:</strong> ScatterBlitz implements automated client and server telemetry (including paste detection and tab switching verification). Any confirmed violation will void your round score (0 points) and may result in immediate disqualification, leaderboard forfeiture, and permanent blacklisting of associated accounts and device IDs.
               </div>
             </div>
           </section>
@@ -269,7 +269,7 @@ export default function TermsPage() {
                 These Terms and any dispute arising out of or related to ScatterBlitz shall be governed by and construed in accordance with the laws of the jurisdiction in which the service operates, without regard to conflict of law principles.
               </p>
               <p className={styles.paragraph}>
-                <strong>Informal Dispute Resolution:</strong> Before filing formal legal proceedings, you and ScatterBlitz agree to attempt to resolve any dispute, claim, or controversy informally by sending an email notice to <a href="mailto:support@scatterblitz.com" style={{ color: "var(--amber)" }}>support@scatterblitz.com</a>.
+                <strong>Informal Dispute Resolution:</strong> Before filing formal legal proceedings, you and ScatterBlitz agree to attempt to resolve any dispute, claim, or controversy informally by sending an email notice to <a href="mailto:scatterblitz1@gmail.com" style={{ color: "var(--amber)" }}>scatterblitz1@gmail.com</a>.
               </p>
               <p className={styles.paragraph}>
                 If a resolution is not achieved within thirty (30) days of notice, the parties agree that any legal action or arbitration proceeding shall be brought exclusively in the competent courts having jurisdiction over our primary place of business, unless mandatory local consumer protection rules provide otherwise.
@@ -303,9 +303,8 @@ export default function TermsPage() {
               </p>
               <div className={styles.callout}>
                 <strong>ScatterBlitz Legal Operations Desk</strong><br />
-                General Legal Inquiries: <a href="mailto:support@scatterblitz.com" style={{ color: "var(--amber)" }}>support@scatterblitz.com</a><br />
-                Privacy &amp; Data Rights: <a href="mailto:privacy@scatterblitz.com" style={{ color: "var(--amber)" }}>privacy@scatterblitz.com</a><br />
-                Response Time: Inquiries are addressed within 3 to 5 business days.
+                General Inquiries &amp; Legal Notices: <a href="mailto:scatterblitz1@gmail.com" style={{ color: "var(--amber)" }}>scatterblitz1@gmail.com</a><br />
+                Response Time: All formal inquiries are addressed within 3 to 5 business days.
               </div>
             </div>
           </section>
@@ -314,7 +313,7 @@ export default function TermsPage() {
         <div className={styles.footerNote}>
           <p>
             Have questions about our Terms? Contact our team at{" "}
-            <a href="mailto:support@scatterblitz.com">support@scatterblitz.com</a>.
+            <a href="mailto:scatterblitz1@gmail.com">scatterblitz1@gmail.com</a>.
             Please also review our <Link href="/privacy">Privacy Policy</Link>.
           </p>
         </div>

@@ -66,7 +66,7 @@ const resetPasswordSchema = z.object({
 router.post("/register", authLimiter, async (req: Request, res: Response) => {
   const result = registerSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ message: "Invalid data", error: result.error });
+    return res.status(400).json({ message: "Invalid registration data. Please verify your username, email, and password." });
   }
 
   const { username, email, password } = result.data;
@@ -125,7 +125,7 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
 router.post("/login", authLimiter, async (req: Request, res: Response) => {
   const result = loginSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ message: "Invalid data", error: result.error });
+    return res.status(400).json({ message: "Invalid login credentials format." });
   }
 
   const { identifier, password } = result.data;
@@ -240,20 +240,21 @@ router.post("/sendVerification", authLimiter, async (req: Request, res: Response
       [result.data]
     );
 
+    // Uniform response prevents user enumeration
     if (user.rows.length === 0) {
-      return res.status(404).json({ message: "User email doesn't exist" });
+      return res.status(200).json({ message: "If an account with that email exists, a verification link has been sent." });
     }
 
     const userAns = user.rows[0];
-    // Prevent sending verification link if account is already verified
+    // If account is already verified, provide friendly feedback
     if (userAns.is_email_verified) {
-      return res.status(400).json({ message: "User email already verified" });
+      return res.status(400).json({ message: "This email address is already verified" });
     }
 
     const verifyToken = signVerifyToken({ id: userAns.id });
     await sendVerificationEmail(userAns.username, userAns.email, verifyToken);
 
-    return res.status(200).json({ message: "Verification link has been sent." });
+    return res.status(200).json({ message: "If an account with that email exists, a verification link has been sent." });
   } catch (err: any) {
     console.error("Send verification error:", err);
     return res.status(500).json({ message: "Server error sending verification email" });
@@ -289,11 +290,42 @@ router.post("/logout", async (req: Request, res: Response) => {
   }
 });
 
-// 6. SOFT DELETE USER ACCOUNT: Marks user as deleted and revokes active sessions
+// 6. SOFT DELETE USER ACCOUNT: Marks user as deleted and revokes active sessions (requires current password for registered accounts)
 router.delete("/delete", verifyAccessToken, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?.id) return res.status(401).json({ message: "Unauthorized" });
 
+    // Guest accounts do not have database rows to delete; prompt them to sign out
+    if (req.user?.role === "guest") {
+      return res.status(400).json({
+        message: "Guest accounts do not have permanent profiles. Please sign out instead.",
+      });
+    }
+
+    // 1. Fetch user to verify account status and password
+    const userResult = await pool.query(
+      `SELECT id, password_hash, email FROM users WHERE id = $1 AND deleted_at IS NULL;`,
+      [req.user.id]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: "User not found or already deleted" });
+    }
+
+    const user = userResult.rows[0];
+
+    // 2. Validate current password confirmation
+    const { password } = req.body || {};
+    if (!password || typeof password !== "string") {
+      return res.status(400).json({ message: "Password is required to delete your account" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
+
+    // 3. Mark account as soft deleted and invalidate all active session tokens
     const softDeleteQuery = `
       UPDATE users 
       SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP, refresh_tokens = '[]'::jsonb
@@ -307,6 +339,7 @@ router.delete("/delete", verifyAccessToken, async (req: AuthRequest, res: Respon
     }
 
     clearRefreshTokenCookie(res);
+    clearGuestTokenCookie(res);
 
     return res.status(200).json({ message: "Account deleted successfully" });
   } catch (error: any) {
@@ -323,7 +356,7 @@ router.post("/forgot-password", authLimiter, async (req: Request, res: Response)
     const { email } = req.body;
     const result = emailSchema.safeParse(email);
     if (!result.success) {
-      return res.status(400).json({ message: "Invalid email address", error: result.error });
+      return res.status(400).json({ message: "Invalid email address format." });
     }
 
     const user = await pool.query(
@@ -351,7 +384,7 @@ router.post("/forgot-password", authLimiter, async (req: Request, res: Response)
 router.post("/reset-password", authLimiter, async (req: Request, res: Response) => {
   const parseResult = resetPasswordSchema.safeParse(req.body);
   if (!parseResult.success) {
-    return res.status(400).json({ message: "Invalid data", error: parseResult.error });
+    return res.status(400).json({ message: "Invalid password reset request." });
   }
 
   const { token, newPassword } = parseResult.data;
@@ -402,7 +435,7 @@ router.get("/guest-login", (req: Request, res: Response) => {
 router.post("/convert-guest", authLimiter, async (req: Request, res: Response) => {
   const result = registerSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ message: "Invalid data", error: result.error });
+    return res.status(400).json({ message: "Invalid conversion details format." });
   }
 
   const guestToken = req.cookies?.guestToken;
@@ -557,7 +590,7 @@ router.get("/profile/matches", verifyAccessToken, async (req: AuthRequest, res: 
 
     const queryValidation = matchesQuerySchema.safeParse(req.query);
     if (!queryValidation.success) {
-      return res.status(400).json({ errors: queryValidation.error.format() });
+      return res.status(400).json({ message: "Invalid query parameters" });
     }
 
     const { page, limit, onlyWins } = queryValidation.data;
@@ -685,7 +718,7 @@ router.patch("/profile", verifyAccessToken, async (req: AuthRequest, res: Respon
 
     const parseResult = updateProfileSchema.safeParse(req.body);
     if (!parseResult.success) {
-      return res.status(400).json({ message: "Invalid data", error: parseResult.error });
+      return res.status(400).json({ message: "Invalid profile data format" });
     }
 
     const { username, email, currentPassword } = parseResult.data;

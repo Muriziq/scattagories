@@ -47,8 +47,8 @@ const createRoomSchema = z
   .object({
     isPublic: z.boolean(),
     password: z.string().trim().optional().nullable(),
-    maxPlayers: z.number().min(2).max(10).default(5),
-    maxTimePerRound: z.number().min(10).max(120).default(60),
+    maxPlayers: z.number().min(1).max(10).default(5),
+    maxTimePerRound: z.number().min(5).max(120).default(60),
     categories: z
       .array(z.string())
       .min(1, "At least one category is required")
@@ -83,7 +83,8 @@ router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: 
   try {
     const validation = createRoomSchema.safeParse(req.body);
     if (!validation.success) {
-      return res.status(400).json({ errors: validation.error.format() });
+      const firstIssue = validation.error.issues[0]?.message || "Invalid room configuration";
+      return res.status(400).json({ message: firstIssue });
     }
 
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
@@ -161,7 +162,7 @@ router.get("/rooms/public", (req: Request, res: Response) => {
   try {
     const queryValidation = publicRoomsQuerySchema.safeParse(req.query);
     if (!queryValidation.success) {
-      return res.status(400).json({ errors: queryValidation.error.format() });
+      return res.status(400).json({ message: "Invalid query parameters" });
     }
 
     const { search, category, categories, page, limit } = queryValidation.data;

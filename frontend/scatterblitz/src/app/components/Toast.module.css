@@ -59,7 +59,9 @@
 
 /* Toast Variants */
 .toastError {
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(35, 12, 12, 0.96);
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(239, 68, 68, 0.2);
 }
 
 .toastError .toastIcon {
@@ -71,7 +73,9 @@
 }
 
 .toastSuccess {
-  border: 1px solid rgba(76, 175, 80, 0.4);
+  background: rgba(10, 30, 16, 0.96);
+  border: 1px solid rgba(76, 175, 80, 0.55);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(76, 175, 80, 0.2);
 }
 
 .toastSuccess .toastIcon {
@@ -83,7 +87,9 @@
 }
 
 .toastWarning {
-  border: 1px solid rgba(255, 183, 3, 0.4);
+  background: rgba(35, 26, 8, 0.96);
+  border: 1px solid rgba(255, 183, 3, 0.55);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 183, 3, 0.2);
 }
 
 .toastWarning .toastIcon {

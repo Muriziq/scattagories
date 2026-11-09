@@ -281,6 +281,30 @@ function WaitingRoomContent() {
                     </div>
                 </div>
 
+                {/* PRACTICE MODE WARNING BANNER (When only 1 player is in lobby) */}
+                {participants.length === 1 && (
+                    <div 
+                        style={{
+                            width: "100%",
+                            background: "rgba(250, 115, 1, 0.07)",
+                            borderLeft: "4px solid var(--safety-orange)",
+                            padding: "0.75rem 1.25rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.85rem",
+                            boxSizing: "border-box"
+                        }}
+                    >
+                        <FaExclamationTriangle style={{ color: "var(--safety-orange)", fontSize: "1.2rem", flexShrink: 0 }} />
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.4rem", fontSize: "0.85rem", lineHeight: "1.4" }}>
+                            <span style={{ fontWeight: 800, color: "var(--safety-orange)" }}>Practice Mode:</span>
+                            <span style={{ color: "var(--text-secondary)" }}>
+                                Solo matches are unranked practice sessions and will not be recorded in database stats or public leaderboards.
+                            </span>
+                        </div>
+                    </div>
+                )}
+
                 {/* CONTENT GRID */}
                 <div className={styles.contentGrid}>
                     {/* PARTICIPANTS SECTION */}
@@ -352,7 +376,7 @@ function WaitingRoomContent() {
                                     onClick={handleStartGame}
                                     disabled={participants.length < 1}
                                 >
-                                    <FaPlay /> START GAME
+                                    <FaPlay /> {participants.length === 1 ? "START PRACTICE" : "START GAME"}
                                 </button>
                             ) : (
                                 <div className={styles.waitingHostMsg}>
