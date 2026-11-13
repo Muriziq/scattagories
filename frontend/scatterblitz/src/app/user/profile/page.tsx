@@ -494,12 +494,12 @@ export default function Profile() {
                     className={styles.reviewDiv}
                     style={{ borderColor: badgeColor }}
                   >
-                    {cat}:
+                    <span className={styles.reviewCategoryLabel}>{cat}</span>
                     <input
                       type="text"
                       readOnly
                       disabled
-                      value={rawAns || "(No Answer Submitted)"}
+                      value={rawAns || "No answer"}
                       className={styles.reviewInput}
                     />
                     <span
@@ -587,8 +587,9 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* GUEST BANNER */}
-          {isGuest && (
+          <div className={styles.profileContent}>
+            {/* GUEST BANNER */}
+            {isGuest && (
             <div className={styles.guestBanner}>
               <div className={styles.guestBannerText}>
                 <FaExclamationTriangle style={{ color: "var(--amber)", fontSize: "1.2rem" }} />
@@ -754,8 +755,10 @@ export default function Profile() {
                   {matches.length === 0 ? (
                     <tr>
                       <td colSpan={7} className={styles.emptyState}>
-                        <FaTrophy size={36} style={{ color: "var(--amber)", opacity: 0.6 }} />
-                        <p>No matches recorded yet. Jump into a room and play a round!</p>
+                        <div className={styles.emptyStateContent}>
+                          <FaTrophy size={36} style={{ color: "var(--amber)", opacity: 0.6 }} />
+                          <p>No matches recorded yet. Jump into a room and play a round!</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -864,6 +867,7 @@ export default function Profile() {
               </button>
             )}
           </section>
+          </div>
         </>
       )}
 
@@ -1026,7 +1030,7 @@ export default function Profile() {
                       Deleting...
                     </>
                   ) : (
-                    "Permanently Delete"
+                    "Delete"
                   )}
                 </button>
                 <button

@@ -60,11 +60,12 @@
   flex: 1;
   max-width: 1240px;
   width: 100%;
-  margin: 1rem auto 0;
-  padding: 1rem 2rem 5rem;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 }
 
 /* Hero Section - Centered */
@@ -83,7 +84,7 @@
   font-weight: 900;
   letter-spacing: -0.02em;
   text-transform: uppercase;
-  line-height: 0.5;
+  line-height: 1.15;
   color: var(--text-primary);
   margin: 0;
   /* text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
@@ -96,7 +97,7 @@
   font-size: 1.25rem;
   color: var(--text-secondary);
   margin: 0;
-  line-height: 1;
+  line-height: 1.4;
   /* max-width: 620px; */
 }
 
@@ -194,11 +195,37 @@
   gap: 0.5rem;
   background: linear-gradient(135deg, var(--gold) 0%, var(--safety-orange) 100%);
   color: #ffffff;
-  padding: 0.45rem 1.1rem;
+  padding: 0.45rem 0.9rem 0.45rem 1.1rem;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(255, 122, 0, 0.35);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.categoryChip:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.categoryChipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+  font-size: 0.75rem;
+  transition: background 0.15s ease;
+}
+
+.categoryChip:hover .categoryChipRemove {
+  background: rgba(0, 0, 0, 0.45);
 }
 
 .presetCategoriesGrid {
@@ -558,8 +585,29 @@
     width: 100%;
   }
   .publicHeaderRow {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .searchInputWrap {
+    width: 100%;
+    min-width: 0;
+    flex: 1;
+  }
+  .lobbySearchInput {
+    font-size: 0.8rem;
+    padding: 0.65rem 0.85rem 0.65rem 2.2rem;
+  }
+  .searchIcon {
+    left: 0.75rem;
+    font-size: 0.85rem;
+  }
+  .refreshIconButton {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
   }
   .main {
     padding: 1rem 1.25rem 4rem;
@@ -567,14 +615,66 @@
   .header {
     padding: 1.25rem 1.25rem 0.5rem;
   }
+  .title {
+    font-size: 1.85rem;
+    line-height: 1.2;
+  }
+  .subtitle {
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+  .categoriesBox {
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+  .headerHelperText {
+    display: none;
+  }
+  .presetChipBtn {
+    padding: 0.38rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  .categoryChip {
+    padding: 0.38rem 0.75rem 0.38rem 0.9rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .publicHeaderRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .refreshIconButton {
+    width: 100%;
+    height: 38px;
+  }
 }
 
 /* Modernized Public Lobbies UI */
+.categoriesCell {
+  max-width: 0;
+  width: 50%;
+}
+
 .categoryPillsWrap {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 0.35rem;
-  max-width: 380px;
+  width: 100%;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 122, 0, 0.3) transparent;
+}
+
+.categoryPillsWrap::-webkit-scrollbar {
+  height: 4px;
+}
+
+.categoryPillsWrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 122, 0, 0.3);
+  border-radius: 4px;
 }
 
 .categoryPill {
@@ -586,6 +686,7 @@
   padding: 0.2rem 0.55rem;
   border-radius: 6px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .playerBadge {

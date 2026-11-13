@@ -169,8 +169,9 @@ export default function Home() {
       )}
 
       {/* MINIMAL HEADER (RIGHT-ALIGNED AUTH BUTTON) */}
-      <header className={styles.header}>
+
         {accessToken === "" && (
+                <header className={styles.header}>
           <nav className={styles.nav}>
             <Link href="/user/login" className={styles.loginBtn}>
               Log In
@@ -179,8 +180,9 @@ export default function Home() {
               Sign Up
             </Link>
           </nav>
+                </header>
         )}
-      </header>
+
 
       {/* MAIN HERO SECTION */}
       <main className={styles.main}>
@@ -200,7 +202,6 @@ export default function Home() {
                   <FaUserCircle className={styles.userAvatarFallback} />
                 )}
                 <span className={styles.userMenuName}>{user?.username || "Player"}</span>
-                {isGuest && <span className={styles.guestTag}>Guest</span>}
                 <FaChevronDown className={`${styles.dropdownChevron} ${isDropdownOpen ? styles.chevronRotated : ""}`} />
               </button>
 
@@ -595,7 +596,7 @@ export default function Home() {
           </small>
           <div className={styles.socialIcons}>
             <a 
-              href="https://twitter.com" 
+              href="https://x.com/Murix766" 
               target="_blank" 
               rel="noopener noreferrer"
               aria-label="Twitter Profile"
@@ -604,7 +605,7 @@ export default function Home() {
               <FaTwitter size={20} />
             </a>
             <a 
-              href="https://github.com" 
+              href="https://github.com/Muriziq" 
               target="_blank" 
               rel="noopener noreferrer"
               aria-label="GitHub Profile"
@@ -613,7 +614,7 @@ export default function Home() {
               <FaGithub size={20} />
             </a>
             <a 
-              href="https://linkedin.com" 
+              href="https://www.linkedin.com/in/muriziq-sannidawodu-48b1b3420/" 
               target="_blank" 
               rel="noopener noreferrer"
               aria-label="LinkedIn Profile"

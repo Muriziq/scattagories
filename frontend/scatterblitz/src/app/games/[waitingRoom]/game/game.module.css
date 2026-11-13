@@ -368,9 +368,10 @@ max-width: 1000px;
 }
 
 .categoryLabel,.reviewDiv {
+    position: relative;
     background: var(--bg-dark);
     border: 2px solid var(--sunset);
-    border-radius: 2rem;
+    border-radius: 1.5rem;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: 800;
@@ -379,12 +380,32 @@ max-width: 1000px;
     align-items: center;
     gap: 0.5rem;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 0.5rem;
+}
+
+.categoryBadge, .reviewCategoryLabel {
+    position: absolute;
+    top: 0;
+    left: 1.25rem;
+    transform: translateY(-50%);
+    background: var(--bg-dark);
+    padding: 0 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--sunset);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
 }
 
 .categoryLabel:focus-within {
     border-color: var(--amber);
     /* background: rgba(255, 183, 3, 0.08); */
     box-shadow: 0 0 7px rgba(255, 183, 3, 0.35); 
+}
+
+.categoryBadge:focus-within {
+    color: var(--amber);
 }
 
 .categoryInput ,.reviewInput{
@@ -632,11 +653,19 @@ max-width: 1000px;
 }
 
 .winnerCard {
-
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+}
+
+.winnerTrophyIcon {
+    font-size: 6rem;
+}
+
+.winnerTitle {
+    font-size: 3rem;
+    font-weight: 900;
 }
 
 .returnBtn {
@@ -840,6 +869,55 @@ max-width: 1000px;
 .reviewScoreBadge {
     font-size: 0.8rem;
     font-weight: 800;
+    padding: 0.25rem 0.65rem;
+    border-radius: 8px;
+    border: 1.5px solid;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.reviewDiv {
+    position: relative;
+    background: var(--bg-dark);
+    border: 2px solid var(--sunset);
+    border-radius: 1.5rem;
+    padding: 0.85rem 1.25rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.reviewCategoryLabel {
+    position: absolute;
+    top: 0;
+    left: 1.25rem;
+    transform: translateY(-50%);
+    background: var(--bg-dark);
+    padding: 0 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--sunset);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.reviewInput {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    overflow-x: auto;
+    text-overflow: ellipsis;
 }
 
 .reviewNavFooter {
@@ -866,4 +944,182 @@ max-width: 1000px;
     padding: 0.7rem 1.2rem;
     font-size: 0.85rem;
     border-radius: 10px;
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS ADJUSTMENTS
+   ========================================================================== */
+@media (max-width: 768px) {
+    .main {
+        padding: 1rem 0.85rem 3rem;
+        gap: 1rem;
+    }
+
+    .exitBtn {
+        padding: 0.45rem 0.85rem;
+        font-size: 0.8rem;
+    }
+
+    .gamePanelBase {
+        padding: 1.25rem 0.75rem;
+        border-radius: 1.25rem;
+    }
+
+    /* Status 1: Letter Selection */
+    .sectionTitle {
+        font-size: 1.45rem;
+    }
+
+    .turnNotice {
+        font-size: 0.85rem;
+        padding: 0.6rem 0.85rem;
+    }
+
+    .lettersGrid {
+        grid-template-columns: repeat(auto-fill, minmax(44px, 50px));
+        gap: 0.45rem;
+    }
+
+    .letterBtn {
+        height: 50px;
+        font-size: 1.25rem;
+        border-radius: 10px;
+    }
+
+    /* Status 2: Active Sprint */
+    .activeSprintSection {
+        padding: 0.5rem 0 0 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        position: relative;
+    }
+
+    .activeTimer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+        margin-bottom: 0;
+    }
+
+    .activeLetterBox {
+        width: 68px;
+        height: 62px;
+        font-size: 1.75rem;
+        border-radius: 12px;
+        margin-top: 0.25rem;
+    }
+
+    .categoriesContainer {
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .categoryLabel {
+        padding: 0.7rem 1rem;
+        font-size: 0.88rem;
+        border-radius: 1.25rem;
+        margin-top: 0.4rem;
+    }
+
+    .categoryBadge {
+        font-size: 0.72rem;
+        left: 1rem;
+    }
+
+    .categoryInput {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.88rem;
+    }
+
+    .categoryInput::placeholder {
+        font-size: 0.8rem;
+    }
+
+    .stopRoundBtn {
+        width: auto;
+        max-width: 280px;
+        padding: 0.7rem 2rem;
+        align-self: start;
+        /* margin: 0.25rem auto 0; */
+    }
+
+    /* Status 3: Recap */
+    .recapBox {
+        padding: 1.25rem 0.5rem;
+    }
+
+    .recapTitle {
+        font-size: 1.8rem;
+    }
+
+    .recapStandingsGrid {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+    }
+
+    /* Status 4: Ended & Review */
+    .endedContainer {
+        padding: 1.5rem 0.5rem;
+    }
+
+    .winnerTrophyIcon {
+        font-size: 4rem;
+    }
+
+    .winnerTitle {
+        font-size: 1.85rem;
+    }
+
+    .standingsCard {
+        padding: 1.15rem 0.85rem;
+        border-radius: 1.25rem;
+    }
+
+    .standingRow {
+        padding: 0.75rem 0.85rem;
+    }
+
+    .standingUsername {
+        font-size: 0.95rem;
+    }
+
+    .standingScore {
+        font-size: 0.9rem;
+    }
+
+    .reviewTitle {
+        font-size: 1.5rem;
+    }
+
+    .roundLetterBadgePlain {
+        font-size: 0.8rem;
+    }
+
+    .reviewDiv {
+        padding: 0.75rem 1rem;
+    }
+
+    .reviewCategoryLabel {
+        font-size: 0.72rem;
+        left: 1rem;
+    }
+
+    .reviewInput {
+        font-size: 0.9rem;
+    }
+
+    .reviewScoreBadge {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+    }
+
+    .returnBtn {
+        width: 100%;
+        padding: 0.85rem 1.5rem;
+    }
 }

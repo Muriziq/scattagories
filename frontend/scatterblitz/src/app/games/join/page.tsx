@@ -289,7 +289,7 @@ export default function JoinRoomPage() {
                             {room.playerCount} / {room.maxPlayers}
                           </span>
                         </td>
-                        <td>
+                        <td className={styles.categoriesCell}>
                           <div className={styles.categoryPillsWrap}>
                             {room.categories && room.categories.length > 0 ? (
                               room.categories.map((cat, idx) => (

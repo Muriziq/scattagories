@@ -698,7 +698,7 @@ function GameContent() {
             <div className={styles.categoriesContainer}>
               {categories.map((category, index) => (
                 <label key={category} className={styles.categoryLabel}>
-                  {category}:
+                  <span className={styles.categoryBadge}>{category}</span>
                   <input
                     ref={(el) => {
                       inputRefs.current[index] = el;
@@ -891,8 +891,8 @@ function GameContent() {
                 /* VIEW A: STANDINGS / LEADERBOARD */
                 <>
                   <div className={styles.winnerCard}>
-                    <FaTrophy size={100} style={{ color: "var(--gold)" }} />
-                    <h2 style={{ fontSize: "3rem", fontWeight: 900 }}>
+                    <FaTrophy className={styles.winnerTrophyIcon} style={{ color: "var(--gold)" }} />
+                    <h2 className={styles.winnerTitle}>
                       Match Completed!
                     </h2>
                     {endedData?.forfeit && endedData?.winner && (
@@ -1026,12 +1026,12 @@ function GameContent() {
                               className={styles.reviewDiv}
                               style={{ borderColor: badgeColor }}
                             >
-                              {cat}:
+                              <span className={styles.reviewCategoryLabel}>{cat}</span>
                               <input
                                 type="text"
                                 readOnly
                                 disabled
-                                value={rawAns || "(No Answer Submitted)"}
+                                value={rawAns || "No answer"}
                                 className={styles.reviewInput}
                               />
                               <span

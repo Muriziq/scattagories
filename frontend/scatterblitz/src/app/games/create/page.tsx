@@ -170,9 +170,6 @@ export default function CreateRoomPage() {
           <p className={styles.subtitle}>
             Configure custom category decks, player limits, and round timers for your match.
           </p>
-          {/* <Link href="/games/join" className={styles.heroSwitchBtn}>
-            <FaCompass /> Browse Public Lobbies
-          </Link> */}
         </div>
 
         <div className={styles.formSection}>
@@ -182,14 +179,23 @@ export default function CreateRoomPage() {
               <div className={styles.sectionLabel}>
                 <FaTags /> Categories ({categories.length})
               </div>
-              <span className={styles.helperText}>Select categories for the match</span>
+              <span className={`${styles.helperText} ${styles.headerHelperText}`}>
+                Select categories for the match
+              </span>
             </div>
 
             <div className={styles.selectedCategoriesList}>
               {categories.map((cat) => (
-                <span key={cat} className={styles.categoryChip}>
-                  {cat}
-                </span>
+                <button
+                  key={cat}
+                  type="button"
+                  className={styles.categoryChip}
+                  onClick={() => toggleCategory(cat)}
+                  title={`Click to remove ${cat}`}
+                >
+                  <span>{cat}</span>
+              
+                </button>
               ))}
             </div>
 

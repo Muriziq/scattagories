@@ -8,9 +8,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
   position: relative;
   z-index: 1;
+}
+
+.profileContent {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
 }
 
 .topNav {
@@ -328,6 +337,59 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 0.85rem;
   }
+
+  .signOutBtn,
+  .deleteAccountBtn {
+    padding: 0.7rem 1.25rem;
+    font-size: 0.8rem;
+  }
+
+  .guestBannerText span {
+    font-size: 0.8rem;
+  }
+
+  .guestBannerText svg {
+    flex-shrink: 0;
+  }
+
+  .modalOverlay {
+    padding: 1rem;
+  }
+
+  .modalCard {
+    padding: 1.5rem;
+  }
+
+  .reviewTitle {
+    font-size: 1.5rem;
+  }
+
+  .roundLetterBadgePlain {
+    font-size: 0.8rem;
+  }
+
+  .playerTab {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .reviewCategoryLabel {
+    font-size: 0.72rem;
+    left: 1rem;
+  }
+
+  .reviewDiv {
+    padding: 0.75rem 1rem;
+  }
+
+  .reviewInput {
+    font-size: 0.9rem;
+  }
+
+  .reviewScoreBadge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+  }
 }
 
 .statCard {
@@ -535,11 +597,17 @@
   padding: 4rem 1.5rem;
   text-align: center;
   color: var(--text-muted);
+  width: 100%;
+}
+
+.emptyStateContent {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .loadMoreBtn {
@@ -569,8 +637,10 @@
 
 .reviewContainer {
   width: 100%;
+  min-height: calc(100vh - 10rem);
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 1.25rem;
 }
 
@@ -656,34 +726,52 @@
 .reviewCategoryGrid {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
   width: 100%;
 }
 
 .reviewDiv {
+  position: relative;
   background: var(--bg-dark);
   border: 2px solid var(--sunset);
-  border-radius: 2rem;
-  padding: 0.75rem 1.5rem;
+  border-radius: 1.5rem;
+  padding: 0.85rem 1.25rem;
   font-size: 1rem;
-  font-weight: 800;
-  color: var(--sunset);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
+  margin-top: 0.5rem;
+}
+
+.reviewCategoryLabel {
+  position: absolute;
+  top: 0;
+  left: 1.25rem;
+  transform: translateY(-50%);
+  background: var(--bg-dark);
+  padding: 0 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--sunset);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 .reviewInput {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
   color: #ffffff;
-  padding: 0.5rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   font-size: 1rem;
   font-weight: 500;
+  overflow-x: auto;
+  text-overflow: ellipsis;
 }
 
 .reviewScoreBadge {
@@ -693,6 +781,7 @@
   border-radius: 8px;
   border: 1.5px solid;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .reviewNavFooter {

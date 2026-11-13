@@ -69,17 +69,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 1.5rem 3.5rem;
+  justify-content: center;
+  padding: 2.5rem 1.5rem 3.5rem;
 }
 
 .lobbyContainer {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 1440px;
+  max-width: 1200px;
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  align-items: center;
+  gap: 1.15rem;
+  margin: 0 auto;
 }
 
 /* Top Header Bar */
@@ -174,6 +177,7 @@
   padding: 0.45rem 1.15rem;
   border-radius: 12px;
   width: fit-content;
+  max-width: 100%;
   backdrop-filter: blur(8px);
   transition: all 0.25s ease;
 }
@@ -183,19 +187,26 @@
   background: rgba(242, 204, 136, 0.08);
 }
 
-.copyUrl p {
+.copyText {
   margin: 0;
   font-size: 0.88rem;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.copyUrl span {
+.copyValue {
   color: var(--gold);
   font-weight: 700;
   letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
 }
 
 .copyBtn {
@@ -325,29 +336,41 @@
 }
 
 .playerCountBadge {
-  background: rgba(242, 204, 136, 0.06);
-  border: 1px solid rgba(242, 204, 136, 0.2);
+  background: none;
+  border: none;
   color: var(--gold);
-  padding: 0.3rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.playerCountNumber {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--amber);
 }
 
 /* Player Grid Cards */
 .playersGrid {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  width: 100%;
+}
+
+.playersGridInner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
+  width: 100%;
 }
 
 .playerCard,
 .emptySlotCard {
-  flex: 1;
-  min-width: 230px;
-  max-width: 270px;
+  width: 100%;
   height: 180px;
+  box-sizing: border-box;
 }
 
 .playerCard {
@@ -436,7 +459,6 @@
   gap: 0.5rem;
   color: var(--text-muted);
   font-size: 0.95rem;
-  min-height: 140px;
 }
 
 /* Sidebar Info & Controls */
@@ -544,9 +566,71 @@
     padding: 1rem 1.5rem 0;
   }
   .main {
-    padding: 0.5rem 1rem 3rem;
+    padding: 2rem 1rem 3rem;
+    justify-content: flex-start;
   }
   .roomTitle {
-    font-size: 2.2rem;
+    font-size: 2rem;
+  }
+  .copyRow {
+    flex-direction: column;
+    align-items: start;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .copyUrl {
+    width: auto;
+    max-width: 360px;
+    justify-content: space-between;
+    padding: 0.45rem 0.85rem;
+    gap: 0.6rem;
+  }
+  .copyText {
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.45rem;
+    min-width: 0;
+    flex: 1;
+  }
+  .copyValue {
+    max-width: 180px;
+    font-size: 0.82rem;
+  }
+  .copyBtn {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  .playersSection {
+    padding: 1.25rem 1rem;
+    align-items: center;
+  }
+  .sectionHeader {
+    width: 100%;
+  }
+  .playersGrid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+  .playersGridInner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+  .playerCard,
+  .emptySlotCard {
+    width: 100%;
+    min-width: 0;
+    max-width: 360px;
+    height: 180px;
+    flex: none;
+    box-sizing: border-box;
   }
 }

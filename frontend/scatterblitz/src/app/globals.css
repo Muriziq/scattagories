@@ -39,6 +39,11 @@ body, * {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+body {
+  background-color: var(--bg-dark);
+  min-height: 100vh;
+}
+
 /* Global 3D Button Base & Variants */
 .btn-3d {
   position: relative;
@@ -87,12 +92,16 @@ body, * {
   background: linear-gradient(180deg, var(--gold) 0%, var(--safety-orange) 50%, var(--persimmon) 100%);
   color: var(--text-primary);
   border: 3.5px solid var(--blood-orange);
+  padding-top: calc(var(--btn-pt, 0.7rem) + 0.1rem);
+  font-size: calc(var(--btn-fs, 0.95rem) - 0.1rem);
 }
 
 .btn-secondary {
   background: linear-gradient(180deg, var(--btn-dark-start) 0%, var(--btn-dark-end) 100%);
   color: var(--sunset);
   border: 3.5px solid var(--persimmon);
+  padding-top: calc(var(--btn-pt, 0.7rem) + 0.1rem);
+  font-size: calc(var(--btn-fs, 0.95rem) - 0.1rem);
 }
 
 /* Global Canvas Background */

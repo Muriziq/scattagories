@@ -220,41 +220,51 @@ function WaitingRoomContent() {
                 {/* ROOM HERO HEADER CARD */}
                  <h1 className={styles.roomTitle}>WAITING ROOM</h1>
                  <div className={styles.copyRow}>
-                <div className={styles.copyUrl} style={{margin:"0 1rem"}}>
-                    <p>Copy Url: <span>{shareUrl}</span> </p>  
-                    {copiedKey === "url" ? (
-                        <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
-                    ) : (
-                        <FaCopy 
-                            className={styles.copyBtn} 
-                            onClick={() => handleCopyCode(shareUrl, "url")} 
-                        />
-                    )}
-                </div>
-                <div className={styles.copyUrl}>
-                    <p>Room Code: <span>{roomId}</span> </p>  
-                    {copiedKey === "room" ? (
-                        <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
-                    ) : (
-                        <FaCopy 
-                            className={styles.copyBtn} 
-                            onClick={() => handleCopyCode(roomId, "room")} 
-                        />
-                    )}
-                </div>
+                    <div className={styles.copyUrl}>
+                        <p className={styles.copyText}>
+                            Copy Url: <span className={styles.copyValue}>{shareUrl}</span>
+                        </p>  
+                        {copiedKey === "url" ? (
+                            <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
+                        ) : (
+                            <FaCopy 
+                                className={styles.copyBtn} 
+                                onClick={() => handleCopyCode(shareUrl, "url")} 
+                                title="Copy Url"
+                            />
+                        )}
+                    </div>
+                    <div className={styles.copyUrl}>
+                        <p className={styles.copyText}>
+                            Room Code: <span className={styles.copyValue}>{roomId}</span>
+                        </p>  
+                        {copiedKey === "room" ? (
+                            <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
+                        ) : (
+                            <FaCopy 
+                                className={styles.copyBtn} 
+                                onClick={() => handleCopyCode(roomId, "room")} 
+                                title="Copy Room Code"
+                            />
+                        )}
+                    </div>
 
-                {password && (<div className={styles.copyUrl}>
-                    <p>Password: <span>{password}</span> </p>  
-                    {copiedKey === "password" ? (
-                        <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
-                    ) : (
-                        <FaCopy 
-                            className={styles.copyBtn} 
-                            onClick={() => handleCopyCode(password, "password")} 
-                        />
+                    {password && (
+                        <div className={styles.copyUrl}>
+                            <p className={styles.copyText}>
+                                Password: <span className={styles.copyValue}>{password}</span>
+                            </p>  
+                            {copiedKey === "password" ? (
+                                <FaCheck className={styles.copyBtn} style={{ color: "#10b981" }} />
+                            ) : (
+                                <FaCopy 
+                                    className={styles.copyBtn} 
+                                    onClick={() => handleCopyCode(password, "password")} 
+                                    title="Copy Password"
+                                />
+                            )}
+                        </div>
                     )}
-                </div>)}
-
                  </div>
 
                 {/* FAIR PLAY & ANTI-CHEAT REMINDER NOTIFICATION BANNER */}
@@ -313,52 +323,54 @@ function WaitingRoomContent() {
          
                                 <h2 className={styles.sectionTitle}>Joined Players</h2>
                             <span className={styles.playerCountBadge}>
-                                {participants.length} / {maxPlayers} Players
+                               {participants.length}/{maxPlayers} Players
                             </span>
                         </div>
 
                         <div className={styles.playersGrid}>
-                            {participants.map((participant, index) => {
-                                const username = typeof participant === "object" ? participant.username : participant;
-                                const isHostPlayer = typeof participant === "object"
-                                    ? (participant.isHost || (hostUsername && participant.username === hostUsername))
-                                    : (hostUsername ? participant === hostUsername : index === 0);
+                            <div className={styles.playersGridInner}>
+                                {participants.map((participant, index) => {
+                                    const username = typeof participant === "object" ? participant.username : participant;
+                                    const isHostPlayer = typeof participant === "object"
+                                        ? (participant.isHost || (hostUsername && participant.username === hostUsername))
+                                        : (hostUsername ? participant === hostUsername : index === 0);
 
-                                return (
-                                    <div key={index} className={styles.playerCard}>
-                                        <div className={styles.avatarWrapper}>
-                                            <div className={styles.avatarCircle}>
-                                                {typeof participant === "object" && participant.avatar_url ? (
-                                                    <img
-                                                        src={participant.avatar_url}
-                                                        alt={username}
-                                                        style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
-                                                    />
-                                                ) : (
-                                                    <FaUserCircle />
+                                    return (
+                                        <div key={index} className={styles.playerCard}>
+                                            <div className={styles.avatarWrapper}>
+                                                <div className={styles.avatarCircle}>
+                                                    {typeof participant === "object" && participant.avatar_url ? (
+                                                        <img
+                                                            src={participant.avatar_url}
+                                                            alt={username}
+                                                            style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                                                        />
+                                                    ) : (
+                                                        <FaUserCircle />
+                                                    )}
+                                                </div>
+                                                {isHostPlayer && (
+                                                    <div className={styles.crownBadge} title="Host">
+                                                        <FaCrown />
+                                                    </div>
                                                 )}
                                             </div>
-                                            {isHostPlayer && (
-                                                <div className={styles.crownBadge} title="Host">
-                                                    <FaCrown />
-                                                </div>
-                                            )}
+                                            <span className={styles.playerName}>{username}</span>
+                                            <span className={styles.playerStatus}>
+                                                {isHostPlayer ? "Lobby Host" : "Ready"}
+                                            </span>
                                         </div>
-                                        <span className={styles.playerName}>{username}</span>
-                                        <span className={styles.playerStatus}>
-                                            {isHostPlayer ? "Lobby Host" : "Ready"}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
 
-                            {/* Filler Empty Slots based on room maxPlayers */}
-                            {Array.from({ length: Math.max(0, maxPlayers - participants.length) }).map((_, i) => (
-                                <div key={`empty-${i}`} className={styles.emptySlotCard}>
-                                    <FaUsers size={50} style={{ opacity: 0.3 }} />
-                                    <span>Waiting for player...</span>
-                                </div>
-                            ))}
+                                {/* Filler Empty Slots based on room maxPlayers */}
+                                {Array.from({ length: Math.max(0, maxPlayers - participants.length) }).map((_, i) => (
+                                    <div key={`empty-${i}`} className={styles.emptySlotCard}>
+                                        <FaUsers size={50} style={{ opacity: 0.3 }} />
+                                        <span>Waiting for player...</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </section>
 
