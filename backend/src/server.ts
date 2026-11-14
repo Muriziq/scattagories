@@ -27,21 +27,31 @@ app.disable("x-powered-by");
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
+
 
 // Allowed origins for CORS in development and production
-const allowedOrigins = [
-  CLIENT_URL,
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-];
+const allowedOrigins = Array.from(
+  new Set([
+    process.env.CLIENT_URL || "http://localhost:3000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+  ])
+);
+
+// Flexible origin checker supporting exact matches and Vercel preview domains
+function isAllowedOrigin(origin?: string): boolean {
+  if (!origin) return true; // Allow mobile apps, curl, or server-to-server calls
+  const cleanOrigin = origin.replace(/\/+$/, "");
+  if (allowedOrigins.includes(cleanOrigin)) return true;
+  return false;
+}
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
-      callback(new Error("Not allowed by CORS"));
+      callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
   credentials: true,
@@ -156,10 +166,10 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 export const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(new Error(`Not allowed by CORS: ${origin}`));
       }
     },
     methods: ["GET", "POST"],
