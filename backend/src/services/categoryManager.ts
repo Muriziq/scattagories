@@ -22,10 +22,15 @@ let dailyCheckTimer: NodeJS.Timeout | null = null;
 
 // Returns the path to backend/data/categories/ directory
 function getCategoriesDir(): string {
+  // If running from dist or backend, resolve robustly relative to __dirname
+  const fromDir = path.resolve(__dirname, "../../data/categories");
+  if (fs.existsSync(fromDir)) return fromDir;
   return path.resolve(process.cwd(), "data", "categories");
 }
 
 function getMetadataPath(): string {
+  const fromDir = path.resolve(__dirname, "../../data/metadata.json");
+  if (fs.existsSync(fromDir)) return fromDir;
   return path.resolve(process.cwd(), "data", "metadata.json");
 }
 
@@ -126,8 +131,8 @@ export function triggerBackgroundSync(): { started: boolean; message: string } {
   // Resolve worker script path depending on tsx dev mode vs compiled dist
   const isTypeScript = __filename.endsWith(".ts");
   const workerScript = isTypeScript
-    ? path.resolve(process.cwd(), "src", "workers", "categoryWorker.ts")
-    : path.resolve(process.cwd(), "dist", "workers", "categoryWorker.js");
+    ? path.resolve(__dirname, "../workers/categoryWorker.ts")
+    : path.resolve(__dirname, "workers/categoryWorker.js");
 
   console.log(`[CategoryManager] Spawning background worker: ${workerScript}`);
 
