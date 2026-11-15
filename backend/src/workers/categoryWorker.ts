@@ -1,5 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Utility to normalize answers: trim, lowercase, remove diacritics and leading punctuation
 function normalizeWord(str: string): string {
@@ -61,9 +65,26 @@ function groupWordsByLetter(words: Iterable<string>): Record<string, string[]> {
   return result;
 }
 
+// Resolve the categories directory relative to __dirname (handles both development and compiled dist/)
+function getCategoriesDir(): string {
+  const fromDir = path.resolve(__dirname, "../../data/categories");
+  if (fs.existsSync(fromDir)) return fromDir;
+  const backendData = path.resolve(process.cwd(), "backend", "data", "categories");
+  if (fs.existsSync(backendData)) return backendData;
+  return path.resolve(process.cwd(), "data", "categories");
+}
+
+function getMetadataPath(): string {
+  const fromDir = path.resolve(__dirname, "../../data/metadata.json");
+  if (fs.existsSync(fromDir)) return fromDir;
+  const backendData = path.resolve(process.cwd(), "backend", "data", "metadata.json");
+  if (fs.existsSync(backendData)) return backendData;
+  return path.resolve(process.cwd(), "data", "metadata.json");
+}
+
 // Atomically writes a single category file (temp file -> rename)
 function saveCategoryFile(categoryName: string, letterMap: Record<string, string[]>): number {
-  const catDir = path.resolve(process.cwd(), "data", "categories");
+  const catDir = getCategoriesDir();
   if (!fs.existsSync(catDir)) {
     fs.mkdirSync(catDir, { recursive: true });
   }
@@ -87,7 +108,8 @@ function saveCategoryFile(categoryName: string, letterMap: Record<string, string
 
 // Loads an existing category from disk if fetch fails (preserves existing dataset)
 function loadExistingCategory(categoryName: string): Record<string, string[]> | null {
-  const filePath = path.resolve(process.cwd(), "data", "categories", `${categoryName.toLowerCase()}.json`);
+  const catDir = getCategoriesDir();
+  const filePath = path.join(catDir, `${categoryName.toLowerCase()}.json`);
   if (!fs.existsSync(filePath)) return null;
   try {
     const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
@@ -99,14 +121,21 @@ function loadExistingCategory(categoryName: string): Record<string, string[]> | 
 
 // URL Endpoints
 const API_ENDPOINTS = {
-  corporaCommonAnimals: "https://raw.githubusercontent.com/dariusk/corpora/master/data/animals/common.json",
-  corporaBirds: "https://raw.githubusercontent.com/dariusk/corpora/master/data/animals/birds_north_america.json",
-  dogBreeds: "https://dog.ceo/api/breeds/list/all",
-  mealDbIngredients: "https://www.themealdb.com/api/json/v1/1/list.php?i=list",
-  corporaFruits: "https://raw.githubusercontent.com/dariusk/corpora/master/data/foods/fruits.json",
-  corporaVegetables: "https://raw.githubusercontent.com/dariusk/corpora/master/data/foods/vegetables.json",
-  pokemon: "https://pokeapi.co/api/v2/pokemon?limit=1025",
+  // Reference endpoint for global geographic data (Countries, States, Cities, Capitals):
+  countryStateCityReference: "https://csc.sidsworld.co.in/public/api",
+
+  // Active production endpoints
+  languages: "https://raw.githubusercontent.com/maikudou/iso639-js/master/reference/iso639-3.json",
+  pokemon: "https://pokeapi.co/api/v2/pokemon?limit=1500",
   elements: "https://raw.githubusercontent.com/neelpatel05/periodic-table-api/master/data.json",
+
+  // Inactive / Disabled incomplete endpoints (kept for reference):
+  // corporaCommonAnimals: "https://raw.githubusercontent.com/dariusk/corpora/master/data/animals/common.json",
+  // corporaBirds: "https://raw.githubusercontent.com/dariusk/corpora/master/data/animals/birds_north_america.json",
+  // dogBreeds: "https://dog.ceo/api/breeds/list/all",
+  // mealDbIngredients: "https://www.themealdb.com/api/json/v1/1/list.php?i=list",
+  // corporaFruits: "https://raw.githubusercontent.com/dariusk/corpora/master/data/foods/fruits.json",
+  // corporaVegetables: "https://raw.githubusercontent.com/dariusk/corpora/master/data/foods/vegetables.json",
 };
 
 export async function runCategorySync(): Promise<void> {
@@ -114,155 +143,66 @@ export async function runCategorySync(): Promise<void> {
   const startTime = Date.now();
   const stats: Record<string, number> = {};
 
-  // 1. Fetch ALL external datasets concurrently using Promise.allSettled
+  // 1. Fetch active external datasets concurrently using Promise.allSettled
   const [
-    commonAnimalsRes,
-    birdsRes,
-    dogBreedsRes,
-    mealDbRes,
-    fruitsRes,
-    vegetablesRes,
+    languagesRes,
     pokemonRes,
     elementsRes,
   ] = await Promise.allSettled([
-    fetchWithTimeout(API_ENDPOINTS.corporaCommonAnimals),
-    fetchWithTimeout(API_ENDPOINTS.corporaBirds),
-    fetchWithTimeout(API_ENDPOINTS.dogBreeds),
-    fetchWithTimeout(API_ENDPOINTS.mealDbIngredients),
-    fetchWithTimeout(API_ENDPOINTS.corporaFruits),
-    fetchWithTimeout(API_ENDPOINTS.corporaVegetables),
+    fetchWithTimeout(API_ENDPOINTS.languages),
     fetchWithTimeout(API_ENDPOINTS.pokemon),
     fetchWithTimeout(API_ENDPOINTS.elements),
   ]);
 
-  // 2. Process Animals Category (Common & Wild Animals Only)
+  // 2. Process Languages Category (ISO 639-3 full 7,800+ languages + common vernacular aliases)
   try {
-    const animalWords = new Set<string>();
+    const languageWords = new Set<string>();
 
-    if (commonAnimalsRes.status === "fulfilled" && Array.isArray(commonAnimalsRes.value?.animals)) {
-      for (const a of commonAnimalsRes.value.animals) {
-        animalWords.add(a);
-      }
-    } else if (commonAnimalsRes.status === "rejected") {
-      console.warn("[CategoryWorker] Common animals fetch failed:", commonAnimalsRes.reason?.message);
-    }
-
-    if (animalWords.size > 0) {
-      stats["animals"] = saveCategoryFile("animals", groupWordsByLetter(animalWords));
-    } else {
-      const existing = loadExistingCategory("animals");
-      if (existing) stats["animals"] = saveCategoryFile("animals", existing);
-    }
-  } catch (err: any) {
-    console.error("[CategoryWorker] Error processing animals:", err.message);
-  }
-
-  // 3. Process Birds Category (Dedicated Category)
-  try {
-    const birdWords = new Set<string>();
-
-    if (birdsRes.status === "fulfilled" && Array.isArray(birdsRes.value?.birds)) {
-      for (const group of birdsRes.value.birds) {
-        if (Array.isArray(group?.members)) {
-          for (const b of group.members) {
-            birdWords.add(b);
+    if (languagesRes.status === "fulfilled" && typeof languagesRes.value === "object" && languagesRes.value !== null) {
+      for (const item of Object.values(languagesRes.value) as any[]) {
+        if (typeof item?.referenceName === "string") {
+          const raw = item.referenceName;
+          const base = raw.split("(")[0].trim();
+          if (base) {
+            languageWords.add(base);
+            // Handle compound suffixes (e.g. "Mandarin Chinese" -> both "Mandarin Chinese" and "Mandarin")
+            if (base.endsWith(" Chinese")) languageWords.add(base.replace(" Chinese", "").trim());
+            if (base.endsWith(" Greek")) languageWords.add(base.replace(" Greek", "").trim());
+          }
+          // Include inside-parentheses name if present (e.g. "Swahili (individual language)" -> "Swahili")
+          if (raw.includes("(") && raw.includes(")")) {
+            const inside = raw.substring(raw.indexOf("(") + 1, raw.indexOf(")")).trim();
+            if (inside && inside.length > 2 && !inside.toLowerCase().includes("language") && !inside.toLowerCase().includes("macrolanguage")) {
+              languageWords.add(inside);
+            }
           }
         }
       }
-    } else if (birdsRes.status === "rejected") {
-      console.warn("[CategoryWorker] Birds fetch failed:", birdsRes.reason?.message);
+    } else if (languagesRes.status === "rejected") {
+      console.warn("[CategoryWorker] Languages fetch failed:", languagesRes.reason?.message);
     }
 
-    if (birdWords.size > 0) {
-      stats["birds"] = saveCategoryFile("birds", groupWordsByLetter(birdWords));
+    // Common everyday player aliases/variants (e.g. Greek, Cantonese, Punjabi, Gaelic)
+    const commonAliases = [
+      "Mandarin", "Cantonese", "Punjabi", "Panjabi", "Swahili", "Greek",
+      "Odia", "Oriya", "Filipino", "Tagalog", "Sudanese", "Sundanese", "Bhojpuri",
+      "Gaelic", "Scottish Gaelic", "Irish Gaelic", "Haitian Creole"
+    ];
+    for (const alias of commonAliases) {
+      languageWords.add(alias);
+    }
+
+    if (languageWords.size > 0) {
+      stats["languages"] = saveCategoryFile("languages", groupWordsByLetter(languageWords));
     } else {
-      const existing = loadExistingCategory("birds");
-      if (existing) stats["birds"] = saveCategoryFile("birds", existing);
+      const existing = loadExistingCategory("languages");
+      if (existing) stats["languages"] = saveCategoryFile("languages", existing);
     }
   } catch (err: any) {
-    console.error("[CategoryWorker] Error processing birds:", err.message);
+    console.error("[CategoryWorker] Error processing languages:", err.message);
   }
 
-  // 4. Process Dogs Category (Dedicated Category)
-  try {
-    const dogWords = new Set<string>();
-
-    if (dogBreedsRes.status === "fulfilled" && dogBreedsRes.value?.message && typeof dogBreedsRes.value.message === "object") {
-      for (const [breed, subBreeds] of Object.entries(dogBreedsRes.value.message)) {
-        dogWords.add(breed);
-        if (Array.isArray(subBreeds)) {
-          for (const sub of subBreeds) {
-            dogWords.add(`${sub} ${breed}`);
-          }
-        }
-      }
-    } else if (dogBreedsRes.status === "rejected") {
-      console.warn("[CategoryWorker] Dog breeds fetch failed:", dogBreedsRes.reason?.message);
-    }
-
-    if (dogWords.size > 0) {
-      stats["dogs"] = saveCategoryFile("dogs", groupWordsByLetter(dogWords));
-    } else {
-      const existing = loadExistingCategory("dogs");
-      if (existing) stats["dogs"] = saveCategoryFile("dogs", existing);
-    }
-  } catch (err: any) {
-    console.error("[CategoryWorker] Error processing dogs:", err.message);
-  }
-
-  // 5. Process Fruits and Vegetables Category (Dedicated Category)
-  try {
-    const fruitVegWords = new Set<string>();
-
-    if (fruitsRes.status === "fulfilled" && Array.isArray(fruitsRes.value?.fruits)) {
-      for (const f of fruitsRes.value.fruits) {
-        fruitVegWords.add(f);
-      }
-    } else if (fruitsRes.status === "rejected") {
-      console.warn("[CategoryWorker] Fruits fetch failed:", fruitsRes.reason?.message);
-    }
-
-    if (vegetablesRes.status === "fulfilled" && Array.isArray(vegetablesRes.value?.vegetables)) {
-      for (const v of vegetablesRes.value.vegetables) {
-        fruitVegWords.add(v);
-      }
-    } else if (vegetablesRes.status === "rejected") {
-      console.warn("[CategoryWorker] Vegetables fetch failed:", vegetablesRes.reason?.message);
-    }
-
-    if (fruitVegWords.size > 0) {
-      stats["fruits and vegetables"] = saveCategoryFile("fruits and vegetables", groupWordsByLetter(fruitVegWords));
-    } else {
-      const existing = loadExistingCategory("fruits and vegetables");
-      if (existing) stats["fruits and vegetables"] = saveCategoryFile("fruits and vegetables", existing);
-    }
-  } catch (err: any) {
-    console.error("[CategoryWorker] Error processing fruits and vegetables:", err.message);
-  }
-
-  // 6. Process Food Category (TheMealDB Culinary Ingredients Only)
-  try {
-    const foodWords = new Set<string>();
-
-    if (mealDbRes.status === "fulfilled" && Array.isArray(mealDbRes.value?.meals)) {
-      for (const item of mealDbRes.value.meals) {
-        if (item?.strIngredient) foodWords.add(item.strIngredient);
-      }
-    } else if (mealDbRes.status === "rejected") {
-      console.warn("[CategoryWorker] TheMealDB fetch failed:", mealDbRes.reason?.message);
-    }
-
-    if (foodWords.size > 0) {
-      stats["food"] = saveCategoryFile("food", groupWordsByLetter(foodWords));
-    } else {
-      const existing = loadExistingCategory("food");
-      if (existing) stats["food"] = saveCategoryFile("food", existing);
-    }
-  } catch (err: any) {
-    console.error("[CategoryWorker] Error processing food:", err.message);
-  }
-
-  // 7. Process Pokemon Category
+  // 3. Process Pokemon Category (limit 1500)
   try {
     if (pokemonRes.status === "fulfilled" && Array.isArray(pokemonRes.value?.results)) {
       const pokeNames = pokemonRes.value.results.map((p: any) => p.name);
@@ -278,7 +218,7 @@ export async function runCategorySync(): Promise<void> {
     console.error("[CategoryWorker] Error processing pokemon:", err.message);
   }
 
-  // 8. Process Elements Category
+  // 4. Process Elements Category
   try {
     if (elementsRes.status === "fulfilled" && Array.isArray(elementsRes.value)) {
       const elementNames = elementsRes.value.map((e: any) => e.name);
@@ -294,7 +234,7 @@ export async function runCategorySync(): Promise<void> {
     console.error("[CategoryWorker] Error processing elements:", err.message);
   }
 
-  // 9. Base Categories (Countries, Capitals, Currencies, States)
+  // 5. Base Categories (Countries, Capitals, Currencies, States)
   for (const baseCategory of ["countries", "capitals", "currencies", "states"]) {
     const existing = loadExistingCategory(baseCategory);
     if (existing) {
@@ -303,9 +243,9 @@ export async function runCategorySync(): Promise<void> {
     }
   }
 
-  // 10. Update data/metadata.json atomically
-  const metadataPath = path.resolve(process.cwd(), "data", "metadata.json");
-  const tempMeta = path.resolve(process.cwd(), "data", "metadata.json.tmp");
+  // 6. Update metadata atomically
+  const metadataPath = getMetadataPath();
+  const tempMeta = `${metadataPath}.tmp`;
   const totalWords = Object.values(stats).reduce((acc, c) => acc + c, 0);
   const metadataPayload = {
     lastSync: new Date().toISOString(),

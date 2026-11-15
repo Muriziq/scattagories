@@ -4,6 +4,7 @@ import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaKey } from "react-icons/fa";
+import { motion, AnimatePresence } from "motion/react";
 import styles from "./reset-password.module.css";
 import { API_BASE_URL } from "../../../config/api";
 import CanvasBackground from "../../components/CanvasBackground";
@@ -83,7 +84,12 @@ function ResetPasswordContent() {
     <main className={styles.main}>
       <CanvasBackground />
       <section className={styles.cardContainer}>
-        <div className={styles.cardWrapper}>
+        <motion.div 
+          className={styles.cardWrapper}
+          initial={{ opacity: 0, y: 16, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        >
           {isSuccess ? (
             <section className={styles.card} style={{ gap: "0rem" }}>
               <div className={styles.header} style={{ gap: "0.35rem" }}>
@@ -158,8 +164,30 @@ function ResetPasswordContent() {
                     </button>
                   </label>
 
-                  {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
-                  {successMsg && <p className={styles.successText}>{successMsg}</p>}
+                  <AnimatePresence>
+                    {errorMsg && (
+                      <motion.p 
+                        className={styles.errorText}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {errorMsg}
+                      </motion.p>
+                    )}
+                    {successMsg && (
+                      <motion.p 
+                        className={styles.successText}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {successMsg}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
 
                   <button type="submit" className={styles.submitButton} disabled={loading}>
                     {loading ? "Resetting..." : "Reset Password"}
@@ -172,7 +200,7 @@ function ResetPasswordContent() {
               </section>
             </section>
           )}
-        </div>
+        </motion.div>
       </section>
     </main>
   );

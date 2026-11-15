@@ -1,6 +1,7 @@
 "use client";
 import { FaUser, FaLock, FaEnvelope, FaUserCircle, FaEye, FaEyeSlash, FaPaperPlane } from 'react-icons/fa';
 import { useState, FormEvent, useRef, KeyboardEvent } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import styles from "./register.module.css";
 import { useRouter } from 'next/navigation';
@@ -100,7 +101,12 @@ export default function Register() {
     <main className={styles.main}>
       <CanvasBackground />
       <section className={styles.cardContainer}>
-        <div className={styles.cardWrapper}>
+        <motion.div 
+          className={styles.cardWrapper}
+          initial={{ opacity: 0, y: 16, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        >
           {isRegistered ? (
             <section className={styles.card} style={{ gap: "0rem" }}>
               <div className={styles.header} style={{ gap: "0.35rem" }}>
@@ -186,8 +192,30 @@ export default function Register() {
                     </button>
                   </label>
 
-                  {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
-                  {successMsg && <p className={styles.successText}>{successMsg}</p>}
+                  <AnimatePresence>
+                    {errorMsg && (
+                      <motion.p 
+                        className={styles.errorText}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {errorMsg}
+                      </motion.p>
+                    )}
+                    {successMsg && (
+                      <motion.p 
+                        className={styles.successText}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {successMsg}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                   <p className={styles.termsText}>
                     By signing up, you agree to our <Link href="/terms" className={styles.termsLink}>Terms of Service</Link> and <Link href="/privacy" className={styles.termsLink}>Privacy Policy</Link>.
                   </p>
@@ -206,7 +234,7 @@ export default function Register() {
               </section>
             </section>
           )}
-        </div>
+        </motion.div>
       </section>
     </main>
   );

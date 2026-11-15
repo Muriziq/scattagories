@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { FaEnvelope, FaKey, FaPaperPlane } from "react-icons/fa";
+import { motion, AnimatePresence } from "motion/react";
 import styles from "./forgot-password.module.css";
 import { API_BASE_URL } from "../../../config/api";
 import CanvasBackground from "../../components/CanvasBackground";
@@ -51,7 +52,13 @@ export default function ForgotPasswordPage() {
     <main className={styles.main}>
       <CanvasBackground />
       <section className={styles.cardContainer}>
-        {isSuccess ? (
+        <motion.div 
+          style={{ width: "100%", display: "flex", justifyContent: "center" }}
+          initial={{ opacity: 0, y: 16, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {isSuccess ? (
           <section className={styles.card}>
             <div className={styles.header}>
               <div className={styles.iconCircle}>
@@ -104,8 +111,30 @@ export default function ForgotPasswordPage() {
                 />
               </label>
 
-              {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
-              {successMsg && <p className={styles.successText}>{successMsg}</p>}
+              <AnimatePresence>
+                {errorMsg && (
+                  <motion.p 
+                    className={styles.errorText}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {errorMsg}
+                  </motion.p>
+                )}
+                {successMsg && (
+                  <motion.p 
+                    className={styles.successText}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {successMsg}
+                  </motion.p>
+                )}
+              </AnimatePresence>
 
               <button type="submit" className={styles.submitButton} disabled={loading}>
                 {loading ? "Sending..." : "Send Reset Link"}
@@ -117,6 +146,7 @@ export default function ForgotPasswordPage() {
             </Link>
           </section>
         )}
+        </motion.div>
       </section>
     </main>
   );

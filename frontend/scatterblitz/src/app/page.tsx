@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef, FormEvent } from "react";
+import { motion, type Variants } from "motion/react";
 import styles from "./page.module.css";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -55,6 +56,70 @@ export default function Home() {
   // Leaderboard preview state
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+
+  // Reversible stagger variants for Categories & How-To-Play:
+  // Forward: enters staggered as user scrolls down
+  // Reverse: fades out backwards as user scrolls back up
+  const reversibleSectionContainer: Variants = {
+    hidden: {
+      opacity: 0,
+      transition: {
+        staggerChildren: 0.3,
+        staggerDirection: -1,
+      },
+    },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.3,
+        delayChildren: 0.05,
+      },
+    },
+  };
+
+  const reversibleSectionCard: Variants = {
+    hidden: {
+      opacity: 0,
+      scale: 0.85,
+      transition: { duration: 0.45, ease: "easeIn" },
+    },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
+  // Footer staggered slide in from left to right (reversible):
+  const footerStaggerContainer: Variants = {
+    hidden: {
+      opacity: 0,
+      transition: {
+        staggerChildren: 0.1,
+        staggerDirection: -1,
+      },
+    },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.05,
+      },
+    },
+  };
+
+  const footerSlideFromLeft: Variants = {
+    hidden: {
+      opacity: 0,
+      x: -30,
+      transition: { duration: 0.45, ease: "easeIn" },
+    },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
 
   useEffect(() => {
     async function fetchSession() {
@@ -339,8 +404,14 @@ export default function Home() {
             your knowledge and typing speed across.
           </h2>
 
-          <div className={styles.categoriesGrid}>
-            <div className={styles.categoryCard}>
+          <motion.div
+            className={styles.categoriesGrid}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.15 }}
+            variants={reversibleSectionContainer}
+          >
+            <motion.div className={styles.categoryCard} variants={reversibleSectionCard}>
               <div className={styles.categoryIconWrap}>
                 <FaGlobeAmericas className={styles.categoryIcon} />
               </div>
@@ -351,9 +422,9 @@ export default function Home() {
               <div className={styles.categoryExamples}>
                 <span>e.g. Brazil, Canada, Denmark, Egypt</span>
               </div>
-            </div>
+            </motion.div>
 
-            <div className={styles.categoryCard}>
+            <motion.div className={styles.categoryCard} variants={reversibleSectionCard}>
               <div className={styles.categoryIconWrap}>
                 <FaLandmark className={styles.categoryIcon} />
               </div>
@@ -364,9 +435,9 @@ export default function Home() {
               <div className={styles.categoryExamples}>
                 <span>e.g. Berlin, Cairo, Dublin, Madrid</span>
               </div>
-            </div>
+            </motion.div>
 
-            <div className={styles.categoryCard}>
+            <motion.div className={styles.categoryCard} variants={reversibleSectionCard}>
               <div className={styles.categoryIconWrap}>
                 <FaCoins className={styles.categoryIcon} />
               </div>
@@ -377,9 +448,9 @@ export default function Home() {
               <div className={styles.categoryExamples}>
                 <span>e.g. Baht, Dollar, Euro, Franc</span>
               </div>
-            </div>
+            </motion.div>
 
-            <div className={styles.categoryCard}>
+            <motion.div className={styles.categoryCard} variants={reversibleSectionCard}>
               <div className={styles.categoryIconWrap}>
                 <FaMapMarkedAlt className={styles.categoryIcon} />
               </div>
@@ -390,8 +461,8 @@ export default function Home() {
               <div className={styles.categoryExamples}>
                 <span>e.g. Bavaria, California, Ontario, Texas</span>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </section>
 
         {/* HOW TO PLAY SECTION */}
@@ -404,8 +475,14 @@ export default function Home() {
             </p>
           </div>
 
-          <div className={styles.featuresGrid}>
-            <div className={styles.featureCard}>
+          <motion.div
+            className={styles.featuresGrid}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.15 }}
+            variants={reversibleSectionContainer}
+          >
+            <motion.div className={styles.featureCard} variants={reversibleSectionCard}>
               <div className={styles.cardBadge}>01</div>
               <div className={styles.featureBody}>
                 <h3 className={styles.featureStepTitle}>Pick Your Letter</h3>
@@ -414,9 +491,9 @@ export default function Home() {
                   that letter is permanently locked out for the rest of the match!
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <div className={styles.featureCard}>
+            <motion.div className={styles.featureCard} variants={reversibleSectionCard}>
               <div className={styles.cardBadge}>02</div>
               <div className={styles.featureBody}>
                 <h3 className={styles.featureStepTitle}>High-Speed Sprint</h3>
@@ -425,9 +502,9 @@ export default function Home() {
                   Speed and vocabulary are your greatest weapons.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <div className={styles.featureCard}>
+            <motion.div className={styles.featureCard} variants={reversibleSectionCard}>
               <div className={styles.cardBadge}>03</div>
               <div className={styles.featureBody}>
                 <h3 className={styles.featureStepTitle}>Beat the Blitz</h3>
@@ -436,9 +513,9 @@ export default function Home() {
                   inputs lock and submissions enter the live review window.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <div className={styles.featureCard}>
+            <motion.div className={styles.featureCard} variants={reversibleSectionCard}>
               <div className={styles.cardBadge}>04</div>
               <div className={styles.featureBody}>
                 <h3 className={styles.featureStepTitle}>Score & Dominate</h3>
@@ -447,15 +524,14 @@ export default function Home() {
                   penalized. The blitzer with highest aggregate score wins!
                 </p>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
         </section>
 
         {/* LEADERBOARD TEASER SECTION */}
         <section id="leaderboard" className={styles.leaderboardSection}>
           <div className={styles.sectionHeader}>
-  
             <h2 className={styles.featuresTitle} style={{textTransform:"upperCase"}}>Top Blitzers Worldwide</h2>
             <p className={styles.sectionSubtitle} >
               The fastest typists and sharpest minds dominating ScatterBlitz matches.
@@ -543,8 +619,14 @@ export default function Home() {
           </div>
         </div>
 
-        <div className={styles.footerContent}>
-          <div className={styles.footerBrand}>
+        <motion.div
+          className={styles.footerContent}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: false, amount: 0.15 }}
+          variants={footerStaggerContainer}
+        >
+          <motion.div className={styles.footerBrand} variants={footerSlideFromLeft}>
             <Link href="/" className={styles.logo}>
               <FaBolt className={styles.logoIcon} />
               <span className={styles.logoText}>
@@ -554,16 +636,16 @@ export default function Home() {
             <p className={styles.footerTagline}>
               The ultimate real-time multiplayer party word game. High-speed sprints, instant validation, and endless vocabulary showdowns.
             </p>
-          </div>
+          </motion.div>
 
-          <div className={styles.footerLinksCol}>
+          <motion.div className={styles.footerLinksCol} variants={footerSlideFromLeft}>
             <p className={styles.footerLinksTitle}>Play & Compete</p>
             <Link href="/games/create" className={styles.footerLink}>Host Game Room</Link>
             <Link href="/games/join" className={styles.footerLink}>Browse Public Lobbies</Link>
             <a href="#leaderboard" className={styles.footerLink}>Global Leaderboard</a>
-          </div>
+          </motion.div>
 
-          <div className={styles.footerLinksCol}>
+          <motion.div className={styles.footerLinksCol} variants={footerSlideFromLeft}>
             <p className={styles.footerLinksTitle}>Account</p>
             {accessToken !== "" ? (
               <>
@@ -581,14 +663,14 @@ export default function Home() {
                 <Link href="/user/register" className={styles.footerLink}>Sign Up Free</Link>
               </>
             )}
-          </div>
+          </motion.div>
 
-          <div className={styles.footerLinksCol}>
+          <motion.div className={styles.footerLinksCol} variants={footerSlideFromLeft}>
             <p className={styles.footerLinksTitle}>Legal & Resources</p>
             <Link href="/terms" className={styles.footerLink}>Terms Of Service</Link>
             <Link href="/privacy" className={styles.footerLink}>Privacy Policy</Link>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         <div className={styles.footerBottom}>
           <small className={styles.copyright}>

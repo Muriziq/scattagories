@@ -1,6 +1,7 @@
 "use client";
 import { FaUser, FaLock, FaUserCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useState, FormEvent, useRef, KeyboardEvent } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import styles from "./login.module.css";
 import { useRouter } from 'next/navigation';
@@ -86,7 +87,12 @@ export default function LoginPage() {
     <main className={styles.main}>
       <CanvasBackground />
       <section className={styles.cardContainer}>
-        <div className={styles.cardWrapper}>
+        <motion.div 
+          className={styles.cardWrapper}
+          initial={{ opacity: 0, y: 16, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        >
           <section className={styles.card}>
             <div className={styles.header}>
               <FaUserCircle size={100} className={styles.avatar} />
@@ -128,8 +134,30 @@ export default function LoginPage() {
                   </button>
                 </label>
 
-                {errorMsg && <p className={styles.errorText}>{errorMsg}</p>}
-                {successMsg && <p className={styles.successText}>{successMsg}</p>}
+                <AnimatePresence>
+                  {errorMsg && (
+                    <motion.p 
+                      className={styles.errorText}
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {errorMsg}
+                    </motion.p>
+                  )}
+                  {successMsg && (
+                    <motion.p 
+                      className={styles.successText}
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {successMsg}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
 
                 <div className={styles.actions}>
                   <Link href="/user/forgot-password" className={styles.forgotPassword}>Forgot Password?</Link>
@@ -147,7 +175,7 @@ export default function LoginPage() {
               </p>
             </section>
           </section>
-        </div>
+        </motion.div>
       </section>
     </main>
   );
