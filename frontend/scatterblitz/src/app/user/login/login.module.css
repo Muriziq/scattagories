@@ -236,11 +236,13 @@
     .actions {
         flex-direction: column;
         gap: 1rem;
-        align-items: flex-start;
+        align-items: stretch;
+        width: 100%;
     }
     .submitButton {
-        align-self: flex-start;
-        width: auto;
+        width: 100%;
+        text-align: center;
+        justify-content: center;
     }
     .forgotPassword {
         text-align: left;

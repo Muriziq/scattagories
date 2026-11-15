@@ -2,11 +2,14 @@ import { Response } from "express";
 
 const isProduction = process.env.NODE_ENV === "production";
 
-// Shared cookie security configuration
+// Shared cookie security configuration:
+// In production cross-site deployments (e.g. frontend on Vercel/Render and backend on Render),
+// cookies MUST use `sameSite: "none"` and `secure: true` for the browser to send them with credentials: "include".
+// In local development (HTTP localhost:3000 -> localhost:5000), `sameSite: "lax"` and `secure: false` are used.
 export const cookieOptions = {
   httpOnly: true, // Prevents client-side JavaScript access (mitigates XSS)
-  secure: isProduction, // Enforces HTTPS in production environments
-  sameSite: (isProduction ? "strict" : "lax") as "strict" | "lax",
+  secure: isProduction, // HTTPS required when sameSite is "none"
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
 };
 
 // Sets HTTP-only 7-day refresh token cookie for persistent user sessions

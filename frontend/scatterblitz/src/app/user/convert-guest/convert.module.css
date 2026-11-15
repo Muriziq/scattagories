@@ -284,7 +284,8 @@
         grid-template-columns: 1fr;
     }
     .submitButton {
-        align-self: flex-start;
-        width: auto;
+        width: 100%;
+        text-align: center;
+        justify-content: center;
     }
 }
