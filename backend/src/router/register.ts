@@ -97,12 +97,17 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
     const accessToken = signAccessToken(userAns);
     const verifyToken = signVerifyToken({ id: userAns.id });
 
-    await sendVerificationEmail(userAns.username, userAns.email, verifyToken);
+    // Send verification email asynchronously; capture delivery status without blocking registration
+    const emailResult = await sendVerificationEmail(userAns.username, userAns.email, verifyToken);
     setRefreshTokenCookie(res, refreshToken);
 
     return res.status(201).json({
       user: userAns,
       accessToken,
+      emailSent: emailResult.success,
+      message: emailResult.success
+        ? "Account created successfully! Verification email sent."
+        : "Account created successfully, but we could not deliver the verification email right now. You can log in and request a new link anytime.",
     });
   } catch (error: any) {
     // Check for PostgreSQL unique constraint violations (code 23505)
@@ -252,9 +257,16 @@ router.post("/sendVerification", authLimiter, async (req: Request, res: Response
     }
 
     const verifyToken = signVerifyToken({ id: userAns.id });
-    await sendVerificationEmail(userAns.username, userAns.email, verifyToken);
+    const emailResult = await sendVerificationEmail(userAns.username, userAns.email, verifyToken);
 
-    return res.status(200).json({ message: "If an account with that email exists, a verification link has been sent." });
+    if (!emailResult.success) {
+      console.warn(`[Send Verification] Failed to send email to ${userAns.email}:`, emailResult.error);
+    }
+
+    return res.status(200).json({
+      message: "If an account with that email exists, a verification link has been sent.",
+      emailSent: emailResult.success,
+    });
   } catch (err: any) {
     console.error("Send verification error:", err);
     return res.status(500).json({ message: "Server error sending verification email" });
@@ -372,8 +384,15 @@ router.post("/forgot-password", authLimiter, async (req: Request, res: Response)
     const userAns = user.rows[0];
     const resetToken = signResetPasswordToken({ id: userAns.id });
 
-    await sendPasswordResetEmail(userAns.username, userAns.email, resetToken);
-    return res.status(200).json({ message: "If an account with that email exists, a password reset link has been sent." });
+    const emailResult = await sendPasswordResetEmail(userAns.username, userAns.email, resetToken);
+    if (!emailResult.success) {
+      console.warn(`[Forgot Password] Failed to send email to ${userAns.email}:`, emailResult.error);
+    }
+
+    return res.status(200).json({
+      message: "If an account with that email exists, a password reset link has been sent.",
+      emailSent: emailResult.success,
+    });
   } catch (err: any) {
     console.error("Forgot password error:", err);
     return res.status(500).json({ message: "Server error sending reset password email" });
@@ -481,16 +500,19 @@ router.post("/convert-guest", authLimiter, async (req: Request, res: Response) =
     const accessToken = signAccessToken(userAns);
     const verifyToken = signVerifyToken({ id: userAns.id });
 
-    await sendVerificationEmail(userAns.username, userAns.email, verifyToken);
+    const emailResult = await sendVerificationEmail(userAns.username, userAns.email, verifyToken);
 
     // Transition from guest cookie to persistent user refresh token
     clearGuestTokenCookie(res);
     setRefreshTokenCookie(res, refreshToken);
 
     return res.status(201).json({
-      message: "Guest account converted successfully! Please verify your email.",
+      message: emailResult.success
+        ? "Guest account converted successfully! Verification email sent."
+        : "Guest account converted successfully! You can log in and request a new verification link anytime.",
       user: userAns,
       accessToken,
+      emailSent: emailResult.success,
     });
   } catch (error: any) {
     // Check for PostgreSQL unique constraint violations (code 23505)
@@ -790,7 +812,10 @@ router.patch("/profile", verifyAccessToken, async (req: AuthRequest, res: Respon
     // 4. If email changed, dispatch verification link to new email address
     if (isEmailChanging) {
       const verifyToken = signVerifyToken({ id: updatedUser.id });
-      await sendVerificationEmail(updatedUser.username, updatedUser.email, verifyToken);
+      const emailResult = await sendVerificationEmail(updatedUser.username, updatedUser.email, verifyToken);
+      if (!emailResult.success) {
+        console.warn(`[Update Profile] Failed to send email to ${updatedUser.email}:`, emailResult.error);
+      }
     }
 
     const newAccessToken = signAccessToken(updatedUser);

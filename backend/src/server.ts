@@ -24,6 +24,10 @@ dotenv.config();
 
 const app = express();
 app.disable("x-powered-by");
+
+// Trust Render's reverse proxy so express-rate-limit correctly identifies client IPs
+app.set("trust proxy", 1);
+
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 5000;

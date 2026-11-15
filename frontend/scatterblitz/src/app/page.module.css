@@ -425,7 +425,7 @@
   line-height: 1.1;
   color: var(--text-primary);
   text-shadow: 0 2px 3px var(--btn-dark-start);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .titleGradient {
@@ -438,15 +438,15 @@
   font-size: 1.6rem;
   font-weight: 700;
   color: var(--sunset);
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.65rem;
 }
 
 .heroDescription {
   max-width: 720px;
   font-size: 1.05rem;
-  line-height: 1.65;
+  line-height: 1.55;
   color: var(--text-description);
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.15rem;
 }
 
 /* Quick Join Card - wider than heroDescription (780px > 720px) */
@@ -711,6 +711,7 @@
   color: var(--text-primary);
   margin: 0 0 0.75rem;
   line-height: 2.4rem;
+  text-transform: uppercase;
 }
 
 .featuresGrid {
@@ -1050,6 +1051,13 @@
 }
 
 @media (max-width: 768px) {
+  .main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .leaderboardCard {
+    padding: 1.25rem 1rem;
+  }
   .header {
     padding: 0.85rem 1rem;
     padding-top: 1rem;
@@ -1134,6 +1142,10 @@
 }
 
 @media (max-width: 480px) {
+  .leaderboardCard {
+    padding: 1.25rem 1rem;
+  }
+
   .quickJoinBtn {
     width: 100%;
   }

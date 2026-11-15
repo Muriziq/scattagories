@@ -19,6 +19,7 @@ export default function Register() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [emailDelivered, setEmailDelivered] = useState(true);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +65,7 @@ export default function Register() {
         if (data?.user && typeof data.user === "object") {
           updateUserData(data.user);
         }
+        setEmailDelivered(data?.emailSent !== false);
         setIsRegistered(true);
       }
     } catch (err) {
@@ -109,9 +111,15 @@ export default function Register() {
               </div>
 
               <section className={styles.formSection} style={{ textAlign: "center"}}>
-                <p style={{ color: "var(--text-description)", fontSize: "0.95rem", lineHeight: "1.6", maxWidth: "480px" }}>
-                  A verification link has been sent to <strong style={{ color: "var(--sunset)" }}>{email}</strong>. Please check your inbox to verify your email address.
-                </p>
+                {emailDelivered ? (
+                  <p style={{ color: "var(--text-description)", fontSize: "0.95rem", lineHeight: "1.6", maxWidth: "480px" }}>
+                    A verification link has been sent to <strong style={{ color: "var(--sunset)" }}>{email}</strong>. Please check your inbox to verify your email address.
+                  </p>
+                ) : (
+                  <p style={{ color: "var(--sunset)", fontSize: "0.95rem", lineHeight: "1.6", maxWidth: "480px" }}>
+                    Your account was created, but we could not deliver the verification email right now. You can log in and request a new link at any time.
+                  </p>
+                )}
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", alignItems: "center" }}>
                   <Link href="/" className={`${styles.submitButton} ${styles.centerButton}`} style={{ textDecoration: "none" }}>

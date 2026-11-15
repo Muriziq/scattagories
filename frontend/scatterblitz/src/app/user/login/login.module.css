@@ -2,6 +2,8 @@
     position: relative;
     padding: 2rem;
     min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
     color: #f7f3ed;
     background: var(--bg-dark);
     display: flex;
@@ -232,14 +234,15 @@
         max-width: 100%;
     }
     .actions {
-        flex-direction: column-reverse;
+        flex-direction: column;
         gap: 1rem;
-        align-items: stretch;
+        align-items: flex-start;
     }
     .submitButton {
-        width: 100%;
+        align-self: flex-start;
+        width: auto;
     }
     .forgotPassword {
-        text-align: center;
+        text-align: left;
     }
 }

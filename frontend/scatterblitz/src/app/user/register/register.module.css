@@ -2,6 +2,8 @@
     position: relative;
     padding: 2rem;
     min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
     color: #f7f3ed;
     background: var(--bg-dark);
     display: flex;
@@ -281,8 +283,11 @@
     .form {
         grid-template-columns: 1fr;
     }
+    .termsText {
+        text-align: left;
+    }
     .submitButton {
-        width: 100%;
-        align-self: stretch;
+        align-self: flex-start;
+        width: auto;
     }
 }
