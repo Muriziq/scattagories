@@ -25,6 +25,7 @@ router.get("/", async (req: Request, res: Response) => {
     const guestToken = req.cookies?.guestToken;
 
     if (!refreshToken && !guestToken) {
+      console.warn("[Refresh] 401: Neither refreshToken nor guestToken cookie present in request.");
       return res.status(401).json({ message: "No refresh token found" });
     }
 

@@ -93,19 +93,23 @@ export function verifyAndRotateSession(
   );
 
   if (!tokenMatched) {
-    // Reuse / theft of an unknown or revoked token detected!
+    console.warn(`[TokenSession] Refresh rejected: presented token hash not found in valid active sessions (possible reuse/theft or already rotated).`);
     return { updatedSessions: [], isReuseDetected: true };
   }
 
   // Backward compatibility: read legacy `userAgent` if `platform` is not yet stored
   const sessionPlatform = tokenMatched.platform || parsePlatform((tokenMatched as any).userAgent);
 
-  // 1. Device ID Validation: If both have a deviceId and they differ -> Stolen token from another device!
+  // 1. Device ID Validation:
+  // If both have a non-empty deviceId and they differ, flag as reuse / stolen token
   if (
     tokenMatched.deviceId &&
     clientInfo.deviceId &&
     tokenMatched.deviceId !== clientInfo.deviceId
   ) {
+    console.warn(
+      `[TokenSession] Refresh rejected: Device ID mismatch (session: ${tokenMatched.deviceId}, request: ${clientInfo.deviceId})`
+    );
     return { updatedSessions: [], isReuseDetected: true };
   }
 
@@ -115,6 +119,9 @@ export function verifyAndRotateSession(
     clientInfo.platform !== "unknown" &&
     sessionPlatform !== clientInfo.platform
   ) {
+    console.warn(
+      `[TokenSession] Refresh rejected: Platform mismatch (session: ${sessionPlatform}, request: ${clientInfo.platform})`
+    );
     return { updatedSessions: [], isReuseDetected: true };
   }
 

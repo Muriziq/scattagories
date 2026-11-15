@@ -20,18 +20,17 @@ let isSyncInProgress = false;
 let activeWorkerProcess: ChildProcess | null = null;
 let dailyCheckTimer: NodeJS.Timeout | null = null;
 
-// Returns the path to backend/data/categories/ directory
+// Resolves backend/data/ directory whether run from root or backend folder
+const backendRoot = process.cwd().endsWith("backend")
+  ? process.cwd()
+  : path.resolve(process.cwd(), "backend");
+
 function getCategoriesDir(): string {
-  // If running from dist or backend, resolve robustly relative to __dirname
-  const fromDir = path.resolve(__dirname, "../../data/categories");
-  if (fs.existsSync(fromDir)) return fromDir;
-  return path.resolve(process.cwd(), "data", "categories");
+  return path.resolve(backendRoot, "data", "categories");
 }
 
 function getMetadataPath(): string {
-  const fromDir = path.resolve(__dirname, "../../data/metadata.json");
-  if (fs.existsSync(fromDir)) return fromDir;
-  return path.resolve(process.cwd(), "data", "metadata.json");
+  return path.resolve(backendRoot, "data", "metadata.json");
 }
 
 // Scans backend/data/categories/*.json, populates O(1) Sets, and executes an atomic pointer swap

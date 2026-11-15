@@ -65,21 +65,17 @@ function groupWordsByLetter(words: Iterable<string>): Record<string, string[]> {
   return result;
 }
 
-// Resolve the categories directory relative to __dirname (handles both development and compiled dist/)
+// Resolves backend/data/ directory whether run from root or backend folder
+const backendRoot = process.cwd().endsWith("backend")
+  ? process.cwd()
+  : path.resolve(process.cwd(), "backend");
+
 function getCategoriesDir(): string {
-  const fromDir = path.resolve(__dirname, "../../data/categories");
-  if (fs.existsSync(fromDir)) return fromDir;
-  const backendData = path.resolve(process.cwd(), "backend", "data", "categories");
-  if (fs.existsSync(backendData)) return backendData;
-  return path.resolve(process.cwd(), "data", "categories");
+  return path.resolve(backendRoot, "data", "categories");
 }
 
 function getMetadataPath(): string {
-  const fromDir = path.resolve(__dirname, "../../data/metadata.json");
-  if (fs.existsSync(fromDir)) return fromDir;
-  const backendData = path.resolve(process.cwd(), "backend", "data", "metadata.json");
-  if (fs.existsSync(backendData)) return backendData;
-  return path.resolve(process.cwd(), "data", "metadata.json");
+  return path.resolve(backendRoot, "data", "metadata.json");
 }
 
 // Atomically writes a single category file (temp file -> rename)

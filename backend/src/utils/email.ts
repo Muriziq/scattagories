@@ -1,15 +1,15 @@
-import { Resend } from "resend";
-
 const clientUrl = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.replace(/\/+$/, "")
   : "http://localhost:3000";
 
-// Resend HTTP API client (runs over HTTPS Port 443, never blocked by cloud hosts)
-const resendApiKey = process.env.RESEND_API_KEY;
-const resendClient = resendApiKey ? new Resend(resendApiKey) : null;
+// Brevo (formerly Sendinblue) & Resend HTTPS API configuration
+const brevoApiKey = process.env.BREVO_API_KEY;
+const senderEmail = process.env.SENDER_EMAIL || process.env.EMAIL_USER || "scatterblitz1@gmail.com";
+const senderName = process.env.SENDER_NAME || "ScatterBlitz";
 
 /**
- * Dispatches an email payload via Resend HTTPS API.
+ * Dispatches an email payload via Brevo HTTPS REST API (Port 443 - never blocked by Render).
+ * Falls back to console logging during development or when API keys are not configured.
  * Returns { success: boolean, error?: string } rather than throwing,
  * ensuring registration and auth endpoints never crash or leave users stuck.
  */
@@ -18,32 +18,51 @@ async function sendEmailPayload(options: {
   subject: string;
   html: string;
 }): Promise<{ success: boolean; error?: string }> {
-  if (!resendClient) {
+  if (!brevoApiKey) {
     console.warn(
-      "[Email Service] RESEND_API_KEY is not configured in environment variables. Email dispatch skipped."
+      "[Email Service] BREVO_API_KEY is not configured in environment variables. Email dispatch skipped."
     );
-    return { success: false, error: "RESEND_API_KEY is not configured" };
+    return { success: false, error: "BREVO_API_KEY is not configured" };
   }
 
   try {
-    const fromAddress = process.env.RESEND_FROM || "ScatterBlitz <onboarding@resend.dev>";
-    const { error } = await resendClient.emails.send({
-      from: fromAddress,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": brevoApiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: {
+          name: senderName,
+          email: senderEmail,
+        },
+        to: [
+          {
+            email: options.to,
+          },
+        ],
+        subject: options.subject,
+        htmlContent: options.html,
+      }),
     });
 
-    if (error) {
-      console.warn("[Email Service] Resend API error:", error);
-      return { success: false, error: error.message };
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.warn("[Email Service] Brevo API error:", data);
+      return {
+        success: false,
+        error: data.message || `Brevo request failed with status ${response.status}`,
+      };
     }
 
-    console.log(`[Email Service] Successfully sent email to ${options.to} via Resend`);
+    console.log(`[Email Service] Successfully delivered email to ${options.to} via Brevo (messageId: ${data.messageId})`);
     return { success: true };
   } catch (err: any) {
-    console.warn("[Email Service] Resend request failed:", err?.message || err);
-    return { success: false, error: err?.message || "Failed to send email" };
+    console.warn("[Email Service] Brevo request failed:", err?.message || err);
+    return { success: false, error: err?.message || "Failed to send email via Brevo" };
   }
 }
 
@@ -54,6 +73,11 @@ export async function sendVerificationEmail(
   verifyToken: string
 ): Promise<{ success: boolean; error?: string }> {
   const verificationUrl = `${clientUrl}/user/verify-email?token=${verifyToken}`;
+
+  // Always log verification link in console during local development or testing
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`\n📧 [DEV VERIFICATION LINK for ${email}]:\n${verificationUrl}\n`);
+  }
 
   const html = `
     <h2>Hello ${username}!</h2>
@@ -68,11 +92,18 @@ export async function sendVerificationEmail(
     <p style="color: #888888; font-size: 0.85rem; margin-top: 20px;">This link will expire in 15 minutes.</p>
   `;
 
-  return sendEmailPayload({
+  const result = await sendEmailPayload({
     to: email,
     subject: "Verify your ScatterBlitz email address",
     html,
   });
+
+  // If email failed (e.g. Resend 403 restriction), print the link so developer/tester is never blocked
+  if (!result.success && process.env.NODE_ENV === "production") {
+    console.log(`\n⚠️ [FALLBACK VERIFICATION LINK for ${email}]:\n${verificationUrl}\n`);
+  }
+
+  return result;
 }
 
 // Dispatches password reset link with 15-minute expiring token
@@ -82,6 +113,11 @@ export async function sendPasswordResetEmail(
   resetToken: string
 ): Promise<{ success: boolean; error?: string }> {
   const resetUrl = `${clientUrl}/user/reset-password?token=${resetToken}`;
+
+  // Always log reset link in console during local development or testing
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`\n🔑 [DEV RESET PASSWORD LINK for ${email}]:\n${resetUrl}\n`);
+  }
 
   const html = `
     <h2>Hello ${username}!</h2>
@@ -96,9 +132,15 @@ export async function sendPasswordResetEmail(
     <p style="color: #888888; font-size: 0.85rem; margin-top: 20px;">This link will expire in 15 minutes. If you did not request this, you can safely ignore this email.</p>
   `;
 
-  return sendEmailPayload({
+  const result = await sendEmailPayload({
     to: email,
     subject: "Reset your ScatterBlitz password",
     html,
   });
+
+  if (!result.success && process.env.NODE_ENV === "production") {
+    console.log(`\n⚠️ [FALLBACK RESET PASSWORD LINK for ${email}]:\n${resetUrl}\n`);
+  }
+
+  return result;
 }
