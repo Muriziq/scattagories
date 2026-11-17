@@ -704,6 +704,10 @@ function GameContent() {
                       inputRefs.current[index] = el;
                     }}
                     type="text"
+                    inputMode="text"
+                    name="search"
+                    aria-autocomplete="none"
+                    enterKeyHint="next"
                     className={styles.categoryInput}
                     placeholder={`Type a ${category} starting with ${activeLetter}...`}
                     autoComplete="off"
@@ -716,9 +720,13 @@ function GameContent() {
                         socket.emit("input:focus", { roomID: roomId, category });
                       }
                     }}
-                    onBlur={() => {
+                    onBlur={(e) => {
                       if (socket) {
-                        socket.emit("input:blur", { roomID: roomId, category });
+                        socket.emit("input:blur", {
+                          roomID: roomId,
+                          category,
+                          value: e.target.value,
+                        });
                       }
                     }}
                     onPaste={(e) => {

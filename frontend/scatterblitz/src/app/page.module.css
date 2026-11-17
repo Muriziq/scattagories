@@ -108,9 +108,9 @@
 
 .joinBtn {
   composes: btn-3d btn-primary from global;
-  padding: 0.9rem 2.4rem;
-  font-size: 1rem;
-  border-radius: 14px;
+  padding: 0.8rem 2rem;
+  font-size: 0.92rem;
+  border-radius: 12px;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -120,9 +120,9 @@
 
 .createBtn {
   composes: btn-3d btn-secondary from global;
-  padding: 0.9rem 2.4rem;
-  font-size: 1rem;
-  border-radius: 14px;
+  padding: 0.8rem 2rem;
+  font-size: 0.92rem;
+  border-radius: 12px;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -915,7 +915,7 @@
 .footerCta {
   background: rgba(41, 8, 2, 0.7);
   border-bottom: 1px solid rgba(255, 122, 0, 0.3);
-  padding: 3.5rem 1.5rem;
+  padding: 2.75rem 1.5rem;
   text-align: center;
 }
 
@@ -923,25 +923,25 @@
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.4rem;
 }
 
 .footerCtaSub {
   color: var(--sunset);
   opacity: 0.9;
   font-size: 1.05rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .footerPlayBtn {
   composes: btn-3d btn-primary from global;
-  padding: 0.95rem 3rem;
-  font-size: 1.1rem;
+  padding: 0.82rem 2.4rem;
+  font-size: 1rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.6rem;
   text-decoration: none;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .footerContent {
@@ -1053,9 +1053,11 @@
   .main {
     padding-left: 1rem;
     padding-right: 1rem;
+    padding-bottom: 2.5rem;
   }
   .leaderboardCard {
-    padding: 1.25rem 1rem;
+    padding: 1.25rem 0.75rem;
+    border-radius: 16px;
   }
   .header {
     padding: 0.85rem 1rem;
@@ -1070,49 +1072,261 @@
     text-align: center;
     padding: 0.85rem 1rem;
   }
+
+  /* 1. HERO SECTION & TYPOGRAPHY */
   .heroSection {
-    padding: 1rem 0 2rem;
+    padding: 0.5rem 0 2rem;
   }
   .heroTitle {
     font-size: 3.4rem;
+    line-height: 1.12;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.35rem;
   }
   .heroSubtitle {
-    font-size: 1.25rem;
+    font-size: 1.05rem;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
   }
-  .featuresGrid {
-    grid-template-columns: 1fr;
+  .heroDescription {
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+    padding: 0 0.5rem;
+  }
+
+  /* 2. QUICK JOIN CARD & BUTTONS */
+  .quickJoinCard {
+    margin-bottom: 2rem;
+    gap: 1.25rem;
   }
   .quickJoinForm {
+    display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.6rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-bottom: 1.25rem;
+    width: 100%;
   }
   .quickInputWrap {
-    flex: 1 1 200px;
-    width: 100%;
+    flex: 1 1 auto;
     min-width: 0;
   }
   .quickJoinInput {
     width: 100%;
-    font-size: 0.92rem;
-    padding: 0.75rem 1rem;
+    height: 44px;
+    font-size: 0.9rem;
+    padding: 0 0.75rem;
     letter-spacing: 0.1em;
+    text-align: center;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+  }
+  .quickJoinInput::placeholder {
+    font-size: 0.72rem;
+    letter-spacing: normal;
   }
   .quickJoinBtn {
     flex: 0 0 auto;
-    padding: 0.75rem 1.4rem;
-    font-size: 0.9rem;
-  }
-  .heroStats{
-    gap:0.7rem;
+    height: 44px;
+    padding: 0 1.15rem;
+    font-size: 0.82rem;
+    border-radius: 10px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   .buttonGroup {
-    flex-direction: column;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
     width: 100%;
   }
   .buttonGroup a {
+    width: auto;
+    flex: 0 1 auto;
+    padding: 0.72rem 1rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    border-radius: 10px;
+    gap: 0.45rem;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* 3. HERO STATS: RESTORED ORIGINAL LAYOUT WITH ENHANCED CONTRAST BACKGROUND */
+  .heroStats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.65rem;
     width: 100%;
   }
+  .statCard {
+    background: rgba(45, 14, 7, 0.45);
+    border-left: 5px solid var(--safety-orange);
+    border-top: none;
+    border-radius: 0;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 0.9rem;
+    backdrop-filter: blur(10px);
+  }
+  .statIcon {
+    font-size: 1.75rem;
+    color: var(--amber);
+  }
+  .statText {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.2rem;
+  }
+  .statText strong {
+    font-size: 0.95rem;
+    line-height: 1.2;
+    color: var(--text-primary);
+  }
+  .statText span {
+    font-size: 0.82rem;
+    line-height: 1.2;
+    color: var(--sunset);
+  }
+
+  /* 4. CATEGORIES SECTION: RESTORED ORIGINAL STACKED LAYOUT */
+  .categoriesSection {
+    margin-top: 2.5rem;
+    padding-top: 2.5rem;
+  }
+  .categoriesTitleLeft {
+    font-size: 1.45rem;
+    line-height: 1.35;
+    margin-bottom: 1.5rem;
+  }
+  .categoriesGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .categoryCard {
+    padding: 1.5rem 1.35rem;
+    border-radius: 18px;
+  }
+  .categoryIconWrap {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+  .categoryIcon {
+    font-size: 1.45rem;
+  }
+  .categoryTitle {
+    font-size: 1.15rem;
+    margin-bottom: 0.4rem;
+  }
+  .categoryDesc {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin-bottom: 0.85rem;
+  }
+  .categoryExamples {
+    font-size: 0.78rem;
+    padding-top: 0.65rem;
+  }
+
+  /* 5. HOW TO PLAY: SLIMMER COMPACT STEP CARDS */
+  .featuresSection {
+    margin-top: 2.5rem;
+    padding-top: 2.25rem;
+    padding-bottom: 2.5rem;
+  }
+  .featuresTitle {
+    font-size: 2rem;
+    line-height: 1.3;
+    margin-bottom: 0.75rem;
+  }
+  .sectionSubtitle {
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+  .featuresGrid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    margin-top: 1.25rem;
+  }
+  .featureCard {
+    padding: 1rem 1.15rem;
+    border-radius: 14px;
+    gap: 0.85rem;
+    align-items: center;
+  }
+  .cardBadge {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    align-self: center;
+  }
+  .featureStepTitle {
+    font-size: 1.02rem;
+    margin-bottom: 0.25rem;
+  }
+  .featureStepDesc {
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  /* 6. LEADERBOARD: CLEAN OVERFLOW-FREE PODIUM TABLE */
+  .leaderboardSection {
+    padding-top: 2.25rem;
+  }
+  .table th {
+    padding: 0.65rem 0.5rem;
+    font-size: 0.72rem;
+  }
+  .table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.82rem;
+  }
+  /* Hide 'Match Played' on smaller mobile screens so table fits seamlessly */
+  .table th:nth-child(4),
+  .table td:nth-child(4) {
+    display: none;
+  }
+  .playerCell {
+    min-width: 120px;
+  }
+  .tableAvatar {
+    width: 26px;
+    height: 26px;
+  }
+  .tableAvatarFallback {
+    font-size: 1.4rem;
+  }
+  .playerName {
+    font-size: 0.82rem;
+  }
+  .winsCell {
+    font-size: 0.78rem;
+  }
+
+  .leaderboardEmpty h3 {
+    font-size: 1.15rem;
+  }
+  .leaderboardEmpty p {
+    font-size: 0.85rem;
+  }
+
   .previewRow {
     flex-direction: column;
     align-items: flex-start;
@@ -1120,14 +1334,6 @@
   }
   .previewCat {
     width: auto;
-  }
-  .categoriesTitleLeft {
-    font-size: 1.55rem;
-    line-height: 1.35;
-  }
-  .featuresTitle {
-    font-size: 2rem;
-    line-height: 1.3;
   }
   .sectionTitle {
     font-size: 1.65rem;
@@ -1141,12 +1347,15 @@
 }
 
 @media (max-width: 480px) {
-  .leaderboardCard {
-    padding: 1.25rem 1rem;
+  .heroTitle {
+    font-size: 3.1rem;
   }
-
-  .quickJoinBtn {
-    width: 100%;
+  .leaderboardCard {
+    padding: 1rem 0.5rem;
+  }
+  .table th:nth-child(3),
+  .table td:nth-child(3) {
+    display: none; /* On very small screens, show Rank, Player, and Total Points */
   }
 
   .userDropdown {
@@ -1164,5 +1373,23 @@
       opacity: 1;
       transform: translate(50%, 0);
     }
+  }
+}
+
+/* When the viewport is below 450px:
+   1. The two secondary buttons wrap with width 100% and max-width 310px, identically sized */
+@media (max-width: 450px) {
+  .buttonGroup {
+    flex-direction: column;
+    align-items: start;
+    width: 100%;
+  }
+  .buttonGroup a {
+    width: 100%;
+    max-width: 250px;
+    padding: 0.78rem 1rem;
+    font-size: 0.85rem;
+    text-align: center;
+    justify-content: center;
   }
 }

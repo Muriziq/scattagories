@@ -68,6 +68,7 @@ export class GameRoom {
   categories: string[];
   language: Language;
   allowComputerHelper: boolean;
+  hostDeviceType: "mobile" | "desktop";
 
   // Game Lifecycle State
   status: "waiting" | "letter_selection" | "active_sprint" | "recap" | "ended";
@@ -127,6 +128,9 @@ export class GameRoom {
     Map<string, { focusedAt?: number; totalDurationMs: number; blurCount: number }>
   > = new Map();
 
+  // Per-round draft answers synced incrementally via input:blur as a network disconnect fallback: username -> { category -> word }
+  draftAnswers: Map<string, Record<string, string>> = new Map();
+
   constructor(
     id: string,
     hostUsername: string,
@@ -136,7 +140,8 @@ export class GameRoom {
     password: string | null = null,
     isPublic: boolean = true,
     categories: string[] = [...getAvailableCategories()],
-    allowComputerHelper: boolean = true
+    allowComputerHelper: boolean = true,
+    hostDeviceType: "mobile" | "desktop" = "desktop"
   ) {
     this.id = id;
     this.hostUsername = hostUsername;
@@ -145,6 +150,7 @@ export class GameRoom {
     this.password = password;
     this.categories = categories;
     this.allowComputerHelper = allowComputerHelper;
+    this.hostDeviceType = hostDeviceType;
 
     this.createdAt = new Date();
     this.isPublic = isPublic;
@@ -583,6 +589,7 @@ export class GameRoom {
     this.selectionStartTime = null;
     this.flaggedCheaters.clear();
     this.inputActivity.clear();
+    this.draftAnswers.clear();
 
     // Start round sprint countdown
     this.roundTimer = setTimeout(() => {
@@ -606,7 +613,7 @@ export class GameRoom {
 
   // Records player input focus to track human interaction timing per category
   public recordInputFocus(username: string, category: string) {
-    if (this.status !== "active_sprint") return;
+    if (this.status !== "active_sprint" || !this.categories.includes(category)) return;
     if (!this.inputActivity.has(username)) {
       this.inputActivity.set(username, new Map());
     }
@@ -616,16 +623,31 @@ export class GameRoom {
     userMap.set(category, current);
   }
 
-  // Records player input blur to aggregate interaction duration per category
-  public recordInputBlur(username: string, category: string) {
-    if (this.status !== "active_sprint") return;
+  // Records player input blur to aggregate interaction duration and saves draft answer fallback
+  public recordInputBlur(username: string, category: string, value?: string) {
+    if (this.status !== "active_sprint" || !this.categories.includes(category)) return;
     const userMap = this.inputActivity.get(username);
-    if (!userMap) return;
-    const current = userMap.get(category);
-    if (current && current.focusedAt) {
-      current.totalDurationMs += Date.now() - current.focusedAt;
-      current.focusedAt = undefined;
-      current.blurCount += 1;
+    if (userMap) {
+      const current = userMap.get(category);
+      if (current && current.focusedAt) {
+        current.totalDurationMs += Date.now() - current.focusedAt;
+        current.focusedAt = undefined;
+        current.blurCount += 1;
+      }
+    }
+
+    // Incremental draft caching fallback: store valid category values
+    if (value !== undefined && typeof value === "string") {
+      const trimmed = value.trim().slice(0, 80);
+      if (!this.draftAnswers.has(username)) {
+        this.draftAnswers.set(username, {});
+      }
+      const playerDrafts = this.draftAnswers.get(username)!;
+      if (trimmed.length > 0) {
+        playerDrafts[category] = trimmed;
+      } else {
+        delete playerDrafts[category];
+      }
     }
   }
 
@@ -766,6 +788,32 @@ export class GameRoom {
   public executeRoundRecap(io: Server, socket?: Socket) {
     this.clearRoundTimer();
     this.submitStatus = "notAccepting";
+
+    // Fallback: If an active player did not explicitly submit (e.g. mobile disconnect or dropped submit packet),
+    // promote their incremental blur draft answers so they don't lose the round
+    if (this.activeLetter) {
+      if (!this.detailedSubmissions[this.activeLetter]) {
+        this.detailedSubmissions[this.activeLetter] = {};
+      }
+      for (const [username, participant] of this.participants.entries()) {
+        if (!participant.hasLeft && !this.detailedSubmissions[this.activeLetter][username]) {
+          const drafts = this.draftAnswers.get(username);
+          if (drafts && Object.keys(drafts).length > 0) {
+            console.log(
+              `[Draft Fallback] Auto-submitting ${Object.keys(drafts).length} draft answer(s) for ${username} in room ${this.id}`
+            );
+            this.detailedSubmissions[this.activeLetter][username] = {};
+            for (const [cat, word] of Object.entries(drafts)) {
+              this.detailedSubmissions[this.activeLetter][username][cat] = {
+                answer: word,
+                score: 0,
+              };
+            }
+          }
+        }
+      }
+    }
+
     const roundScores = this.calculateRoundScores();
 
     // Compute round points and rank players for this specific round
@@ -827,10 +875,10 @@ export class GameRoom {
     this.status = "recap";
     this.recapSkipVotes.clear();
 
-    // Phase 1: 3.5s buffer gives in-flight mobile/Wi-Fi submissions time to flush
+    // Phase 1: 5s buffer gives in-flight mobile/Wi-Fi submissions time to flush
     this.roundTimer = setTimeout(() => {
       this.executeRoundRecap(io, socket);
-    }, 3500);
+    }, 5000);
   }
 
   // Handles a player voting to skip the 6-second recap review window early

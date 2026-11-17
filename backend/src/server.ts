@@ -445,11 +445,22 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     room?.recordInputFocus(socket.user.username, category);
   });
 
-  socket.on("input:blur", ({ roomID, category }: { roomID: string; category: string }) => {
-    if (!socket.user || !roomID || !category) return;
-    const room = getRoom(roomID.toUpperCase());
-    room?.recordInputBlur(socket.user.username, category);
-  });
+  socket.on(
+    "input:blur",
+    ({
+      roomID,
+      category,
+      value,
+    }: {
+      roomID: string;
+      category: string;
+      value?: string;
+    }) => {
+      if (!socket.user || !roomID || !category) return;
+      const room = getRoom(roomID.toUpperCase());
+      room?.recordInputBlur(socket.user.username, category, value);
+    }
+  );
 
   // Skip review vote during recap phase
   socket.on("recap:skip", (roomID: string) => {

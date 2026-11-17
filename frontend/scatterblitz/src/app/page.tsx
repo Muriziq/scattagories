@@ -57,36 +57,29 @@ export default function Home() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
-  // Reversible stagger variants for Categories & How-To-Play:
-  // Forward: enters staggered as user scrolls down
-  // Reverse: fades out backwards as user scrolls back up
-  const reversibleSectionContainer: Variants = {
+  // Stagger variants for Categories & How-To-Play sections (animates in once on view)
+  const sectionContainer: Variants = {
     hidden: {
       opacity: 0,
-      transition: {
-        staggerChildren: 0.3,
-        staggerDirection: -1,
-      },
     },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.3,
+        staggerChildren: 0.2,
         delayChildren: 0.05,
       },
     },
   };
 
-  const reversibleSectionCard: Variants = {
+  const sectionCard: Variants = {
     hidden: {
       opacity: 0,
-      scale: 0.85,
-      transition: { duration: 0.45, ease: "easeIn" },
+      scale: 0.9,
     },
     visible: {
       opacity: 1,
       scale: 1,
-      transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] },
+      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
     },
   };
 
@@ -357,7 +350,7 @@ export default function Home() {
                 {quickJoinError && <span className={styles.quickJoinError}>{quickJoinError}</span>}
               </div>
               <button type="submit" className={styles.quickJoinBtn}>
-                <FaBolt /> Quick Join
+                Quick Join
               </button>
             </form>
 
@@ -408,10 +401,10 @@ export default function Home() {
             className={styles.categoriesGrid}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: false, amount: 0.15 }}
-            variants={reversibleSectionContainer}
+            viewport={{ once: true, amount: 0.15 }}
+            variants={sectionContainer}
           >
-            <motion.div className={styles.categoryCard} variants={reversibleSectionCard}>
+            <motion.div className={styles.categoryCard} variants={sectionCard}>
               <div className={styles.categoryIconWrap}>
                 <FaGlobeAmericas className={styles.categoryIcon} />
               </div>
@@ -424,7 +417,7 @@ export default function Home() {
               </div>
             </motion.div>
 
-            <motion.div className={styles.categoryCard} variants={reversibleSectionCard}>
+            <motion.div className={styles.categoryCard} variants={sectionCard}>
               <div className={styles.categoryIconWrap}>
                 <FaLandmark className={styles.categoryIcon} />
               </div>
@@ -437,7 +430,7 @@ export default function Home() {
               </div>
             </motion.div>
 
-            <motion.div className={styles.categoryCard} variants={reversibleSectionCard}>
+            <motion.div className={styles.categoryCard} variants={sectionCard}>
               <div className={styles.categoryIconWrap}>
                 <FaCoins className={styles.categoryIcon} />
               </div>
@@ -450,7 +443,7 @@ export default function Home() {
               </div>
             </motion.div>
 
-            <motion.div className={styles.categoryCard} variants={reversibleSectionCard}>
+            <motion.div className={styles.categoryCard} variants={sectionCard}>
               <div className={styles.categoryIconWrap}>
                 <FaMapMarkedAlt className={styles.categoryIcon} />
               </div>
@@ -479,10 +472,10 @@ export default function Home() {
             className={styles.featuresGrid}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: false, amount: 0.15 }}
-            variants={reversibleSectionContainer}
+            viewport={{ once: true, amount: 0.15 }}
+            variants={sectionContainer}
           >
-            <motion.div className={styles.featureCard} variants={reversibleSectionCard}>
+            <motion.div className={styles.featureCard} variants={sectionCard}>
               <div className={styles.cardBadge}>01</div>
               <div className={styles.featureBody}>
                 <h3 className={styles.featureStepTitle}>Pick Your Letter</h3>
@@ -493,7 +486,7 @@ export default function Home() {
               </div>
             </motion.div>
 
-            <motion.div className={styles.featureCard} variants={reversibleSectionCard}>
+            <motion.div className={styles.featureCard} variants={sectionCard}>
               <div className={styles.cardBadge}>02</div>
               <div className={styles.featureBody}>
                 <h3 className={styles.featureStepTitle}>High-Speed Sprint</h3>
@@ -504,7 +497,7 @@ export default function Home() {
               </div>
             </motion.div>
 
-            <motion.div className={styles.featureCard} variants={reversibleSectionCard}>
+            <motion.div className={styles.featureCard} variants={sectionCard}>
               <div className={styles.cardBadge}>03</div>
               <div className={styles.featureBody}>
                 <h3 className={styles.featureStepTitle}>Beat the Blitz</h3>
@@ -515,7 +508,7 @@ export default function Home() {
               </div>
             </motion.div>
 
-            <motion.div className={styles.featureCard} variants={reversibleSectionCard}>
+            <motion.div className={styles.featureCard} variants={sectionCard}>
               <div className={styles.cardBadge}>04</div>
               <div className={styles.featureBody}>
                 <h3 className={styles.featureStepTitle}>Score & Dominate</h3>

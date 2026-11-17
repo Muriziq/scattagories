@@ -6,7 +6,18 @@ import pool from "../db";
 import { verifyAccessToken, AuthRequest } from "../middleware/tokens";
 import { GameRoom, publicRooms, privateRooms, getRoom, getTotalRoomsCount, deleteRoom } from "../model/gamesModel";
 import { getAvailableCategories, isCategoryAvailable } from "../services/categoryManager";
+import { parsePlatform } from "../utils/tokenSession";
 import crypto from "crypto";
+
+// Detects whether a request originates from a mobile device or desktop
+function getDeviceType(req: Request): "mobile" | "desktop" {
+  const ua = req.headers["user-agent"] || "";
+  const platform = parsePlatform(ua);
+  if (platform === "Android" || platform === "iOS" || /mobile|tablet|ipad|iphone|android/i.test(ua)) {
+    return "mobile";
+  }
+  return "desktop";
+}
 
 dotenv.config();
 const router = Router();
@@ -106,6 +117,8 @@ router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: 
       return res.status(400).json({ message: "Password is required for private games" });
     }
 
+    const hostDeviceType = getDeviceType(req);
+
     const newRoom = new GameRoom(
       roomId,
       hostUsername,
@@ -115,7 +128,8 @@ router.post("/room/create", verifyAccessToken, roomCreationLimiter, async (req: 
       password,
       isPublic,
       categories,
-      allowComputerHelper
+      allowComputerHelper,
+      hostDeviceType
     );
 
     // Register host as the first participant keyed by username
@@ -207,6 +221,7 @@ router.get("/rooms/public", (req: Request, res: Response) => {
       matchingRooms.push({
         roomId: room.id,
         hostUsername: room.hostUsername,
+        hostDeviceType: room.hostDeviceType || "desktop",
         playerCount: room.participants.size,
         maxPlayers: room.maxPlayers,
         createdAt: room.createdAt,
@@ -214,8 +229,19 @@ router.get("/rooms/public", (req: Request, res: Response) => {
       });
     }
 
-    // Sort newest rooms first
-    matchingRooms.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Determine querying user's device type (mobile vs desktop)
+    const userDeviceType = getDeviceType(req);
+
+    // Prioritize matching device types first (e.g. mobile host rooms for mobile players),
+    // then sort newest first within each device bucket
+    matchingRooms.sort((a, b) => {
+      const aMatches = a.hostDeviceType === userDeviceType ? 1 : 0;
+      const bMatches = b.hostDeviceType === userDeviceType ? 1 : 0;
+      if (aMatches !== bMatches) {
+        return bMatches - aMatches; // matching device rooms appear first
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
     // Apply pagination
     const totalCount = matchingRooms.length;
