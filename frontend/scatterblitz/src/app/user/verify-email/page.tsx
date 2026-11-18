@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FaCheckCircle, FaExclamationCircle, FaSpinner } from "react-icons/fa";
-import styles from "./verify-email.module.css";
+import styles from "../auth.module.css";
 import { API_BASE_URL } from "../../../config/api";
 import CanvasBackground from "../../components/CanvasBackground";
 

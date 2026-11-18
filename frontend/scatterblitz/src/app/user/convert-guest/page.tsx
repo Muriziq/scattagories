@@ -4,7 +4,7 @@ import { FaUser, FaLock, FaEnvelope, FaEye, FaEyeSlash, FaFire, FaPaperPlane } f
 import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
-import styles from "./convert.module.css";
+import styles from "../auth.module.css";
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
 import { isValidEmail } from "../../utils/validation";
@@ -142,9 +142,9 @@ export default function ConvertGuestPage() {
               </div>
 
               <section className={styles.formSection}>
-                <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
+                <form ref={formRef} className={styles.formGrid} onSubmit={handleSubmit}>
                   <label className={styles.label}>
-                    <FaUser className={styles.icon} />
+                    <FaUser className={styles.inputIcon} />
                     <input
                       type="text"
                       placeholder="Username"
@@ -156,7 +156,7 @@ export default function ConvertGuestPage() {
                   </label>
 
                   <label className={styles.label}>
-                    <FaEnvelope className={styles.icon} />
+                    <FaEnvelope className={styles.inputIcon} />
                     <input
                       ref={emailInputRef}
                       type="email"
@@ -169,7 +169,7 @@ export default function ConvertGuestPage() {
                   </label>
 
                   <label className={`${styles.label} ${styles.fullWidth}`}>
-                    <FaLock className={styles.icon} />
+                    <FaLock className={styles.inputIcon} />
                     <input
                       ref={passwordInputRef}
                       type={showPassword ? "text" : "password"}

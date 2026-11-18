@@ -1,9 +1,9 @@
 "use client";
-import { FaUser, FaLock, FaUserCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
-import styles from "./login.module.css";
+import styles from "../auth.module.css";
 import { useRouter } from 'next/navigation';
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
@@ -95,14 +95,16 @@ export default function LoginPage() {
         >
           <section className={styles.card}>
             <div className={styles.header}>
-              <FaUserCircle size={100} className={styles.avatar} />
+              <div className={styles.iconCircle}>
+                <FaUser size={48} className={styles.avatar} />
+              </div>
               <h1 className={styles.title}>Welcome Back</h1>
             </div>
 
             <section className={styles.formSection}>
               <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
                 <label className={styles.label}>
-                  <FaUser className={styles.icon} />
+                  <FaUser className={styles.inputIcon} />
                   <input 
                     type="text" 
                     placeholder="Username or Email" 
@@ -113,8 +115,13 @@ export default function LoginPage() {
                   />
                 </label>
 
+                <div className={styles.passwordHeader}>
+                  <Link href="/user/forgot-password" className={styles.forgotPassword}>
+                    Forgot Password?
+                  </Link>
+                </div>
                 <label className={styles.label}>
-                  <FaLock className={styles.icon} />
+                  <FaLock className={styles.inputIcon} />
                   <input 
                     ref={passwordInputRef}
                     type={showPassword ? "text" : "password"} 
@@ -160,7 +167,6 @@ export default function LoginPage() {
                 </AnimatePresence>
 
                 <div className={styles.actions}>
-                  <Link href="/user/forgot-password" className={styles.forgotPassword}>Forgot Password?</Link>
                   <button type="submit" className={styles.submitButton} disabled={loading}>
                     {loading ? "Logging in..." : "Login"}
                   </button>

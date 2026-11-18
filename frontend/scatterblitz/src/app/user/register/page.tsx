@@ -1,9 +1,9 @@
 "use client";
-import { FaUser, FaLock, FaEnvelope, FaUserCircle, FaEye, FaEyeSlash, FaPaperPlane } from 'react-icons/fa';
+import { FaUser, FaLock, FaEnvelope, FaEye, FaEyeSlash, FaPaperPlane } from 'react-icons/fa';
 import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
-import styles from "./register.module.css";
+import styles from "../auth.module.css";
 import { useRouter } from 'next/navigation';
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
@@ -140,14 +140,16 @@ export default function Register() {
           ) : (
             <section className={styles.card}>
               <div className={styles.header}>
-                <FaUserCircle size={100} className={styles.avatar} />
+                <div className={styles.iconCircle}>
+                  <FaUser size={48} className={styles.avatar} />
+                </div>
                 <h1 className={styles.title}>Join the Blitz</h1>
               </div>
 
               <section className={styles.formSection}>
-                <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
+                <form ref={formRef} className={styles.formGrid} onSubmit={handleSubmit}>
                   <label className={styles.label}>
-                    <FaUser className={styles.icon} />
+                    <FaUser className={styles.inputIcon} />
                     <input 
                       type="text" 
                       placeholder="Username" 
@@ -159,7 +161,7 @@ export default function Register() {
                   </label>
 
                   <label className={styles.label}>
-                    <FaEnvelope className={styles.icon} />
+                    <FaEnvelope className={styles.inputIcon} />
                     <input 
                       ref={emailInputRef}
                       type="email" 
@@ -172,7 +174,7 @@ export default function Register() {
                   </label>
 
                   <label className={`${styles.label} ${styles.fullWidth}`}>
-                    <FaLock className={styles.icon} />
+                    <FaLock className={styles.inputIcon} />
                     <input 
                       ref={passwordInputRef}
                       type={showPassword ? "text" : "password"} 

@@ -254,7 +254,11 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  background: linear-gradient(135deg, var(--safety-orange), var(--blood-orange));
+  background: linear-gradient(
+    135deg,
+    var(--safety-orange),
+    var(--blood-orange)
+  );
   color: #fff;
   text-decoration: none;
   font-size: 0.85rem;
@@ -350,9 +354,9 @@
   color: var(--text-primary);
   font-size: 0.9rem;
 }
-.sectionHeader{
+.sectionHeader {
   text-align: center;
-  margin-bottom:1rem;
+  margin-bottom: 1rem;
 }
 .bannerIcon {
   color: var(--amber);
@@ -396,7 +400,7 @@
   width: 100%;
   position: relative;
   z-index: 50;
-  margin-top:1.25rem;
+  margin-top: 1.25rem;
 }
 
 .heroAuthLinks {
@@ -428,7 +432,13 @@
 }
 
 .titleGradient {
-  background: linear-gradient(135deg, var(--sunset) 0%, var(--amber) 30%, var(--safety-orange) 65%, var(--blood-orange) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--sunset) 0%,
+    var(--amber) 30%,
+    var(--safety-orange) 65%,
+    var(--blood-orange) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -556,7 +566,9 @@
   align-items: center;
   gap: 1rem;
   backdrop-filter: blur(10px);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .statCard:hover {
@@ -730,8 +742,6 @@
   flex-direction: row;
   align-items: flex-start;
   gap: 1.25rem;
- 
-
 }
 
 .featureCard:hover {
@@ -746,7 +756,11 @@
   position: static;
   transform: none;
   flex-shrink: 0;
- background: linear-gradient(135deg, var(--safety-orange), var(--blood-orange));
+  background: linear-gradient(
+    135deg,
+    var(--safety-orange),
+    var(--blood-orange)
+  );
   width: 60px;
   height: 60px;
   border-radius: 12px;
@@ -781,8 +795,6 @@
   margin: 0;
   text-align: left;
 }
-
-
 
 /* Global Leaderboard Section */
 .leaderboardSection {
@@ -1031,7 +1043,9 @@
 
 .socialIcon {
   color: var(--text-muted);
-  transition: color 0.2s ease, transform 0.2s ease;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
   display: flex;
   align-items: center;
 }
@@ -1381,12 +1395,11 @@
 @media (max-width: 450px) {
   .buttonGroup {
     flex-direction: column;
-    align-items: start;
+    align-items: center;
     width: 100%;
   }
   .buttonGroup a {
-    width: 100%;
-    max-width: 250px;
+    width: 85%;
     padding: 0.78rem 1rem;
     font-size: 0.85rem;
     text-align: center;

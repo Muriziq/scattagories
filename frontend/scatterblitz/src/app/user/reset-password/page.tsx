@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaKey } from "react-icons/fa";
 import { motion, AnimatePresence } from "motion/react";
-import styles from "./reset-password.module.css";
+import styles from "../auth.module.css";
 import { API_BASE_URL } from "../../../config/api";
 import CanvasBackground from "../../components/CanvasBackground";
 
@@ -124,7 +124,7 @@ function ResetPasswordContent() {
               <section className={styles.formSection}>
                 <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
                   <label className={styles.label}>
-                    <FaLock className={styles.icon} />
+                    <FaLock className={styles.inputIcon} />
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="New Password"
@@ -144,7 +144,7 @@ function ResetPasswordContent() {
                   </label>
 
                   <label className={styles.label}>
-                    <FaLock className={styles.icon} />
+                    <FaLock className={styles.inputIcon} />
                     <input
                       ref={confirmPasswordInputRef}
                       type={showConfirmPassword ? "text" : "password"}

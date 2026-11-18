@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { FaEnvelope, FaKey, FaPaperPlane } from "react-icons/fa";
 import { motion, AnimatePresence } from "motion/react";
-import styles from "./forgot-password.module.css";
+import styles from "../auth.module.css";
 import { API_BASE_URL } from "../../../config/api";
 import CanvasBackground from "../../components/CanvasBackground";
 
@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
 
             <form className={styles.form} onSubmit={handleSubmit}>
               <label className={styles.label}>
-                <FaEnvelope className={styles.icon} />
+                <FaEnvelope className={styles.inputIcon} />
                 <input
                   type="email"
                   placeholder="Email Address"
