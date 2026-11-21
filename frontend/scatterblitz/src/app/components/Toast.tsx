@@ -77,28 +77,26 @@ export default function Toast({
       className={`${styles.toastContainer} ${variantClass}`}
       role="alert"
       aria-live="assertive"
+      style={{
+        ["--toast-duration" as any]: `${duration}ms`,
+      }}
     >
-      <div className={styles.toastContent}>
-        {renderIcon()}
-        <span className={styles.toastText}>{message}</span>
+      <div className={styles.toastInnerCard}>
+        <div className={styles.toastContent}>
+          {renderIcon()}
+          <span className={styles.toastText}>{message}</span>
+        </div>
+
+        <button
+          type="button"
+          className={styles.toastCloseBtn}
+          onClick={onClose}
+          title="Dismiss"
+          aria-label="Dismiss notification"
+        >
+          <FaTimes size={13} />
+        </button>
       </div>
-
-      <button
-        type="button"
-        className={styles.toastCloseBtn}
-        onClick={onClose}
-        title="Dismiss"
-        aria-label="Dismiss notification"
-      >
-        <FaTimes size={13} />
-      </button>
-
-      {duration > 0 && (
-        <div
-          className={styles.toastProgressBar}
-          style={{ animationDuration: `${duration}ms` }}
-        />
-      )}
     </div>
   );
 }

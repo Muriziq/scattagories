@@ -32,7 +32,8 @@ CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users (deleted_at) WHERE dele
 CREATE TABLE IF NOT EXISTS games (
     id VARCHAR(64) PRIMARY KEY,
     room_code VARCHAR(100) NOT NULL,
-    host_id VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL,
+    -- Can store registered user ID or guest ID
+    host_id VARCHAR(64) DEFAULT NULL,
     categories JSONB NOT NULL DEFAULT '[]'::jsonb,
     max_players INT NOT NULL DEFAULT 8,
     max_time_per_round INT NOT NULL DEFAULT 60,
@@ -51,15 +52,15 @@ CREATE INDEX IF NOT EXISTS idx_games_ended_at ON games(ended_at DESC);
 -- 3. GAME PLAYERS (MATCH RESULTS & LEADERBOARD STATS)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS game_players (
-    id BIGSERIAL PRIMARY KEY,
     game_id VARCHAR(64) NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-    -- Nullable for guest players or deleted accounts
-    user_id VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL,
+    -- Stores registered user ID or guest ID (linked directly upon account conversion)
+    user_id VARCHAR(64) DEFAULT NULL,
     player_name VARCHAR(100) NOT NULL,
     score INT NOT NULL DEFAULT 0,
     rank INT NOT NULL DEFAULT 1,
     is_winner BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (game_id, player_name)
 );
 
 CREATE INDEX IF NOT EXISTS idx_game_players_user_id ON game_players(user_id);

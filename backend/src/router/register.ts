@@ -619,6 +619,7 @@ router.get("/profile/matches", verifyAccessToken, async (req: AuthRequest, res: 
     const filterByWins = onlyWins === "true";
 
     // Fetch paginated matches (fetch limit + 1 to determine if there is a next page)
+    // NOTE: rounds_data is deliberately excluded here to optimize payload size; inspect endpoint loads rounds on-demand.
     const offset = (page - 1) * limit;
     const matchesQuery = `
       SELECT 
@@ -629,7 +630,6 @@ router.get("/profile/matches", verifyAccessToken, async (req: AuthRequest, res: 
         gp.is_winner,
         g.categories,
         g.total_rounds,
-        g.rounds_data,
         g.ended_at
       FROM game_players gp
       JOIN games g ON gp.game_id = g.id
@@ -652,6 +652,44 @@ router.get("/profile/matches", verifyAccessToken, async (req: AuthRequest, res: 
   } catch (error) {
     console.error("Fetch match history error:", error);
     return res.status(500).json({ message: "Server error fetching match history" });
+  }
+});
+
+// 12b. GET SINGLE MATCH DETAILS: Fetches full rounds_data on-demand when user inspects a match
+router.get("/profile/matches/:gameId", verifyAccessToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { gameId } = req.params;
+    if (!gameId) {
+      return res.status(400).json({ message: "Missing game ID" });
+    }
+
+    // Verify user participated in this game or is inspecting valid match
+    const query = `
+      SELECT 
+        g.id AS game_id,
+        g.room_code,
+        g.categories,
+        g.total_rounds,
+        g.rounds_data,
+        g.ended_at
+      FROM games g
+      JOIN game_players gp ON gp.game_id = g.id
+      WHERE g.id = $1 AND gp.user_id = $2
+      LIMIT 1;
+    `;
+    const result = await pool.query(query, [gameId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Match not found or access denied" });
+    }
+
+    return res.status(200).json({ match: result.rows[0] });
+  } catch (error) {
+    console.error("Fetch match detail error:", error);
+    return res.status(500).json({ message: "Server error fetching match details" });
   }
 });
 

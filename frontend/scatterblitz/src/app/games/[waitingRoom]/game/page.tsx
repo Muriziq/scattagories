@@ -493,6 +493,24 @@ function GameContent() {
     return () => clearInterval(interval);
   }, [status, selectionTargetEndTime, serverOffset]);
 
+  // Forfeit warning live local countdown tick
+  useEffect(() => {
+    if (!forfeitWarning || forfeitWarning.remainingSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setForfeitWarning((prev) => {
+        if (!prev) return null;
+        if (prev.remainingSeconds <= 1) {
+          clearInterval(timer);
+          return { ...prev, remainingSeconds: 0 };
+        }
+        return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [forfeitWarning?.remainingPlayer]);
+
   // Accurate timer countdown effect during active_sprint
   useEffect(() => {
     if (status !== "active_sprint" || !sprintTargetEndTime) return;

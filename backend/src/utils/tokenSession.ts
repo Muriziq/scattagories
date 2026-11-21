@@ -114,16 +114,16 @@ export function verifyAndRotateSession(
   }
 
   // 2. Platform Validation: If both platforms are known and differ (e.g. issued on iOS, refreshed on Windows)
-  if (
-    sessionPlatform !== "unknown" &&
-    clientInfo.platform !== "unknown" &&
-    sessionPlatform !== clientInfo.platform
-  ) {
-    console.warn(
-      `[TokenSession] Refresh rejected: Platform mismatch (session: ${sessionPlatform}, request: ${clientInfo.platform})`
-    );
-    return { updatedSessions: [], isReuseDetected: true };
-  }
+  // if (
+  //   sessionPlatform !== "unknown" &&
+  //   clientInfo.platform !== "unknown" &&
+  //   sessionPlatform !== clientInfo.platform
+  // ) {
+  //   console.warn(
+  //     `[TokenSession] Refresh rejected: Platform mismatch (session: ${sessionPlatform}, request: ${clientInfo.platform})`
+  //   );
+  //   return { updatedSessions: [], isReuseDetected: true };
+  // }
 
   // Generate new rotated session object with updated IP & platform
   const newSession: RefreshTokenSession = {

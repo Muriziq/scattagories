@@ -100,51 +100,53 @@ export default function SendVerificationPage() {
               </p>
             </div>
 
-            <form className={styles.form} onSubmit={handleSubmit}>
-              <label className={styles.label}>
-                <FaEnvelope className={styles.inputIcon} />
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  className={styles.input}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </label>
+            <section className={styles.formSection}>
+              <form className={styles.form} onSubmit={handleSubmit}>
+                <label className={styles.label}>
+                  <FaEnvelope className={styles.inputIcon} />
+                  <input
+                    type="email"
+                    placeholder="Email Address"
+                    className={styles.input}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </label>
 
-              <AnimatePresence>
-                {errorMsg && (
-                  <motion.p 
-                    className={styles.errorText}
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {errorMsg}
-                  </motion.p>
-                )}
-                {successMsg && (
-                  <motion.p 
-                    className={styles.successText}
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {successMsg}
-                  </motion.p>
-                )}
-              </AnimatePresence>
+                <AnimatePresence>
+                  {errorMsg && (
+                    <motion.p 
+                      className={styles.errorText}
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {errorMsg}
+                    </motion.p>
+                  )}
+                  {successMsg && (
+                    <motion.p 
+                      className={styles.successText}
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {successMsg}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
 
-              <button type="submit" className={styles.submitButton} disabled={loading}>
-                {loading ? "Sending..." : "Send Verification Email"}
-              </button>
-            </form>
+                <button type="submit" className={styles.submitButton} disabled={loading}>
+                  {loading ? "Sending..." : "Send Verification Email"}
+                </button>
+              </form>
 
-            <Link href="/user/login" className={styles.backLink}>
-              Back to Login
-            </Link>
+              <Link href="/user/login" className={styles.backLink}>
+                Back to Login
+              </Link>
+            </section>
           </section>
         )}
         </motion.div>

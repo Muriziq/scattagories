@@ -22,6 +22,10 @@ import {
   FaLock,
   FaSignOutAlt,
   FaTrashAlt,
+  FaGamepad,
+  FaMedal,
+  FaPercent,
+  FaFire,
 } from "react-icons/fa";
 import styles from "./profile.module.css";
 import CanvasBackground from "../../components/CanvasBackground";
@@ -149,7 +153,7 @@ export default function Profile() {
     setLoadingMatches(true);
     try {
       const res = await authFetch(
-        `${API_BASE_URL}/user/profile/matches?page=${targetPage}&limit=20`
+        `${API_BASE_URL}/user/profile/matches?page=${targetPage}&limit=10`
       );
       const data = await res.json();
       if (res.ok && (data.matches || data.success)) {
@@ -382,10 +386,15 @@ export default function Profile() {
     }
   };
 
-  const openInspectView = (match: MatchHistoryItem) => {
-    setInspectMatch(match);
+  const [loadingInspect, setLoadingInspect] = useState(false);
+
+  const openInspectView = async (match: MatchHistoryItem) => {
     setInspectLetterIdx(0);
-    if (match.rounds_data) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // If rounds_data is already cached on match item, open immediately
+    if (match.rounds_data && Object.keys(match.rounds_data).length > 0) {
+      setInspectMatch(match);
       const firstLetter = Object.keys(match.rounds_data)[0];
       const players = firstLetter ? Object.keys(match.rounds_data[firstLetter] || {}) : [];
       if (user?.username && players.includes(user.username)) {
@@ -393,8 +402,44 @@ export default function Profile() {
       } else {
         setSelectedInspectPlayer(players[0] || "");
       }
+      return;
     }
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Otherwise, fetch single match details on-demand
+    setLoadingInspect(true);
+    try {
+      const res = await authFetch(`${API_BASE_URL}/user/profile/matches/${match.game_id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const fullMatch: MatchHistoryItem = {
+          ...match,
+          ...data.match,
+        };
+
+        // Cache in matches state so subsequent inspects of this match are instant
+        setMatches((prev) =>
+          prev.map((m) => (m.game_id === match.game_id ? fullMatch : m))
+        );
+
+        setInspectMatch(fullMatch);
+        if (fullMatch.rounds_data) {
+          const firstLetter = Object.keys(fullMatch.rounds_data)[0];
+          const players = firstLetter ? Object.keys(fullMatch.rounds_data[firstLetter] || {}) : [];
+          if (user?.username && players.includes(user.username)) {
+            setSelectedInspectPlayer(user.username);
+          } else {
+            setSelectedInspectPlayer(players[0] || "");
+          }
+        }
+      } else {
+        showToast("Could not load match details", "error");
+      }
+    } catch (err) {
+      console.error("Inspect match error:", err);
+      showToast("Network error loading match details", "error");
+    } finally {
+      setLoadingInspect(false);
+    }
   };
 
   const isGuest = !user?.email;
@@ -555,36 +600,6 @@ export default function Profile() {
             <button type="button" onClick={() => router.push("/")} className={styles.backButton}>
               <FaArrowLeft /> Back
             </button>
-            <div className={styles.navActions}>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className={styles.signOutBtn}
-                title="Sign out of your account"
-              >
-                {signingOut ? (
-                  <FaSpinner className="spin" size={13} />
-                ) : (
-                  <>
-                    <FaSignOutAlt /> Sign Out
-                  </>
-                )}
-              </button>
-              {!isGuest && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDeletePassword("");
-                    setShowDeleteModal(true);
-                  }}
-                  className={styles.deleteAccountBtn}
-                  title="Permanently delete your account"
-                >
-                  <FaTrashAlt /> Delete Account
-                </button>
-              )}
-            </div>
           </div>
 
           <div className={styles.profileContent}>
@@ -592,13 +607,13 @@ export default function Profile() {
             {isGuest && (
             <div className={styles.guestBanner}>
               <div className={styles.guestBannerText}>
-                <FaExclamationTriangle style={{ color: "var(--amber)", fontSize: "1.2rem" }} />
+                <FaFire className={styles.bannerIconGuest} />
                 <span>
-                  You are currently using a temporary guest account. Convert to a permanent account to keep your stats!
+                  <strong>Playing as Guest:</strong> Upgrade to a permanent account to keep your win records, customize your avatar, and enter the leaderboard!
                 </span>
               </div>
               <Link href="/user/convert-guest" className={styles.guestConvertBtn}>
-                Convert Account
+                Convert Guest Account
               </Link>
             </div>
           )}
@@ -607,9 +622,9 @@ export default function Profile() {
           {!isGuest && user && !user.is_email_verified && (
             <div className={styles.verifyBanner}>
               <div className={styles.guestBannerText}>
-                <FaExclamationTriangle style={{ color: "var(--safety-orange)", fontSize: "1.2rem" }} />
+                <FaExclamationTriangle className={styles.bannerIcon} />
                 <span>
-                  Your email address ({user.email}) is not verified. Please verify your email to secure your account.
+                  Your email address ({user.email}) is not verified yet. Please check your inbox to confirm your account.
                 </span>
               </div>
               <button
@@ -629,110 +644,157 @@ export default function Profile() {
             </div>
           )}
 
-          {/* USER INFO SECTION */}
-          <section className={styles.userInfoSection}>
-            <div
-              className={`${styles.avatarContainer} ${
-                uploadingAvatar ? styles.avatarContainerLoading : ""
-              }`}
-              onClick={() => {
-                if (!uploadingAvatar) fileInputRef.current?.click();
-              }}
-              title="Click to change avatar"
-            >
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.username || "Avatar"}
-                  className={styles.userImage}
-                />
-              ) : (
-                <div className={styles.avatarFallback}>
-                  <FaUser className={styles.userIcon} />
-                </div>
-              )}
+          {/* USER INFO PROFILE HEADER CARD */}
+          <section className={styles.profileHeaderCard}>
+            {/* Top banner background half */}
+            <div className={styles.profileBannerCover} />
 
-              <div className={styles.avatarOverlay}>
-                {uploadingAvatar ? (
-                  <FaSpinner className="spin" size={20} />
+            {/* Profile main identity row */}
+            <div className={styles.profileIdentityRow}>
+              {/* Circular interactive avatar positioned half over the cover banner */}
+              <div
+                className={`${styles.avatarContainer} ${
+                  uploadingAvatar ? styles.avatarContainerLoading : ""
+                }`}
+                onClick={() => {
+                  if (!uploadingAvatar) fileInputRef.current?.click();
+                }}
+                title="Click to change avatar"
+              >
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.username || "Avatar"}
+                    className={styles.userImage}
+                  />
                 ) : (
-                  <>
-                    <FaCamera size={18} />
-                    <span>Change</span>
-                  </>
+                  <div className={styles.avatarFallback}>
+                    <FaUser className={styles.userIcon} />
+                  </div>
                 )}
+
+                <div className={styles.avatarOverlay}>
+                  {uploadingAvatar ? (
+                    <FaSpinner className="spin" size={20} />
+                  ) : (
+                    <>
+                      <FaCamera size={18} />
+                      <span>Change</span>
+                    </>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,.jfif"
+                  className={styles.fileInput}
+                  onChange={handleAvatarFileChange}
+                />
               </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,.jfif"
-                className={styles.fileInput}
-                onChange={handleAvatarFileChange}
-              />
-            </div>
+              {/* Profile details block */}
+              <div className={styles.profileDetailsBlock}>
+                {/* Top section: Username, email, join date (Inside vibrant banner on mobile) */}
+                <div className={styles.profileTopMeta}>
+                  <h1 className={styles.username}>{user?.username || "Player"}</h1>
 
-            <h1 className={styles.username}>{user?.username || "Player"}</h1>
-
-            <div className={styles.userMeta}>
-              {!isGuest && user?.email && (
-                <div className={styles.emailContainer}>
-                  <span className={styles.userEmail}>
-                    <FaEnvelope style={{ marginRight: "0.4rem", color: "var(--amber)" }} />
-                    {user.email}
-                  </span>
-                  <span className={styles.emailBadge}>
-                    {user.is_email_verified ? (
-                      <span className={styles.verifiedBadge}>
-                        <FaCheckCircle size={13} /> Verified
-                      </span>
-                    ) : (
-                      <span className={styles.unverifiedBadge}>
-                        Unverified
-                      </span>
+                  <div className={styles.userMetaBadges}>
+                    {!isGuest && user?.email && (
+                      <div className={styles.emailContainer}>
+                        <span className={styles.userEmail}>
+                          <FaEnvelope style={{ marginRight: "0.35rem", color: "var(--amber)" }} />
+                          {user.email}
+                        </span>
+                      </div>
                     )}
-                  </span>
+
+                    <span className={styles.joinDate}>
+                      <FaCalendarAlt style={{ marginRight: "0.35rem", color: "var(--amber)" }} />
+                      Joined {user?.created_at ? new Date(user.created_at).toLocaleDateString() : "Recently"}
+                    </span>
+                  </div>
                 </div>
-              )}
 
-              <span className={styles.joinDate}>
-                <FaCalendarAlt style={{ marginRight: "0.4rem", color: "var(--amber)" }} />
-                Joined {user?.created_at ? new Date(user.created_at).toLocaleDateString() : "Recently"}
-              </span>
+                {/* Bottom section: Action buttons in a row (Outside banner on dark background) */}
+                <div className={styles.profileActionsRow}>
+                  {!isGuest && (
+                    <button
+                      type="button"
+                      className={styles.editProfileBtn}
+                      onClick={handleOpenEditModal}
+                      title="Edit profile details"
+                    >
+                      <FaEdit /> Edit Profile
+                    </button>
+                  )}
 
-              {!isGuest && (
-                <button
-                  type="button"
-                  className={styles.editProfileBtn}
-                  onClick={handleOpenEditModal}
-                  title="Edit profile details"
-                >
-                  <FaEdit /> Edit Profile
-                </button>
-              )}
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                    className={styles.signOutBtn}
+                    title="Sign out of your account"
+                  >
+                    {signingOut ? (
+                      <FaSpinner className="spin" size={13} />
+                    ) : (
+                      <>
+                        <FaSignOutAlt /> Sign Out
+                      </>
+                    )}
+                  </button>
+
+                  {!isGuest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeletePassword("");
+                        setShowDeleteModal(true);
+                      }}
+                      className={styles.deleteAccountBtn}
+                      title="Permanently delete your account"
+                    >
+                      <FaTrashAlt /> Delete Account
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </section>
 
           {/* LIFETIME STATS CARDS */}
           <section className={styles.statsSection}>
             <div className={styles.statCard}>
-              <span className={styles.statTitle}>Matches</span>
-              <p className={styles.statValue}>{stats?.totalGames ?? 0}</p>
+              <FaGamepad className={styles.statIcon} />
+              <div className={styles.statText}>
+                <strong>{stats?.totalGames ?? 0}</strong>
+                <span>Matches Played</span>
+              </div>
             </div>
 
             <div className={styles.statCard}>
-              <span className={styles.statTitle}>Wins</span>
-              <p className={styles.statValue}>{stats?.totalWins ?? 0}</p>
+              <FaMedal className={styles.statIcon} />
+              <div className={styles.statText}>
+                <strong>{stats?.totalWins ?? 0}</strong>
+                <span>Total Victories</span>
+              </div>
             </div>
 
             <div className={styles.statCard}>
-              <span className={styles.statTitle}>Win Rate</span>
-              <p className={styles.statValue}>{stats?.winRate ?? 0}%</p>
+              <FaPercent className={styles.statIcon} />
+              <div className={styles.statText}>
+                <strong>{stats?.winRate ?? 0}%</strong>
+                <span>Win Rate</span>
+              </div>
             </div>
 
             <div className={styles.statCard}>
-              <span className={styles.statTitle}>High Score</span>
-              <p className={styles.statValue}>{stats?.highScore ?? 0} pts</p>
+              <FaTrophy className={styles.statIcon} />
+              <div className={styles.statText}>
+                <strong>{stats?.highScore ?? 0} pts</strong>
+                <span>High Score</span>
+              </div>
             </div>
           </section>
 
@@ -828,19 +890,16 @@ export default function Profile() {
                             )}
                           </td>
                           <td className={`${styles.tableCell} ${styles.tableCellCenter}`} style={{ textAlign: "center" }}>
-                            {hasRoundsData ? (
-                              <button
-                                type="button"
-                                className={styles.inspectBtn}
-                                onClick={() => openInspectView(item)}
-                                title="Inspect Match"
-                                aria-label="Inspect Match"
-                              >
-                                <FaEye />
-                              </button>
-                            ) : (
-                              <span style={{ color: "var(--text-dim)", fontSize: "0.8rem" }}>—</span>
-                            )}
+                            <button
+                              type="button"
+                              className={styles.inspectBtn}
+                              onClick={() => openInspectView(item)}
+                              disabled={loadingInspect}
+                              title="Inspect Match"
+                              aria-label="Inspect Match"
+                            >
+                              <FaEye />
+                            </button>
                           </td>
                         </tr>
                       );
@@ -1051,7 +1110,7 @@ export default function Profile() {
       <Toast
         message={toast?.text || null}
         type={toast?.type || "error"}
-        duration={4000}
+        duration={2000}
         onClose={() => setToast(null)}
       />
     </main>
