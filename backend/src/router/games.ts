@@ -350,7 +350,7 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
           SELECT 
             u.username,
             u.avatar_url,
-            COUNT(gp.id)::int AS matches_played,
+            COUNT(gp.game_id)::int AS matches_played,
             COALESCE(SUM(CASE WHEN gp.is_winner = TRUE THEN 1 ELSE 0 END), 0)::int AS total_wins,
             COALESCE(SUM(gp.score), 0)::int AS total_score,
             COALESCE(MAX(gp.score), 0)::int AS high_score

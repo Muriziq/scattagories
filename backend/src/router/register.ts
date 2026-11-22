@@ -545,7 +545,7 @@ router.get("/profile", verifyAccessToken, async (req: AuthRequest, res: Response
         u.is_email_verified, 
         u.avatar_url, 
         u.created_at,
-        COUNT(gp.id)::int AS total_games,
+        COUNT(gp.game_id)::int AS total_games,
         COALESCE(SUM(CASE WHEN gp.is_winner = TRUE THEN 1 ELSE 0 END), 0)::int AS total_wins,
         COALESCE(MAX(gp.score), 0)::int AS high_score,
         COALESCE(AVG(gp.score), 0)::numeric(10, 1) AS average_score
