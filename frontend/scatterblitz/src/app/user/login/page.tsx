@@ -1,5 +1,5 @@
 "use client";
-import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaUser, FaLock, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa';
 import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
@@ -86,6 +86,11 @@ export default function LoginPage() {
   return (
     <main className={styles.main}>
       <CanvasBackground />
+      <div className={styles.topNavContainer}>
+        <button type="button" onClick={() => router.push("/")} className={styles.backButton}>
+          <FaArrowLeft /> Back
+        </button>
+      </div>
       <section className={styles.cardContainer}>
         <motion.div 
           className={styles.cardWrapper}

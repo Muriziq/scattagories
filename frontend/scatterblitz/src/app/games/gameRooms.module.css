@@ -79,9 +79,9 @@
 }
 
 .title {
-  /* font-family: 'Montserrat', var(--font-inter), system-ui, -apple-system, sans-serif; */
-  font-size:  3rem;
-  font-weight: 900;
+  font-family: var(--font-bree), 'Bree Serif', serif;
+  font-size: 2.25rem;
+  font-weight: 400;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 1.15;
@@ -94,7 +94,7 @@
 }
 
 .subtitle {
-  font-size: 1.25rem;
+  font-size: 1rem;
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.4;
@@ -168,7 +168,7 @@
 }
 
 .sectionLabel {
-  font-family: 'Montserrat', var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 1.15rem;
   font-weight: 800;
   color: var(--amber);
@@ -513,6 +513,7 @@
 
 .tableWrapper {
   width: 100%;
+  min-height: 48vh;
   overflow-x: auto;
   background: rgba(18, 9, 7, 0.85);
   border: 1px solid rgba(255, 122, 0, 0.35);
@@ -619,16 +620,19 @@
     padding: 1.25rem 1.25rem 0.5rem;
   }
   .title {
-    font-size: 1.85rem;
+    font-size: 1.5rem;
     line-height: 1.2;
   }
   .subtitle {
-    font-size: 1rem;
+    font-size: 0.88rem;
     line-height: 1.45;
   }
   .categoriesBox {
     padding: 1.25rem;
     gap: 1rem;
+  }
+  .sectionLabel {
+    font-size: 0.95rem;
   }
   .headerHelperText {
     display: none;

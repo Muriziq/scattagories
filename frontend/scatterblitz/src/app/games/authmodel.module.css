@@ -118,4 +118,46 @@
     font-size: 0.85rem;
     font-weight: 600;
     margin: 0;
+}
+
+@media (max-width: 600px) {
+    .modalOverlay {
+        padding: 1rem;
+    }
+
+    .modalCard {
+        padding: 4rem 1.25rem;
+        border-radius: 1.25rem;
+        gap: 0.85rem;
+    }
+
+    .modalIcon {
+        width: 42px;
+        height: 42px;
+    }
+
+    .modalTitle {
+        font-size: 1.25rem;
+    }
+
+    .modalDescription {
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+
+    .modalActions {
+        gap: 0.65rem;
+        margin-top: 0.25rem;
+    }
+
+    .modalPrimaryBtn,
+    .modalSecondaryBtn {
+        padding: 0.65rem 1.25rem;
+        font-size: 0.85rem;
+    }
+
+    .modalInput {
+        padding: 0.65rem 0.85rem;
+        font-size: 0.9rem;
+    }
 }

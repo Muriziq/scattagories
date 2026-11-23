@@ -566,7 +566,7 @@ export default function Profile() {
                   className={styles.navRoundBtn}
                   onClick={() => setInspectLetterIdx((prev) => Math.max(0, prev - 1))}
                 >
-                  <FaChevronLeft />
+                  <FaChevronLeft /> Back
                 </button>
               )}
 
@@ -586,7 +586,7 @@ export default function Profile() {
                     setInspectLetterIdx((prev) => Math.min(letters.length - 1, prev + 1))
                   }
                 >
-                  <FaChevronRight />
+                  <FaChevronRight /> Next
                 </button>
               )}
             </div>
@@ -842,7 +842,7 @@ export default function Profile() {
                       const placementColor = getPlacementColor(rankNum, is1st);
 
                       const roundCount = item.total_rounds || 1;
-                      const roundsLabel = `${roundCount} ${roundCount > 1 ? "rounds" : "round"}`;
+                      const roundsLabel = `${roundCount}`;
 
                       const hasRoundsData =
                         item.rounds_data && Object.keys(item.rounds_data).length > 0;

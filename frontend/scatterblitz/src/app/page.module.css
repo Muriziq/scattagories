@@ -422,8 +422,9 @@
 }
 
 .heroTitle {
+  font-family: var(--font-bree), 'Bree Serif', serif;
   font-size: 6.5rem;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.5px;
   line-height: 1.1;
   color: var(--text-primary);

@@ -146,7 +146,7 @@ export default function JoinRoomPage() {
 
       <main className={styles.main}>
         <div className={styles.hero}>
-          <h1 className={styles.title}>public LOBBIES</h1>
+          <h1 className={styles.title}>Public Lobbies</h1>
           <p className={styles.subtitle}>
             Browse open public lobbies and jump into a match.
           </p>

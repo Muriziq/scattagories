@@ -737,6 +737,10 @@ export class GameRoom {
   public endGame(io: Server, socket?: Socket, forfeitWinnerUsername?: string) {
     if (this.status === "ended") return;
     this.status = "ended";
+
+    // Instantly notify connected players that game conclusion is calculating/loading
+    io.to(this.id).emit("game:ended_loading");
+
     this.clearConnectionTimeout();
     this.clearSelectionTimer();
     this.clearRoundTimer();
