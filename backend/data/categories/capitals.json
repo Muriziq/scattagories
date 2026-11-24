@@ -28,6 +28,7 @@
       "baghdad",
       "baku",
       "bamako",
+      "bandar",
       "bandar seri begawan",
       "bangkok",
       "bangui",
@@ -70,12 +71,14 @@
     "D": [
       "dakar",
       "damascus",
+      "dc",
       "dhaka",
       "diego garcia",
       "dili",
       "djibouti",
       "dodoma",
       "doha",
+      "douglas",
       "douglas, isle of man",
       "dublin",
       "dushanbe"
@@ -182,6 +185,8 @@
       "nouakchott",
       "noumea",
       "nuku'alofa",
+      "nur-sultan",
+      "nursultan",
       "nuuk"
     ],
     "O": [
@@ -244,6 +249,11 @@
       "singapur",
       "skopje",
       "sofia",
+      "st george's",
+      "st georges",
+      "st helier",
+      "st john's",
+      "st johns",
       "st peter port",
       "st. george's",
       "st. john's",
@@ -283,6 +293,7 @@
     "W": [
       "warsaw",
       "washington",
+      "washington dc",
       "wellington",
       "west island",
       "willemstad",
