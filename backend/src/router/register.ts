@@ -26,7 +26,7 @@ import {
 } from "../utils/cookies";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
 import { uploadAvatar, validateImageMagicBytes } from "../utils/upload";
-import { uploadToCloudinary, isCloudinaryConfigured, getAvatarPublicId } from "../utils/cloudinary";
+import { uploadToCloudinary, isCloudinaryConfigured, getAvatarPublicId, getOptimizedAvatarUrl } from "../utils/cloudinary";
 import { updateCachedLeaderboardUser } from "./games";
 
 const router = express.Router();
@@ -744,14 +744,31 @@ router.post(
       // 1. Deterministically name avatar using hashed userId so updates overwrite in-place without exposing primary keys
       const avatarPublicId = getAvatarPublicId(userId);
 
-      const cloudResult = await uploadToCloudinary(
-        req.file.buffer,
-        undefined,
-        avatarPublicId
-      );
-      const avatarUrl = cloudResult.secure_url;
+      let cloudResult;
+      try {
+        cloudResult = await uploadToCloudinary(
+          req.file.buffer,
+          undefined,
+          avatarPublicId
+        );
+      } catch (uploadErr) {
+        console.error("Cloudinary upload failed for user", userId, uploadErr);
+        // Do not update the database; keep user's existing avatar intact
+        return res.status(502).json({
+          message: "Failed to upload image to storage service. Your current avatar remains unchanged.",
+        });
+      }
 
-      // 2. Update database record
+      if (!cloudResult || (!cloudResult.secure_url && !cloudResult.public_id)) {
+        return res.status(502).json({
+          message: "Upload service did not return a valid image URL. Your current avatar remains unchanged.",
+        });
+      }
+
+      // Use edge-optimized URL format with on-the-fly face-centering and auto-format
+      const avatarUrl = getOptimizedAvatarUrl(cloudResult.public_id) || cloudResult.secure_url;
+
+      // 2. Update database record only after successful image upload
       const updateQuery = `
         UPDATE users
         SET avatar_url = $1, modified_at = CURRENT_TIMESTAMP

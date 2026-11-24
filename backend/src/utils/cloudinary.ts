@@ -35,8 +35,23 @@ export function getAvatarPublicId(userId: string): string {
 }
 
 /**
+ * Generates an optimized avatar delivery URL with edge face-cropping and auto-format.
+ * Cloudinary generates this on-the-fly at CDN edge without delaying upload response.
+ */
+export function getOptimizedAvatarUrl(publicId: string): string {
+  if (!isConfigured) return "";
+  return cloudinary.url(publicId, {
+    secure: true,
+    transformation: [
+      { width: 300, height: 300, crop: "fill", gravity: "face" },
+      { quality: "auto", fetch_format: "auto" },
+    ],
+  });
+}
+
+/**
  * Uploads a multer memory buffer directly using the official Cloudinary v2 upload_stream.
- * Automatically applies face-centered avatar cropping and WebP/auto-format optimization.
+ * Performs fast ingestion without synchronous CPU-heavy transformations on the upload stream.
  */
 export function uploadToCloudinary(
   buffer: Buffer,
@@ -47,10 +62,6 @@ export function uploadToCloudinary(
     const uploadOptions: Record<string, any> = {
       overwrite: true,
       resource_type: "image",
-      transformation: [
-        { width: 300, height: 300, crop: "fill", gravity: "face" },
-        { quality: "auto", fetch_format: "auto" },
-      ],
     };
 
     if (folder) uploadOptions.folder = folder;
