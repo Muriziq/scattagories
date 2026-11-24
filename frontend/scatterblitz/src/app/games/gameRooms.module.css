@@ -513,7 +513,6 @@
 
 .tableWrapper {
   width: 100%;
-  min-height: 48vh;
   overflow-x: auto;
   background: rgba(18, 9, 7, 0.85);
   border: 1px solid rgba(255, 122, 0, 0.35);
@@ -620,7 +619,7 @@
     padding: 1.25rem 1.25rem 0.5rem;
   }
   .title {
-    font-size: 1.5rem;
+    font-size: 2.25rem;
     line-height: 1.2;
   }
   .subtitle {
@@ -830,6 +829,7 @@
 .categoryFiltersRow {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   overflow-x: auto;
   width: 100%;

@@ -188,6 +188,21 @@ max-width: 1000px;
     backdrop-filter: none;
 
 }
+@property --timerProgress {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes timerSweep {
+    0% {
+        --timerProgress: 0deg;
+    }
+    100% {
+        --timerProgress: 360deg;
+    }
+}
+
 .activeTimer {
     position: absolute;
     top: 0rem;
@@ -195,7 +210,6 @@ max-width: 1000px;
     font-size: 2.5rem;
     font-weight: 800;
     color: var(--sunset);
-    background: rgba(22, 10, 8, 0.95);
     border: none;
     border-radius: 50%;
     height: 90px;
@@ -203,8 +217,8 @@ max-width: 1000px;
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(250, 115, 1, 0.2);
     z-index: 5;
+    isolation: isolate;
 }
 
 .activeTimer::before {
@@ -212,23 +226,14 @@ max-width: 1000px;
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    background: conic-gradient(from 0deg, var(--safety-orange), var(--gold), var(--safety-orange));
+    background: conic-gradient(
+        from 0deg,
+        rgba(255, 122, 0, 0.95) var(--timerProgress),
+        rgba(255, 255, 255, 0.08) 0
+    );
     z-index: -1;
-    animation: stopwatchSpin 2s linear infinite;
-}
-
-.activeTimer::after {
-    content: "";
-    position: absolute;
-    inset: 0px;
-    border-radius: 50%;
-    background: var(--bg-dark);
-    z-index: -1;
-}
-
-@keyframes stopwatchSpin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    animation: timerSweep 1s linear infinite;
+    pointer-events: none;
 }
 
 .recapSection {
@@ -405,7 +410,7 @@ max-width: 1000px;
     position: relative;
     background: var(--bg-dark);
     border: 2px solid var(--sunset);
-    border-radius: 1.5rem;
+    border-radius: 0.65rem;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: 800;
@@ -932,7 +937,7 @@ max-width: 1000px;
     position: relative;
     background: var(--bg-dark);
     border: 2px solid var(--sunset);
-    border-radius: 1.5rem;
+    border-radius: 0.65rem;
     padding: 0.85rem 1.25rem;
     font-size: 1rem;
     display: flex;
@@ -1074,7 +1079,7 @@ max-width: 1000px;
     .categoryLabel {
         padding: 0.7rem 1rem;
         font-size: 0.88rem;
-        border-radius: 1.25rem;
+        border-radius: 0.65rem;
         margin-top: 0.4rem;
     }
 
@@ -1136,21 +1141,28 @@ max-width: 1000px;
     }
 
     .endedContainer {
-        padding: 1rem 0;
+        padding: 0.5rem 0;
         margin: 0;
+        gap: 0.85rem;
+    }
+
+    .winnerCard {
+        gap: 0.35rem;
+        margin-bottom: 0.25rem;
     }
 
     .winnerIconCircle {
-        width: 72px;
-        height: 72px;
+        width: 64px;
+        height: 64px;
+        margin-bottom: 0.25rem;
     }
 
     .winnerTrophyIcon {
-        font-size: 2.2rem;
+        font-size: 2rem;
     }
 
     .winnerTitle {
-        font-size: 1.85rem;
+        font-size: 1.65rem;
     }
 
     .standingsCard {
@@ -1158,12 +1170,17 @@ max-width: 1000px;
         border: none !important;
         padding: 0 !important;
         margin: 0 !important;
+        gap: 0.6rem;
         box-shadow: none !important;
         backdrop-filter: none !important;
     }
 
+    .standingsList {
+        gap: 0.5rem;
+    }
+
     .standingRow {
-        padding: 0.75rem 0.85rem;
+        padding: 0.65rem 0.75rem;
     }
 
     .standingUsername {
@@ -1203,7 +1220,7 @@ max-width: 1000px;
     .returnBtn {
         font-size: 0.88rem;
         padding: 0.75rem 1.5rem;
-        margin: 1.25rem auto 0 auto;
+        margin: 0.85rem auto 0 auto;
         display: block;
         width: auto;
     }

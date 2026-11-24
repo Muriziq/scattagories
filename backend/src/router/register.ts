@@ -25,7 +25,7 @@ import {
   clearGuestTokenCookie,
 } from "../utils/cookies";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
-import { uploadAvatar } from "../utils/upload";
+import { uploadAvatar, validateImageMagicBytes } from "../utils/upload";
 import { uploadToCloudinary, isCloudinaryConfigured, getAvatarPublicId } from "../utils/cloudinary";
 import { updateCachedLeaderboardUser } from "./games";
 
@@ -41,6 +41,15 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many attempts from this IP, please try again after 15 minutes." },
+});
+
+// Rate limiter for avatar upload to prevent image spam / storage denial of service (10 uploads per 15 minutes)
+export const avatarUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many avatar upload attempts. Please try again after 15 minutes." },
 });
 
 // Request validation schemas
@@ -697,6 +706,7 @@ router.get("/profile/matches/:gameId", verifyAccessToken, async (req: AuthReques
 router.post(
   "/profile/avatar",
   verifyAccessToken,
+  avatarUploadLimiter,
   (req: Request, res: Response, next) => {
     uploadAvatar.single("avatar")(req, res, (err: any) => {
       if (err) {
@@ -715,6 +725,14 @@ router.post(
 
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
+      }
+
+      // Verify file content using magic byte signatures to prevent malicious renamed payloads
+      const magicValidation = validateImageMagicBytes(req.file.buffer);
+      if (!magicValidation.isValid) {
+        return res.status(400).json({
+          message: "Invalid file content: The uploaded file is not a valid JPEG, PNG, GIF, or WebP image.",
+        });
       }
 
       if (!isCloudinaryConfigured()) {

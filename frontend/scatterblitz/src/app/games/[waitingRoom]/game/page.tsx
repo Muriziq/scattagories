@@ -66,37 +66,21 @@ function GameContent() {
   >("letter_selection");
   const [participants, setParticipants] = useState<
     { username: string; score: number; isConnected?: boolean; hasLeft?: boolean }[]
-  >([
-    { username: "Alex", score: 25, isConnected: true },
-    { username: "Jordan", score: 18, isConnected: true },
-    { username: "Taylor", score: 12, isConnected: true },
-  ]);
-  const [allLetters, setAllLetters] = useState<string[]>([
-    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
-    "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
-  ]);
-  const [availableLetters, setAvailableLetters] = useState<string[]>([
-    "A", "B", "C", "D", "E", "F", "G", "H", "I", "K", "M", "P", "R", "S", "T"
-  ]);
-  const [activeLetter, setActiveLetter] = useState<string | null>("S");
-  const [categories, setCategories] = useState<string[]>([
-    "Animals",
-    "Countries",
-    "Movies",
-    "Food & Dishes",
-    "Celebrities",
-    "Video Games",
-  ]);
+  >([]);
+  const [allLetters, setAllLetters] = useState<string[]>([]);
+  const [availableLetters, setAvailableLetters] = useState<string[]>([]);
+  const [activeLetter, setActiveLetter] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
   const [currentRound, setCurrentRound] = useState<number>(1);
-  const [totalRound, setTotalRound] = useState<number>(3);
-  const [usersTurn, setUsersTurn] = useState<string | null>("Alex");
+  const [totalRound, setTotalRound] = useState<number>(1);
+  const [usersTurn, setUsersTurn] = useState<string | null>(null);
   const [maxTimePerRound, setMaxTimePerRound] = useState<number>(60);
 
   // Timer & Answers state
-  const [timerSeconds, setTimerSeconds] = useState<number>(45);
+  const [timerSeconds, setTimerSeconds] = useState<number>(60);
   const [selectionTimeLimit, setSelectionTimeLimit] = useState<number>(15);
   const [selectionTimerSeconds, setSelectionTimerSeconds] =
-    useState<number>(11);
+    useState<number>(15);
   const [selectionTargetEndTime, setSelectionTargetEndTime] = useState<number | null>(null);
   const [sprintTargetEndTime, setSprintTargetEndTime] = useState<number | null>(null);
 
@@ -114,14 +98,7 @@ function GameContent() {
   const statusRef = useRef(status);
   statusRef.current = status;
 
-  const [answers, setAnswers] = useState<Record<string, string>>({
-    Animals: "Snake",
-    Countries: "Spain",
-    Movies: "Star Wars",
-    "Food & Dishes": "Sushi",
-    Celebrities: "Selena Gomez",
-    "Video Games": "Skyrim",
-  });
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
   const hasSubmittedRef = useRef<boolean>(false);
   hasSubmittedRef.current = hasSubmitted;
@@ -138,49 +115,10 @@ function GameContent() {
     roundStandings?: Array<{ username: string; roundPoints: number; cumulativeScore: number }>;
     roundWinners?: string[];
     recapDuration: number;
-  } | null>({
-    letter: "S",
-    round: 1,
-    roundWinners: ["Alex"],
-    recapDuration: 6,
-    roundStandings: [
-      { username: "Alex", roundPoints: 25, cumulativeScore: 25 },
-      { username: "Jordan", roundPoints: 18, cumulativeScore: 18 },
-      { username: "Taylor", roundPoints: 12, cumulativeScore: 12 },
-    ],
-    scores: {
-      Alex: {
-        Animals: { answer: "Snake", score: 5 },
-        Countries: { answer: "Spain", score: 5 },
-        Movies: { answer: "Star Wars", score: 5 },
-        "Food & Dishes": { answer: "Sushi", score: 5 },
-        Celebrities: { answer: "Selena Gomez", score: 5 },
-        "Video Games": { answer: "Skyrim", score: 0 },
-      },
-      Jordan: {
-        Animals: { answer: "Sheep", score: 5 },
-        Countries: { answer: "Sweden", score: 5 },
-        Movies: { answer: "Shrek", score: 5 },
-        "Food & Dishes": { answer: "Spaghetti", score: 3 },
-        Celebrities: { answer: "", score: 0 },
-        "Video Games": { answer: "Sonic", score: 0 },
-      },
-      Taylor: {
-        Animals: { answer: "Shark", score: 5 },
-        Countries: { answer: "Senegal", score: 5 },
-        Movies: { answer: "", score: 0 },
-        "Food & Dishes": { answer: "Soup", score: 2 },
-        Celebrities: { answer: "", score: 0 },
-        "Video Games": { answer: "", score: 0 },
-      },
-    },
-  });
+  } | null>(null);
 
   // Recap Skip Votes State
-  const [skipVotes, setSkipVotes] = useState<{ votes: number; total: number } | null>({
-    votes: 2,
-    total: 3,
-  });
+  const [skipVotes, setSkipVotes] = useState<{ votes: number; total: number } | null>(null);
   const [hasVotedSkip, setHasVotedSkip] = useState<boolean>(false);
 
   // Forfeit Warning banner state
@@ -188,11 +126,7 @@ function GameContent() {
     remainingSeconds: number;
     remainingPlayer: string;
     message: string;
-  } | null>({
-    remainingSeconds: 12,
-    remainingPlayer: "Alex",
-    message: "An opponent disconnected or left. Waiting 15s for reconnection...",
-  });
+  } | null>(null);
 
   // Match ending loading state
   const [isEndingLoading, setIsEndingLoading] = useState<boolean>(false);
@@ -206,43 +140,7 @@ function GameContent() {
     standings: Array<{ username: string; score: number; isHost: boolean }>;
     forfeit?: boolean;
     winner?: string | null;
-  } | null>({
-    forfeit: false,
-    winner: "Alex",
-    standings: [
-      { username: "Alex", score: 65, isHost: true },
-      { username: "Jordan", score: 48, isHost: false },
-      { username: "Taylor", score: 32, isHost: false },
-    ],
-    submissions: {
-      S: {
-        Alex: {
-          Animals: { answer: "Snake", score: 5 },
-          Countries: { answer: "Spain", score: 5 },
-          Movies: { answer: "Star Wars", score: 5 },
-          "Food & Dishes": { answer: "Sushi", score: 5 },
-          Celebrities: { answer: "Selena Gomez", score: 5 },
-          "Video Games": { answer: "Skyrim", score: 0 },
-        },
-        Jordan: {
-          Animals: { answer: "Sheep", score: 5 },
-          Countries: { answer: "Sweden", score: 5 },
-          Movies: { answer: "Shrek", score: 5 },
-          "Food & Dishes": { answer: "Spaghetti", score: 3 },
-          Celebrities: { answer: "", score: 0 },
-          "Video Games": { answer: "Sonic", score: 0 },
-        },
-        Taylor: {
-          Animals: { answer: "Shark", score: 5 },
-          Countries: { answer: "Senegal", score: 5 },
-          Movies: { answer: "", score: 0 },
-          "Food & Dishes": { answer: "Soup", score: 2 },
-          Celebrities: { answer: "", score: 0 },
-          "Video Games": { answer: "", score: 0 },
-        },
-      },
-    },
-  });
+  } | null>(null);
   const [reviewParticipant, setReviewParticipant] = useState<string | null>(
     null,
   );
@@ -784,7 +682,7 @@ function GameContent() {
         {/* MAIN GRID */}
 
         {/* STATUS 1: LETTER SELECTION */}
-        {true && (
+        {status === "letter_selection" && (
           <section className={styles.letterSelectionSection}>
             <h2 className={styles.sectionTitle}>
               <FaSpellCheck
@@ -839,7 +737,7 @@ function GameContent() {
         )}
 
         {/* STATUS 2: ACTIVE SPRINT */}
-        {true && (
+        {status === "active_sprint" && (
           <section className={styles.activeSprintSection}>
             <h2 className={styles.activeTimer}>
               {String(timerSeconds).padStart(2, "0")}
@@ -925,7 +823,7 @@ function GameContent() {
         )}
 
         {/* STATUS 3: RECAP / SUBMITTED */}
-        {true && (
+        {status === "recap" && (
           <section className={styles.recapSection}>
             <div className={styles.recapBox}>
               {!roundRecapData ? (
@@ -1043,7 +941,7 @@ function GameContent() {
         )}
 
         {/* STATUS 4: ENDED */}
-        {true && (
+        {status === "ended" && (
           <section className={styles.endedSection}>
             <div className={styles.endedContainer}>
               {!reviewParticipant ? (
@@ -1252,7 +1150,7 @@ function GameContent() {
       </div>
 
       {/* REUSABLE ERROR & AUTH MODALS */}
-      {/* <ErrorModals
+      <ErrorModals
         roomId={roomId}
         showAuthModal={showAuthModal}
         enterAsGuest={enterAsGuest}
@@ -1263,7 +1161,7 @@ function GameContent() {
         showNotStartedModal={showNotStartedModal}
         notStartedMsg={notStartedMsg}
         onCloseNotStartedModal={() => router.push(`/games/${roomId}`)}
-      /> */}
+      />
 
       {/* BOTTOM-RIGHT AUTO-DISMISSING TOASTS WITH TIMER BARS */}
       <Toast

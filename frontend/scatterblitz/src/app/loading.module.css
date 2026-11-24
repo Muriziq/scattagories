@@ -63,13 +63,13 @@
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  background: rgba(255, 183, 3, 0.1);
-  border: 2px solid rgba(255, 183, 3, 0.35);
+  background: linear-gradient(135deg, var(--amber), var(--safety-orange));
+  border: none;
+  box-shadow: 0 4px 20px rgba(250, 115, 1, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--amber);
-  box-shadow: 0 0 30px rgba(255, 183, 3, 0.25);
+  color: #000000;
   animation: iconPulse 2s ease-in-out infinite alternate;
 }
 

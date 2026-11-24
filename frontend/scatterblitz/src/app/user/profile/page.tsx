@@ -385,9 +385,10 @@ export default function Profile() {
     }
   };
 
-  const [loadingInspect, setLoadingInspect] = useState(false);
+  const [inspectLoadingId, setInspectLoadingId] = useState<string | null>(null);
 
   const openInspectView = async (match: MatchHistoryItem) => {
+    if (inspectLoadingId) return; // Prevent duplicate concurrent requests
     setInspectLetterIdx(0);
     window.scrollTo({ top: 0, behavior: "smooth" });
 
@@ -404,8 +405,8 @@ export default function Profile() {
       return;
     }
 
-    // Otherwise, fetch single match details on-demand
-    setLoadingInspect(true);
+    // Otherwise, fetch single match details on-demand with button disabled
+    setInspectLoadingId(match.game_id);
     try {
       const res = await authFetch(`${API_BASE_URL}/user/profile/matches/${match.game_id}`);
       if (res.ok) {
@@ -437,7 +438,7 @@ export default function Profile() {
       console.error("Inspect match error:", err);
       showToast("Network error loading match details", "error");
     } finally {
-      setLoadingInspect(false);
+      setInspectLoadingId(null);
     }
   };
 
@@ -892,8 +893,8 @@ export default function Profile() {
                               type="button"
                               className={styles.inspectBtn}
                               onClick={() => openInspectView(item)}
-                              disabled={loadingInspect}
-                              title="Inspect Match"
+                              disabled={Boolean(inspectLoadingId)}
+                              title={inspectLoadingId === item.game_id ? "Loading match..." : "Inspect Match"}
                               aria-label="Inspect Match"
                             >
                               <FaEye />
