@@ -627,9 +627,10 @@ function GameContent() {
     }
   };
 
+  const isPaused = Boolean(forfeitWarning);
   const isYourTurn =
     Boolean(currentUser?.username && usersTurn && currentUser.username === usersTurn);
-  const canStopRound = isYourTurn || usersTurn === "computer";
+  const canStopRound = (isYourTurn || usersTurn === "computer") && !isPaused;
 
   return (
     <main className={styles.main}>
@@ -703,12 +704,12 @@ function GameContent() {
               {(allLetters.length > 0 ? allLetters : availableLetters).map(
                 (letter) => {
                   const isAvailable = availableLetters.includes(letter);
-                  const isDisabled = !isAvailable || !isYourTurn;
+                  const isDisabled = !isAvailable || !isYourTurn || isPaused;
 
                   let btnClass = styles.letterBtn;
                   if (!isAvailable) {
                     btnClass += ` ${styles.letterBtnDisabled}`;
-                  } else if (!isYourTurn) {
+                  } else if (!isYourTurn || isPaused) {
                     btnClass += ` ${styles.letterBtnWaiting}`;
                   }
 
@@ -720,7 +721,9 @@ function GameContent() {
                       disabled={isDisabled}
                       onClick={() => handleSelectLetter(letter)}
                       title={
-                        !isAvailable
+                        isPaused
+                          ? "Game paused - waiting for opponent"
+                          : !isAvailable
                           ? "Already selected"
                           : !isYourTurn
                             ? "Waiting for turn player"
@@ -755,10 +758,15 @@ function GameContent() {
                     type="text"
                     inputMode="text"
                     name="search"
+                    disabled={isPaused}
                     aria-autocomplete="none"
                     enterKeyHint="next"
                     className={styles.categoryInput}
-                    placeholder={`Type a ${category} starting with ${activeLetter}...`}
+                    placeholder={
+                      isPaused
+                        ? "Game paused - waiting for opponent..."
+                        : `Type a ${category} starting with ${activeLetter}...`
+                    }
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="none"
@@ -1167,13 +1175,13 @@ function GameContent() {
       <Toast
         message={error}
         type="error"
-        duration={3500}
+        duration={2500}
         onClose={() => setError(null)}
       />
       <Toast
         message={cheatNotice}
         type="error"
-        duration={6000}
+        duration={3500}
         onClose={() => setCheatNotice(null)}
       />
     </main>

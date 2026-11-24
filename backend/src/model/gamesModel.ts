@@ -77,7 +77,11 @@ export class GameRoom {
   usersTurn: string | null;
   availableLetters: string[];
   activeLetter: string | null;
-  isBoardLocked: boolean;
+
+  // Active round participant roster and turn cursor
+  roundParticipants: string[] = [];
+  roundTurnIndex: number = 0;
+
   // Timers and Grace Periods
   roundTimer: NodeJS.Timeout | null;
   selectionTimer: NodeJS.Timeout | null;
@@ -165,8 +169,9 @@ export class GameRoom {
     this.usersTurn = hostUsername;
     this.activeLetter = null;
     this.totalRound = 0;
-    this.isBoardLocked = false;
     this.submitStatus = "notAccepting";
+    this.roundParticipants = [];
+    this.roundTurnIndex = 0;
 
     this.language = "en";
     this.availableLetters = [...this.getAllLetters()];
@@ -242,15 +247,6 @@ export class GameRoom {
         this.startForfeitCountdown(remainingUsername, io, socket);
         return;
       }
-
-      // Recalculate remaining rounds dynamically so all remaining active players get equal turns
-      this.recalculateRemainingRounds(io);
-
-      // If departing player held the letter selection turn, advance immediately to next turn
-      if (io && this.usersTurn === username && this.status === "letter_selection") {
-        this.clearSelectionTimer();
-        this.getNextUserTurn(io, socket);
-      }
     }
   }
 
@@ -299,10 +295,7 @@ export class GameRoom {
       participant.avatar_url = socket.user.avatar_url;
     }
 
-    // Recalculate remaining rounds dynamically to re-include the returning player
-    this.recalculateRemainingRounds(io);
-
-    // If room was counting down to forfeit victory for the sole player, cancel it and resume accurately
+    // If room was counting down to forfeit victory for the sole player, cancel it and resume
     if (this.forfeitTimer !== null) {
       const paused = this.pausedStateBeforeForfeit;
       this.clearForfeitTimer();
@@ -327,6 +320,7 @@ export class GameRoom {
             selectionStartTime: this.selectionStartTime,
           });
 
+          this.clearSelectionTimer();
           this.selectionTimer = setTimeout(() => {
             if (this.status === "letter_selection" && this.availableLetters.length > 0) {
               const randomLetter =
@@ -348,6 +342,7 @@ export class GameRoom {
             roundStartTime: this.roundStartTime,
           });
 
+          this.clearRoundTimer();
           this.roundTimer = setTimeout(() => {
             this.submitStatus = "accepting";
             io.to(this.id).emit("round:ended", { reason: "time_up" });
@@ -433,31 +428,6 @@ export class GameRoom {
     this.disconnectTimers.clear();
   }
 
-  // Recalculates total rounds dynamically after a player departs mid-game
-  public recalculateRemainingRounds(io?: Server) {
-    const activeCount = Array.from(this.participants.values()).filter((p) => !p.hasLeft).length;
-    if (activeCount <= 1) return;
-
-    const remainingLettersCount = this.availableLetters.length;
-    const turnsEach = Math.floor(remainingLettersCount / activeCount);
-
-    if (turnsEach > 0) {
-      // Remaining rounds calculated equal across active players
-      this.totalRound = Math.min(
-        this.availableLetters.length + this.currentRound,
-        this.currentRound + turnsEach * activeCount
-      );
-    }
-
-    if (io) {
-      io.to(this.id).emit("room:state", {
-        totalRound: this.totalRound,
-        currentRound: this.currentRound,
-        participants: this.getParticipantsList(),
-      });
-    }
-  }
-
   public getParticipantsList() {
     return Array.from(this.participants.entries()).map(([username, p]) => ({
       username,
@@ -514,19 +484,26 @@ export class GameRoom {
     this.status = "letter_selection";
     this.clearSelectionTimer();
     this.clearRoundTimer();
-    const activeUsernames = Array.from(this.participants.entries())
-      .filter(([_, p]) => !p.hasLeft)
-      .map(([username]) => username);
 
-    this.currentRound++;
-    // Check if player-assigned rounds are exhausted or no players remain
-    if (activeUsernames.length === 0 || this.currentRound <= 0) {
+    // Check if the current round roster has completed all turns or is uninitialized
+    if (this.roundParticipants.length === 0 || this.roundTurnIndex >= this.roundParticipants.length) {
+      // Re-snapshot participants from all active, connected players
+      this.roundParticipants = Array.from(this.participants.entries())
+        .filter(([_, p]) => !p.hasLeft && p.isConnected !== false)
+        .map(([username]) => username);
+      this.roundTurnIndex = 0;
+      this.currentRound++;
+    }
+
+    // Check if no active players remain
+    if (this.roundParticipants.length === 0 || this.availableLetters.length === 0) {
       this.endGame(io, socket);
       return true;
     }
 
+    // Check if total scheduled player-round turns are exhausted
     if (this.currentRound > this.totalRound) {
-      // If computer helper is allowed and unused letters remain, let the computer pick and continue
+      // If computer helper is allowed and unused letters remain, let computer pick randomly and continue
       if (this.allowComputerHelper && this.availableLetters.length > 0) {
         this.usersTurn = "computer";
         const randomLetter =
@@ -537,24 +514,27 @@ export class GameRoom {
         return true;
       }
 
-      // Otherwise conclude match immediately
+      // Otherwise match concludes normally
       this.usersTurn = null;
       this.endGame(io, socket);
       return true;
     }
 
-    // Determine whose turn it is in round-robin sequence
-    const playerIndex = (this.currentRound - 1) % activeUsernames.length;
-    this.usersTurn = activeUsernames[playerIndex] || null;
+    // Pick player for this turn from the snapshotted roundParticipants
+    const currentUsername = this.roundParticipants[this.roundTurnIndex];
+    this.roundTurnIndex++;
+
+    this.usersTurn = currentUsername;
     this.selectionStartTime = Date.now();
     this.roundStartTime = null;
+
     io.to(this.id).emit("turn:change", {
       usersTurn: this.usersTurn,
       selectionTimeLimit: this.selectionTimeLimit,
       selectionStartTime: this.selectionStartTime,
     });
 
-    // Auto-select random letter if player times out
+    // Auto-select random letter if player times out or doesn't pick before the time limit
     this.selectionTimer = setTimeout(() => {
       if (this.status === "letter_selection" && this.availableLetters.length > 0) {
         const randomLetter =
@@ -566,6 +546,8 @@ export class GameRoom {
         }
       }
     }, this.selectionTimeLimit * 1000);
+
+    return true;
   }
 
   // Sets active round letter and transitions room into active sprint phase

@@ -51,8 +51,8 @@ export default function CreateRoomPage() {
   const [settings, setSettings] = useState<{
     isPublic: boolean;
     password: string;
-    maxPlayers: number;
-    maxTimePerRound: number;
+    maxPlayers: number | string;
+    maxTimePerRound: number | string;
     allowComputerHelper: boolean;
   }>({
     isPublic: true,
@@ -64,16 +64,41 @@ export default function CreateRoomPage() {
 
   const changeSettings = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    if (type === "checkbox") {
+      setSettings((prev) => ({ ...prev, [name]: checked }));
+      return;
+    }
+
+    if (type === "number") {
+      // Allow empty string so user can clear and type fresh without leading 0 (e.g. 01, 02)
+      if (value === "") {
+        setSettings((prev) => ({ ...prev, [name]: "" }));
+        return;
+      }
+      const num = parseInt(value, 10);
+      setSettings((prev) => ({ ...prev, [name]: isNaN(num) ? "" : num }));
+      return;
+    }
+
     setSettings((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : type === "number"
-            ? Number(value)
-            : value,
+      [name]: value,
     }));
   };
+
+  const parsedMaxPlayers = Number(settings.maxPlayers);
+  const isMaxPlayersInvalid =
+    settings.maxPlayers === "" ||
+    isNaN(parsedMaxPlayers) ||
+    parsedMaxPlayers < 1 ||
+    parsedMaxPlayers > 10;
+
+  const parsedMaxTime = Number(settings.maxTimePerRound);
+  const isMaxTimeInvalid =
+    settings.maxTimePerRound === "" ||
+    isNaN(parsedMaxTime) ||
+    parsedMaxTime < 5 ||
+    parsedMaxTime > 120;
 
   const toggleCategory = (cat: string) => {
     if (categories.includes(cat)) {
@@ -97,12 +122,29 @@ export default function CreateRoomPage() {
       return;
     }
 
+    if (isMaxPlayersInvalid) {
+      setError("Max players must be between 1 and 10.");
+      return;
+    }
+
+    if (isMaxTimeInvalid) {
+      setError("Round timer must be between 5 and 120 seconds.");
+      return;
+    }
+
     setLoading(true);
 
     try {
+      const payload = {
+        categories,
+        ...settings,
+        maxPlayers: parsedMaxPlayers,
+        maxTimePerRound: parsedMaxTime,
+      };
+
       const res = await authFetch(`${API_BASE_URL}/games/room/create`, {
         method: "POST",
-        body: JSON.stringify({ categories, ...settings }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -305,15 +347,15 @@ export default function CreateRoomPage() {
                   <span className={styles.labelSpan}>
                     <FaUsers /> Max Players
                   </span>
-                  <span className={styles.helperText}>1–8 Players</span>
+                  <span className={styles.helperText}>1–10 Players</span>
                 </label>
                 <input
                   type="number"
                   id="maxPlayers"
                   min={1}
-                  max={8}
+                  max={10}
                   name="maxPlayers"
-                  className={styles.input}
+                  className={`${styles.input} ${isMaxPlayersInvalid ? styles.inputError : ""}`}
                   value={settings.maxPlayers}
                   onChange={changeSettings}
                 />
@@ -332,7 +374,7 @@ export default function CreateRoomPage() {
                   min={5}
                   max={120}
                   name="maxTimePerRound"
-                  className={styles.input}
+                  className={`${styles.input} ${isMaxTimeInvalid ? styles.inputError : ""}`}
                   value={settings.maxTimePerRound}
                   onChange={changeSettings}
                 />

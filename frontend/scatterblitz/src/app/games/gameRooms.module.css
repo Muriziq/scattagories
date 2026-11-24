@@ -401,6 +401,12 @@
   box-shadow: 0 0 14px rgba(255, 122, 0, 0.25);
 }
 
+.inputError {
+  border-color: #ff4d63 !important;
+  background-color: rgba(60, 10, 10, 0.85) !important;
+  box-shadow: 0 0 12px rgba(255, 77, 99, 0.35) !important;
+}
+
 /* Submit Button */
 .submitBtn {
   composes: btn-3d btn-primary from global;

@@ -376,6 +376,9 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     }
     const roomId = roomID?.toUpperCase();
     const room = getRoom(roomId);
+    if (room?.forfeitTimer !== null) {
+      return socket.emit("error", "Game is currently paused waiting for opponent reconnection.");
+    }
     const participant = room?.participants.get(socket.user.username);
     if (
       !participant ||
@@ -395,6 +398,9 @@ io.on("connection", (socket: AuthenticatedSocket) => {
 
     const roomId = roomID?.toUpperCase();
     const room = getRoom(roomId);
+    if (room?.forfeitTimer !== null) {
+      return socket.emit("error", "Game is currently paused waiting for opponent reconnection.");
+    }
     const participant = room?.participants.get(socket.user.username);
 
     const isTurnPlayer = socket.user.username === room?.usersTurn;
@@ -432,6 +438,9 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       }
       const roomId = roomID?.toUpperCase();
       const room = getRoom(roomId);
+      if (room?.forfeitTimer !== null) {
+        return socket.emit("error", "Game is currently paused waiting for opponent reconnection.");
+      }
       const participant = room?.participants.get(socket.user.username);
       if (!participant) return socket.emit("error", "Participant not found");
       room?.saveAnswers(socket.user.username, answers, socket, io, telemetry);
@@ -442,6 +451,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
   socket.on("input:focus", ({ roomID, category }: { roomID: string; category: string }) => {
     if (!socket.user || !roomID || !category) return;
     const room = getRoom(roomID.toUpperCase());
+    if (room?.forfeitTimer !== null) return;
     room?.recordInputFocus(socket.user.username, category);
   });
 
@@ -458,6 +468,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     }) => {
       if (!socket.user || !roomID || !category) return;
       const room = getRoom(roomID.toUpperCase());
+      if (room?.forfeitTimer !== null) return;
       room?.recordInputBlur(socket.user.username, category, value);
     }
   );
@@ -467,6 +478,9 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     if (!socket.user) return;
     const roomId = roomID?.toUpperCase();
     const room = getRoom(roomId);
+    if (room?.forfeitTimer !== null) {
+      return socket.emit("error", "Game is currently paused waiting for opponent reconnection.");
+    }
     if (room && socket.user) {
       room.handleRecapSkip(socket.user.username, io, socket);
     }

@@ -62,10 +62,10 @@
 }
 
 .title {
-  font-family: 'Montserrat', var(--font-inter), system-ui, -apple-system, sans-serif;
-  font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+  font-family: var(--font-bree), 'Bree Serif', serif;
+  font-size: clamp(1.6rem, 4.5vw, 3.8rem);
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--text-primary);
   margin: 0 0 0.85rem;
@@ -73,6 +73,13 @@
   background: linear-gradient(135deg, #ffffff 30%, var(--gold) 90%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 1.55rem;
+    white-space: nowrap;
+  }
 }
 
 .heroSubtitle {

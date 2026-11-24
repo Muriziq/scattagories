@@ -1,26 +1,137 @@
 # Scatterblitz — Backend Engine & API Documentation
 
-Scatterblitz is a real-time multiplayer word sprint game inspired by Scattergories. Built with **Node.js, Express, TypeScript, PostgreSQL, and Socket.IO**, the backend orchestrates game rooms, bijective 5-character collision-free lobby codes, instant $O(1)$ dictionary scoring, session rotation with fingerprinting, and post-game persistence.
+Scatterblitz is a real-time multiplayer word sprint game inspired by Scattergories. Built with **Node.js, Express, TypeScript, PostgreSQL, and Socket.IO**, the backend orchestrates game rooms, bijective 5-character collision-free lobby codes, instant $O(1)$ dictionary scoring, session rotation with fingerprinting, binary magic byte image validation, and post-game persistence.
 
 ---
 
 ## Table of Contents
-1. [Architecture & Engine Overview](#architecture--engine-overview)
-2. [Environment Configuration](#environment-configuration)
-3. [REST API Documentation](#rest-api-documentation)
+1. [Prerequisites & System Requirements](#prerequisites--system-requirements)
+2. [Step-by-Step Installation & Setup](#step-by-step-installation--setup)
+3. [Database Setup & Schema Migration](#database-setup--schema-migration)
+4. [Environment Configuration (`.env`)](#environment-configuration)
+5. [Running the Backend Engine](#running-the-backend-engine)
+6. [Architecture & Security Overview](#architecture--security-overview)
+7. [REST API Documentation](#rest-api-documentation)
    - [System & Health](#1-system--health-endpoints)
    - [Authentication & Users (`/user`)](#2-authentication--users-endpoints)
    - [Session Refresh (`/refresh`)](#3-session-refresh-endpoints)
    - [Game Rooms & Match History (`/games`)](#4-game-rooms--lobbies-endpoints)
-4. [Socket.IO Real-Time Protocol](#socketio-real-time-protocol)
-   - [Handshake & Authentication](#handshake--authentication)
-   - [Client-to-Server Events](#client-to-server-events)
-   - [Server-to-Client Events](#server-to-client-events)
-5. [Free External APIs & Dataset Sources for Categories](#free-external-apis--dataset-sources-for-categories)
+8. [Socket.IO Real-Time Protocol](#socketio-real-time-protocol)
+9. [Free External APIs & Dataset Sources for Categories](#free-external-apis--dataset-sources-for-categories)
+10. [Proprietary License Notice](#proprietary-license-notice)
 
 ---
 
-## Architecture & Engine Overview
+## 🛠️ Prerequisites & System Requirements
+
+- **Node.js**: `v20.x` or higher (`v22 LTS` recommended)
+- **PostgreSQL**: `v14.x` or higher (local or managed instance on Render/Supabase/Neon)
+- **Cloudinary Account (Optional for Avatars)**: Free tier credentials for media transformations and avatar storage
+- **Resend or SMTP Account (Optional for Emails)**: API key for outbound verification and password reset emails
+
+---
+
+## 🚀 Step-by-Step Installation & Setup
+
+1. **Navigate to the backend directory:**
+   ```bash
+   cd scattagories/backend
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Verify TypeScript toolchain:**
+   ```bash
+   npx tsc --noEmit
+   ```
+
+---
+
+## 🗄️ Database Setup & Schema Migration
+
+1. **Create the database in PostgreSQL:**
+   ```sql
+   CREATE DATABASE scatterblitz;
+   ```
+
+2. **Run the initial SQL migration script:**
+   The repository includes a ready-to-run schema file at `backend/database.sql`:
+   ```bash
+   # Using psql CLI:
+   psql -U postgres -d scatterblitz -f database.sql
+   ```
+   Or connect using pgAdmin / DBeaver / your cloud provider console and execute the queries in `database.sql`.
+
+3. **Database Tables Created:**
+   - `users`: Core player credentials, password hashes, avatar URLs, and verification timestamps.
+   - `sessions`: Token rotation registry with device fingerprinting and reuse tracking.
+   - `games`: Historical match records with winner identifiers, total rounds, and timestamps.
+   - `game_participants`: Composite relationship mapping players, placements, and scores per game.
+   - `categories`: Pre-seeded category decks and wordlists for dictionary validation.
+
+---
+
+## ⚙️ Environment Configuration
+
+Create a `.env` file in `backend/` with the following variables:
+
+```env
+PORT=5000
+NODE_ENV=development
+
+# PostgreSQL Connection
+DATABASE_URL=postgres://postgres:your_password@localhost:5432/scatterblitz
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=scatterblitz
+
+# Cryptographic Token Secrets (Generate 64-char random hex strings)
+ACCESS_TOKEN=your_high_entropy_access_secret_32bytes_or_more
+REFRESH_TOKEN=your_high_entropy_refresh_secret_32bytes_or_more
+VERIFY_TOKEN=your_high_entropy_verify_secret_32bytes_or_more
+GUEST_TOKEN=your_high_entropy_guest_secret_32bytes_or_more
+RESET_PASSWORD_TOKEN=your_high_entropy_reset_secret_32bytes_or_more
+
+# Cloudinary Storage (For player avatars)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Outbound Email (Resend or SMTP)
+RESEND_API_KEY=re_your_resend_api_key
+EMAIL_FROM=no-reply@scatterblitz.com
+
+# Allowed CORS Origins (Comma-separated for multiple origins)
+FRONTEND_URL=http://localhost:3000
+```
+
+---
+
+## 💻 Running the Backend Engine
+
+### Development Mode (with hot-reloading via TSX)
+```bash
+npm run dev
+```
+The server will boot on `http://localhost:5000` and establish the Socket.IO listener.
+
+### Production Build & Launch
+```bash
+# 1. Build and bundle server with esbuild / tsc
+npm run build
+
+# 2. Run the compiled production distribution
+npm run start
+```
+
+---
+
+## Architecture & Security Overview
 
 * **Bijective Room Codes:** Generates collision-free 5-character room codes (`ROOM_CODE_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"`) with zero collision retry loops using full-period modulo arithmetic.
 * **Separated Registry:** In-memory maps for `publicRooms` and `privateRooms` allow $O(1)$ lookups while cleanly isolating lobby discovery from private password-protected matches.
@@ -28,7 +139,8 @@ Scatterblitz is a real-time multiplayer word sprint game inspired by Scattergori
 * **Multi-Layered Security:**
   * JWT segregation: separate secrets for access tokens, refresh tokens, email verification, password reset, and guest sessions.
   * Session rotation: device fingerprint tracking and SHA-256 token hashing with token reuse detection (`tokenSession.ts`).
-  * Strict file upload validation: dual MIME type and file extension matching against allowed formats (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`) preventing Stored XSS.
+  * **Binary Magic Byte Inspection:** Validates buffer headers for JPEG (`FF D8 FF`), PNG (`89 50 4E 47`), GIF (`47 49 46`), and WebP (`RIFF...WEBP`) to block renamed executable payloads.
+  * Multi-tier rate limiting: General limiter (300/15m), Auth limiter (15/15m), Room creation limiter (15/10m), Avatar upload limiter (10/15m), Socket rate limiter (30 events/sec).
   * Uniform forgot-password responses to mitigate user enumeration.
   * Automated unjoined room garbage collection with connection-cleared timers.
 
@@ -735,3 +847,16 @@ For building category expansion scripts via GitHub Actions or automated seeders:
 | **Musical Instruments**| **Corpora Instruments** | `https://raw.githubusercontent.com/dariusk/corpora/master/data/music/instruments.json` | None | Accordion, Bagpipes, Cello, Drum, Flute, Guitar |
 | **World Languages** | **REST Countries** | `https://restcountries.com/v3.1/all?fields=languages` | None | English, Spanish, Arabic, French, Mandarin |
 | **Movie Titles** | **TMDB API** | `https://api.themoviedb.org/3/movie/popular` | Free Key | Title lists, popularity index, release dates |
+
+---
+
+## 🔒 Proprietary License Notice
+
+```
+Copyright (c) 2026 ScatterBlitz. All rights reserved.
+```
+
+**ScatterBlitz is proprietary software. It is NOT open source.**
+
+No permission is granted to copy, modify, distribute, publish, sublicense, reverse-engineer, decompile, or sell any portion of this codebase or its proprietary game engine without express prior written consent from the copyright holders.
+
