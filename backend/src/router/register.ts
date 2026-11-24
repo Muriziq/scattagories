@@ -765,8 +765,10 @@ router.post(
         });
       }
 
-      // Use edge-optimized URL format with on-the-fly face-centering and auto-format
-      const avatarUrl = getOptimizedAvatarUrl(cloudResult.public_id) || cloudResult.secure_url;
+      // Use edge-optimized URL format with on-the-fly face-centering, auto-format, and cache-busting version
+      const avatarUrl =
+        getOptimizedAvatarUrl(cloudResult.public_id, cloudResult.version) ||
+        cloudResult.secure_url;
 
       // 2. Update database record only after successful image upload
       const updateQuery = `

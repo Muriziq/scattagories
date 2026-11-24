@@ -285,6 +285,7 @@ export default function Profile() {
     setUser((prev) => (prev ? { ...prev, avatar_url: previewUrl } : null));
 
     setUploadingAvatar(true);
+    let isSuccess = false;
     try {
       // 2. Client-side downscaling: Shrink image to ~30KB for lightning-fast network transfer
       const processedBlob = await compressAvatarImage(file);
@@ -299,7 +300,13 @@ export default function Profile() {
       const data = await res.json();
 
       if (res.ok && (data.avatar_url || data.success || data.user)) {
-        const newAvatar = (data.avatar_url || data.user?.avatar_url) ?? null;
+        isSuccess = true;
+        // Append a cache-buster query timestamp so the browser immediately fetches the new image
+        const rawNewAvatar = (data.avatar_url || data.user?.avatar_url) ?? null;
+        const newAvatar = rawNewAvatar
+          ? `${rawNewAvatar}${rawNewAvatar.includes("?") ? "&" : "?"}t=${Date.now()}`
+          : null;
+
         setUser((prev) => (prev ? { ...prev, avatar_url: newAvatar } : null));
         updateUserData({ avatar_url: newAvatar });
         if (data.accessToken) {
@@ -317,7 +324,12 @@ export default function Profile() {
       console.error("Avatar upload error:", err);
       showToast("Network error uploading avatar", "error");
     } finally {
-      URL.revokeObjectURL(previewUrl);
+      // Only revoke object URL if upload failed, or after a delay so img tag doesn't break
+      if (!isSuccess) {
+        URL.revokeObjectURL(previewUrl);
+      } else {
+        setTimeout(() => URL.revokeObjectURL(previewUrl), 2000);
+      }
       setUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }

@@ -36,17 +36,21 @@ export function getAvatarPublicId(userId: string): string {
 
 /**
  * Generates an optimized avatar delivery URL with edge face-cropping and auto-format.
- * Cloudinary generates this on-the-fly at CDN edge without delaying upload response.
+ * Includes asset version so browsers and CDNs bypass previous cached avatars on update.
  */
-export function getOptimizedAvatarUrl(publicId: string): string {
+export function getOptimizedAvatarUrl(publicId: string, version?: number | string): string {
   if (!isConfigured) return "";
-  return cloudinary.url(publicId, {
+  const options: Record<string, any> = {
     secure: true,
     transformation: [
       { width: 300, height: 300, crop: "fill", gravity: "face" },
       { quality: "auto", fetch_format: "auto" },
     ],
-  });
+  };
+  if (version) {
+    options.version = version;
+  }
+  return cloudinary.url(publicId, options);
 }
 
 /**
