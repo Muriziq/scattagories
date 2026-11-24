@@ -5,7 +5,6 @@
 
 .pageWrapper {
   min-height: 100vh;
-  background: var(--bg-dark);
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
@@ -80,17 +79,18 @@
 
 .title {
   font-family: var(--font-bree), 'Bree Serif', serif;
-  font-size: 2.25rem;
-  font-weight: 400;
+  font-size: 2.75rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 1.15;
   color: var(--text-primary);
   margin: 0;
-  /* text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
-  background: linear-gradient(135deg, #ffffff 20%, var(--gold) 65%, var(--safety-orange) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent; */
+}
+
+.title span {
+  font-family: inherit;
+  font-weight: inherit;
 }
 
 .subtitle {

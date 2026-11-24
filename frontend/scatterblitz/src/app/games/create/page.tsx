@@ -15,7 +15,6 @@ import {
   FaCompass,
   FaRobot,
 } from "react-icons/fa";
-import CanvasBackground from "../../components/CanvasBackground";
 import styles from "../gameRooms.module.css";
 import { createNewGuest, authFetch } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
@@ -154,7 +153,6 @@ export default function CreateRoomPage() {
 
   return (
     <div className={styles.pageWrapper}>
-      <CanvasBackground />
 
       <header className={styles.header}>
         <div className={styles.navContainer}>

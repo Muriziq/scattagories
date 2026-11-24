@@ -9,7 +9,6 @@
   padding: 2rem;
   box-sizing: border-box;
   overflow: hidden;
-  background: var(--bg-dark);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 

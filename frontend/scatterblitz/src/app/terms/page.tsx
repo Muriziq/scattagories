@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa";
-import CanvasBackground from "../components/CanvasBackground";
 import styles from "./legal.module.css";
 
 export default function TermsPage() {
@@ -18,7 +17,6 @@ export default function TermsPage() {
 
   return (
     <div className={styles.legalWrapper}>
-      <CanvasBackground />
 
       <header className={styles.header}>
         <div className={styles.navContainer}>

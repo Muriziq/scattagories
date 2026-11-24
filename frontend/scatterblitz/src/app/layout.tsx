@@ -36,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable} ${breeSerif.variable}`}>
-      <body>
+      <body style={{position:"relative",  background: "var(--bg-dark)"}}>
         <TokenInitializer />
         <CanvasBackground />
         {children}

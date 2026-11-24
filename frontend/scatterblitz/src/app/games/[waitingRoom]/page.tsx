@@ -29,7 +29,6 @@ import { getAccessToken, getUserData, createNewGuest } from "../../accessToken";
 import AuthModel from "../authModels";
 import { useSocket } from "./SocketContext";
 import ErrorModals from "./ErrorModals";
-import CanvasBackground from "../../components/CanvasBackground";
 import Toast from "../../components/Toast";
 
 function WaitingRoomContent() {
@@ -213,7 +212,6 @@ function WaitingRoomContent() {
 
     return (
         <div className={styles.pageWrapper}>
-            <CanvasBackground />
             <main className={styles.main}>
                 <div className={styles.lobbyContainer}>
 

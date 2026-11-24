@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { FaHome, FaGamepad, FaSearchLocation } from "react-icons/fa";
 import styles from "./not-found.module.css";
-import CanvasBackground from "./components/CanvasBackground";
 
 export default function NotFound() {
   return (
     <main className={styles.container}>
-      <CanvasBackground />
 
       <div className={styles.contentCard}>
 

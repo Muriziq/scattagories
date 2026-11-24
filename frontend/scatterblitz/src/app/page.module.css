@@ -2,7 +2,6 @@
   position: relative;
   min-height: 100vh;
 
-  background: var(--bg-dark);
   color: var(--text-secondary);
   display: flex;
   flex-direction: column;
@@ -62,7 +61,13 @@
   filter: drop-shadow(0 0 8px rgba(255, 179, 0, 0.4));
 }
 
+.logoText {
+  font-family: var(--font-bree), 'Bree Serif', serif;
+  letter-spacing: -0.5px;
+}
+
 .logoHighlight {
+  font-family: inherit;
   color: var(--amber);
   background: linear-gradient(135deg, var(--amber), var(--safety-orange));
   -webkit-background-clip: text;
@@ -432,7 +437,12 @@
   margin-bottom: 0.25rem;
 }
 
+.heroTitle span {
+  font-family: inherit;
+}
+
 .titleGradient {
+  font-family: inherit;
   background: linear-gradient(
     135deg,
     var(--sunset) 0%,

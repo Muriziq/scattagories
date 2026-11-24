@@ -7,8 +7,6 @@ import { FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaKey } from "react-icons/fa"
 import { motion, AnimatePresence } from "motion/react";
 import styles from "../auth.module.css";
 import { API_BASE_URL } from "../../../config/api";
-import CanvasBackground from "../../components/CanvasBackground";
-
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -82,7 +80,6 @@ function ResetPasswordContent() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
       <section className={styles.cardContainer}>
         <motion.div 
           className={styles.cardWrapper}

@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa";
-import CanvasBackground from "../components/CanvasBackground";
 import styles from "../terms/legal.module.css";
 
 export default function PrivacyPage() {
@@ -18,7 +17,6 @@ export default function PrivacyPage() {
 
   return (
     <div className={styles.legalWrapper}>
-      <CanvasBackground />
 
       <header className={styles.header}>
         <div className={styles.navContainer}>

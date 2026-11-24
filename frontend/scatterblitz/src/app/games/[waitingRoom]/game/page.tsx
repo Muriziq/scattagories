@@ -27,7 +27,6 @@ import { useSocket } from "../SocketContext";
 import { getAccessToken, getUserData, createNewGuest } from "../../../accessToken";
 import AuthModel from "../../authModels";
 import ErrorModals from "../ErrorModals";
-import CanvasBackground from "../../../components/CanvasBackground";
 import Toast from "../../../components/Toast";
 
 function GameContent() {
@@ -736,7 +735,6 @@ function GameContent() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
       <button onClick={handleExitGame} className={styles.exitBtn}>
         <FaArrowLeft /> Back
       </button>
@@ -1052,13 +1050,19 @@ function GameContent() {
                 /* VIEW A: STANDINGS / LEADERBOARD */
                 <>
                   <div className={styles.winnerCard}>
-                    <FaTrophy className={styles.winnerTrophyIcon} style={{ color: "var(--gold)" }} />
+                    <div className={styles.winnerIconCircle}>
+                      <FaTrophy className={styles.winnerTrophyIcon} />
+                    </div>
                     <h2 className={styles.winnerTitle}>
                       Match Completed!
                     </h2>
-                    {endedData?.forfeit && endedData?.winner && (
+                    {endedData?.forfeit && endedData?.winner ? (
                       <p style={{ color: "var(--amber)", fontSize: "1.1rem", fontWeight: 700 }}>
                         🏆 Won by forfeit ({endedData.winner} remained standing)
+                      </p>
+                    ) : (
+                      <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: "0 auto" }}>
+                        Final scores and player standings for this session
                       </p>
                     )}
                   </div>
@@ -1214,7 +1218,7 @@ function GameContent() {
                               setReviewRoundIndex((prev) => Math.max(0, prev - 1))
                             }
                           >
-                            <FaChevronLeft />
+                            <FaChevronLeft /> Back
                           </button>
                         )}
 
@@ -1234,7 +1238,7 @@ function GameContent() {
                               )
                             }
                           >
-                            <FaChevronRight />
+                            Next <FaChevronRight />
                           </button>
                         )}
                       </div>

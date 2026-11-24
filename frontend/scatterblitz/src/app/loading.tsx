@@ -1,11 +1,9 @@
 import { FaBolt } from "react-icons/fa";
 import styles from "./loading.module.css";
-import CanvasBackground from "./components/CanvasBackground";
 
 export default function Loading() {
   return (
     <main className={styles.loadingContainer}>
-      <CanvasBackground />
 
       <div className={styles.loadingCard}>
         <div className={styles.iconCircle}>

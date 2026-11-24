@@ -6,7 +6,6 @@ import Link from "next/link";
 import { FaCheckCircle, FaExclamationCircle, FaSpinner } from "react-icons/fa";
 import styles from "../auth.module.css";
 import { API_BASE_URL } from "../../../config/api";
-import CanvasBackground from "../../components/CanvasBackground";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -52,7 +51,6 @@ function VerifyEmailContent() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
       <section className={styles.cardContainer}>
         <section className={styles.card}>
           {status === "loading" && (

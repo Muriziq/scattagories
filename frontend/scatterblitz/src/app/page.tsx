@@ -30,7 +30,6 @@ import {
 } from "react-icons/fa";
 import { getAccessToken, getUserData, clearAccessToken } from "./accessToken";
 import { API_BASE_URL } from "../config/api";
-import CanvasBackground from "./components/CanvasBackground";
 
 interface LeaderboardUser {
   id: string;
@@ -194,8 +193,6 @@ export default function Home() {
 
   return (
     <div className={styles.pageWrapper}>
-      {/* CANVAS BACKGROUND GRID */}
-      <CanvasBackground />
 
       {/* DUAL PURPOSE NOTIFICATION BANNERS */}
       {accessToken !== "" && isGuest && (

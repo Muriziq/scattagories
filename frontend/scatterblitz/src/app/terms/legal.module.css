@@ -1,6 +1,5 @@
 .legalWrapper {
   min-height: 100vh;
-  background: var(--bg-dark);
   color: var(--text-primary);
   display: flex;
   flex-direction: column;

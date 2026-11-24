@@ -7,7 +7,6 @@ import styles from "../auth.module.css";
 import { useRouter } from 'next/navigation';
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
-import CanvasBackground from "../../components/CanvasBackground";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -85,7 +84,6 @@ export default function LoginPage() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
       <div className={styles.topNavContainer}>
         <button type="button" onClick={() => router.push("/")} className={styles.backButton}>
           <FaArrowLeft /> Back

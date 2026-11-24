@@ -6,7 +6,6 @@ import { FaEnvelope, FaKey, FaPaperPlane } from "react-icons/fa";
 import { motion, AnimatePresence } from "motion/react";
 import styles from "../auth.module.css";
 import { API_BASE_URL } from "../../../config/api";
-import CanvasBackground from "../../components/CanvasBackground";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -50,7 +49,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
       <section className={styles.cardContainer}>
         <motion.div 
           style={{ width: "100%", display: "flex", justifyContent: "center" }}

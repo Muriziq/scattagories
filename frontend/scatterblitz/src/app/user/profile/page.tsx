@@ -28,7 +28,6 @@ import {
   FaFire,
 } from "react-icons/fa";
 import styles from "./profile.module.css";
-import CanvasBackground from "../../components/CanvasBackground";
 import Toast from "../../components/Toast";
 import Loading from "../../loading";
 import { API_BASE_URL } from "../../../config/api";
@@ -463,7 +462,6 @@ export default function Profile() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
 
       {inspectMatch ? (
         /* ================= FULL-WIDTH INSPECT MATCH VIEW ================= */

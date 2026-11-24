@@ -8,7 +8,6 @@ import styles from "../auth.module.css";
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
 import { isValidEmail } from "../../utils/validation";
-import CanvasBackground from "../../components/CanvasBackground";
 
 export default function ConvertGuestPage() {
   const [username, setUsername] = useState("");
@@ -97,7 +96,6 @@ export default function ConvertGuestPage() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
       <section className={styles.cardContainer}>
         <motion.div 
           className={styles.cardWrapper}

@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
 import { isValidEmail } from "../../utils/validation";
-import CanvasBackground from "../../components/CanvasBackground";
 
 export default function Register() {
   const router = useRouter();
@@ -99,7 +98,6 @@ export default function Register() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
       <section className={styles.cardContainer}>
         <motion.div 
           className={styles.cardWrapper}

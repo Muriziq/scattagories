@@ -7,8 +7,6 @@ import { motion, AnimatePresence } from "motion/react";
 import styles from "../auth.module.css";
 import { API_BASE_URL } from "../../../config/api";
 import { isValidEmail } from "../../utils/validation";
-import CanvasBackground from "../../components/CanvasBackground";
-
 export default function SendVerificationPage() {
   const [email, setEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -51,7 +49,6 @@ export default function SendVerificationPage() {
 
   return (
     <main className={styles.main}>
-      <CanvasBackground />
       <section className={styles.cardContainer}>
         <motion.div 
           style={{ width: "100%", display: "flex", justifyContent: "center" }}
