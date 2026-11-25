@@ -30,6 +30,7 @@ import {
 import styles from "./profile.module.css";
 import Toast from "../../components/Toast";
 import Loading from "../../loading";
+import Cropper, { Area } from "react-easy-crop";
 import { API_BASE_URL } from "../../../config/api";
 import { isValidEmail } from "../../utils/validation";
 import {
@@ -123,6 +124,13 @@ export default function Profile() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
+  // Avatar Cropper Modal state
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [isCropping, setIsCropping] = useState(false);
+
   // Toast feedback
   const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
@@ -199,56 +207,50 @@ export default function Profile() {
   };
 
   /**
-   * Downscales user-selected avatar to a maximum of 400x400 at 0.85 quality using HTML5 Canvas.
-   * This reduces 2MB high-res camera photos down to ~30KB WebP/JPEG, making network upload virtually instant.
+   * Cuts and compresses the user's selected crop area from the source image
+   * using an HTML5 Canvas, outputting a 400x400 WebP blob ready for upload.
    */
-  const compressAvatarImage = async (file: File): Promise<Blob> => {
-    // If browser does not support createImageBitmap or canvas, return raw file
-    if (typeof window === "undefined" || !("createImageBitmap" in window)) {
-      return file;
-    }
+  const getCroppedImgBlob = async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
+    const image = new Image();
+    image.src = imageSrc;
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+    });
 
-    try {
-      const bitmap = await createImageBitmap(file);
-      const maxDim = 400;
-      let width = bitmap.width;
-      let height = bitmap.height;
+    const canvas = document.createElement("canvas");
+    const targetSize = 400;
+    canvas.width = targetSize;
+    canvas.height = targetSize;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not get canvas context");
 
-      if (width > maxDim || height > maxDim) {
-        if (width > height) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-      }
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      targetSize,
+      targetSize
+    );
 
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return file;
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Canvas crop failed"));
+        },
+        "image/webp",
+        0.85
+      );
+    });
+  };
 
-      ctx.drawImage(bitmap, 0, 0, width, height);
-
-      // Prefer modern WebP with JPEG fallback
-      return new Promise<Blob>((resolve) => {
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(blob);
-            } else {
-              resolve(file);
-            }
-          },
-          "image/webp",
-          0.85
-        );
-      });
-    } catch {
-      return file;
-    }
+  const onCropComplete = (_: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
   };
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,19 +281,65 @@ export default function Profile() {
       return;
     }
 
-    // 1. Optimistic Preview: Display instantly so user feels zero waiting latency
-    const previewUrl = URL.createObjectURL(file);
-    const previousAvatar = user?.avatar_url ?? null;
-    setUser((prev) => (prev ? { ...prev, avatar_url: previewUrl } : null));
-
-    setUploadingAvatar(true);
-    let isSuccess = false;
+    // Pre-shrink image first (max 800px) so large photos do not lag in the cropper
     try {
-      // 2. Client-side downscaling: Shrink image to ~30KB for lightning-fast network transfer
-      const processedBlob = await compressAvatarImage(file);
-      const uploadFilename = file.name.endsWith(".gif") ? file.name : "avatar.webp";
+      const bitmap = await createImageBitmap(file);
+      const maxDim = 800;
+      let width = bitmap.width;
+      let height = bitmap.height;
+
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        setCropImageSrc(dataUrl);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        return;
+      }
+    } catch {
+      // Fallback to FileReader if createImageBitmap is not supported
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyCrop = async () => {
+    if (!cropImageSrc || !croppedAreaPixels) return;
+
+    setIsCropping(true);
+    setUploadingAvatar(true);
+    const previousAvatar = user?.avatar_url ?? null;
+
+    try {
+      const croppedBlob = await getCroppedImgBlob(cropImageSrc, croppedAreaPixels);
+      const previewUrl = URL.createObjectURL(croppedBlob);
+      setUser((prev) => (prev ? { ...prev, avatar_url: previewUrl } : null));
+
+      // Close modal immediately so user sees optimistic result
+      setCropImageSrc(null);
+
       const formData = new FormData();
-      formData.append("avatar", processedBlob, uploadFilename);
+      formData.append("avatar", croppedBlob, "avatar.webp");
 
       const res = await authFetch(`${API_BASE_URL}/user/profile/avatar`, {
         method: "POST",
@@ -300,8 +348,6 @@ export default function Profile() {
       const data = await res.json();
 
       if (res.ok && (data.avatar_url || data.success || data.user)) {
-        isSuccess = true;
-        // Append a cache-buster query timestamp so the browser immediately fetches the new image
         const rawNewAvatar = (data.avatar_url || data.user?.avatar_url) ?? null;
         const newAvatar = rawNewAvatar
           ? `${rawNewAvatar}${rawNewAvatar.includes("?") ? "&" : "?"}t=${Date.now()}`
@@ -313,26 +359,27 @@ export default function Profile() {
           saveAccessToken(data.accessToken);
         }
         showToast("Avatar updated successfully!", "success");
+        setTimeout(() => URL.revokeObjectURL(previewUrl), 2000);
       } else {
         // Rollback preview on error
         setUser((prev) => (prev ? { ...prev, avatar_url: previousAvatar } : null));
+        URL.revokeObjectURL(previewUrl);
         showToast(data.message || "Avatar upload failed", "error");
       }
     } catch (err) {
-      // Rollback preview on error
       setUser((prev) => (prev ? { ...prev, avatar_url: previousAvatar } : null));
-      console.error("Avatar upload error:", err);
-      showToast("Network error uploading avatar", "error");
+      console.error("Avatar crop/upload error:", err);
+      showToast("Error processing and uploading image", "error");
     } finally {
-      // Only revoke object URL if upload failed, or after a delay so img tag doesn't break
-      if (!isSuccess) {
-        URL.revokeObjectURL(previewUrl);
-      } else {
-        setTimeout(() => URL.revokeObjectURL(previewUrl), 2000);
-      }
+      setIsCropping(false);
       setUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handleCancelCrop = () => {
+    setCropImageSrc(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleOpenEditModal = () => {
@@ -1179,6 +1226,66 @@ export default function Profile() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* AVATAR CROPPER MODAL */}
+      {cropImageSrc && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard} style={{ maxWidth: "440px", gap: "0.85rem" }}>
+            <div className={styles.cropContainer}>
+              <Cropper
+                image={cropImageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </div>
+
+            <div className={styles.cropControls}>
+              <span className={styles.zoomLabel}>Zoom:</span>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.05}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className={styles.zoomSlider}
+                disabled={isCropping}
+              />
+            </div>
+
+            <div className={styles.modalActions} style={{ gap: "0.5rem", paddingTop: "0.25rem" }}>
+              <button
+                type="button"
+                className={styles.saveCropBtn}
+                onClick={handleApplyCrop}
+                disabled={isCropping}
+              >
+                {isCropping ? (
+                  <>
+                    <FaSpinner className="spin" /> Uploading...
+                  </>
+                ) : (
+                  "Save Avatar"
+                )}
+              </button>
+              <button
+                type="button"
+                className={styles.cancelCropBtn}
+                onClick={handleCancelCrop}
+                disabled={isCropping}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

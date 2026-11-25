@@ -35,7 +35,7 @@ export function getAvatarPublicId(userId: string): string {
 }
 
 /**
- * Generates an optimized avatar delivery URL with edge face-cropping and auto-format.
+ * Generates an optimized avatar delivery URL with auto-format and auto-quality.
  * Includes asset version so browsers and CDNs bypass previous cached avatars on update.
  */
 export function getOptimizedAvatarUrl(publicId: string, version?: number | string): string {
@@ -43,7 +43,7 @@ export function getOptimizedAvatarUrl(publicId: string, version?: number | strin
   const options: Record<string, any> = {
     secure: true,
     transformation: [
-      { width: 300, height: 300, crop: "fill", gravity: "face" },
+      { width: 300, height: 300, crop: "fill" },
       { quality: "auto", fetch_format: "auto" },
     ],
   };

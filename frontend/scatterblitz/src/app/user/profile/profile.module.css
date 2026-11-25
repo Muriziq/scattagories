@@ -1345,3 +1345,60 @@
     padding: 0.2rem 0.5rem;
   }
 }
+
+/* --- AVATAR CROPPER MODAL --- */
+.cropContainer {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  background: #111116;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 122, 0, 0.2);
+}
+
+.cropControls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.25rem 0;
+}
+
+.zoomLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.zoomSlider {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+
+.saveCropBtn {
+  composes: btn-3d btn-primary from global;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cancelCropBtn {
+  composes: btn-3d btn-secondary from global;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+}

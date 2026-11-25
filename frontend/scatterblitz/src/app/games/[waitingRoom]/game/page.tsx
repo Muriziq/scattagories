@@ -772,6 +772,8 @@ function GameContent() {
                     autoCapitalize="none"
                     spellCheck={false}
                     data-form-type="other"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
                     onFocus={() => {
                       if (socket) {
                         socket.emit("input:focus", { roomID: roomId, category });

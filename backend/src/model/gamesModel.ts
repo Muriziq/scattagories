@@ -755,6 +755,11 @@ export class GameRoom {
       winner: forfeitWinnerUsername || (standings[0]?.username ?? null),
     });
 
+    // Release heavy telemetry and transient draft caches to save memory during post-game review
+    this.inputActivity.clear();
+    this.draftAnswers.clear();
+    this.flaggedCheaters.clear();
+
     // 2. Persist to PostgreSQL asynchronously in the background only if there are 2 or more players
     // Solo matches are practice matches and do not affect competitive database statistics or leaderboards
     const totalParticipantsCount = this.participants.size;
@@ -802,13 +807,12 @@ export class GameRoom {
 
     const roundScores = this.calculateRoundScores();
 
-    // Compute round points and rank players for this specific round
-    const roundPointsSummary = Object.keys(roundScores || {}).map((uname) => {
-      const userCatScores = roundScores[uname] || {};
-      const roundTotal = Object.values(userCatScores).reduce(
-        (sum, cat) => sum + (cat?.score || 0),
-        0
-      );
+    // Compute round points and rank players for this specific round in a single allocation-free pass
+    const roundPointsSummary = Object.entries(roundScores || {}).map(([uname, userCatScores]) => {
+      let roundTotal = 0;
+      for (const catEntry of Object.values(userCatScores || {})) {
+        roundTotal += catEntry?.score || 0;
+      }
       const participant = this.participants.get(uname);
       return {
         username: uname,
@@ -927,6 +931,8 @@ export class GameRoom {
 
     const usernames = Object.keys(currentSubmissions);
 
+    const playerRoundPoints: Record<string, number> = {};
+
     // 2. Score each category
     for (const category of this.categories) {
       const answerCounts: Record<string, number> = {};
@@ -966,11 +972,16 @@ export class GameRoom {
         };
 
         if (score > 0) {
-          const participant = this.participants.get(username);
-          if (participant) {
-            participant.score += score;
-          }
+          playerRoundPoints[username] = (playerRoundPoints[username] || 0) + score;
         }
+      }
+    }
+
+    // Safely commit accumulated round points to participants' cumulative scores
+    for (const [username, points] of Object.entries(playerRoundPoints)) {
+      const participant = this.participants.get(username);
+      if (participant) {
+        participant.score += points;
       }
     }
 
@@ -1002,14 +1013,20 @@ export class GameRoom {
     }
 
     // Validate that submitted keys belong to configured room categories
-    const answersKey = Object.keys(answers);
-    if (this.categories.length < answersKey.length) {
+    const answerEntries = Object.entries(answers);
+    if (answerEntries.length > this.categories.length) {
       return socket.emit("error", "Category Not Found");
     }
 
-    for (const key of answersKey) {
-      if (!this.categories.includes(key)) {
+    let totalChars = 0;
+    const categorySet = new Set(this.categories);
+
+    for (const [key, val] of answerEntries) {
+      if (!categorySet.has(key)) {
         return socket.emit("error", "Category Not Found");
+      }
+      if (typeof val === "string") {
+        totalChars += val.trim().length;
       }
     }
 
@@ -1028,11 +1045,6 @@ export class GameRoom {
 
     // 2. Tab switching / blur detection while typing answers
     // If user switched tabs multiple times (>=2) while answers are populated
-    const totalChars = Object.values(answers).reduce(
-      (sum, val) => sum + (typeof val === "string" ? val.trim().length : 0),
-      0
-    );
-
     if (!isCheatingDetected && totalChars > 0) {
       if (blurCount >= 2) {
         isCheatingDetected = true;
@@ -1040,12 +1052,11 @@ export class GameRoom {
       }
     }
 
-
     // 4. Input Focus & Interaction Cadence Verification (Server-Authoritative Anti-Bot)
     // Every category with an answer must have genuine user focus interaction recorded on the server
     if (!isCheatingDetected && totalChars > 0) {
       const userActivity = this.inputActivity.get(username);
-      for (const [cat, word] of Object.entries(answers)) {
+      for (const [cat, word] of answerEntries) {
         const trimmed = (word || "").trim();
         if (trimmed.length > 0) {
           const catMetric = userActivity?.get(cat);
@@ -1083,7 +1094,7 @@ export class GameRoom {
 
     this.detailedSubmissions[this.activeLetter][username] = {};
 
-    for (const [cat, word] of Object.entries(answers)) {
+    for (const [cat, word] of answerEntries) {
       this.detailedSubmissions[this.activeLetter][username][cat] = {
         answer: word,
         score: 0,
