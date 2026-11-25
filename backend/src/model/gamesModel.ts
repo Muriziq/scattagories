@@ -86,6 +86,7 @@ export class GameRoom {
   roundTimer: NodeJS.Timeout | null;
   selectionTimer: NodeJS.Timeout | null;
   connectionTimeout: NodeJS.Timeout | null;
+  emptyRoomTimer: NodeJS.Timeout | null = null;
   forfeitTimer: NodeJS.Timeout | null = null;
   pausedStateBeforeForfeit: {
     status: "waiting" | "letter_selection" | "active_sprint" | "recap";
@@ -230,14 +231,22 @@ export class GameRoom {
 
       const activeParticipants = Array.from(this.participants.entries()).filter(([_, p]) => !p.hasLeft);
       
-      // If no active players remain, destroy room immediately
+      // If no active players remain, grant a 30s grace period in case players on the same Wi-Fi reconnect
       if (activeParticipants.length === 0) {
-        this.clearConnectionTimeout();
-        this.clearSelectionTimer();
-        this.clearRoundTimer();
-        this.clearForfeitTimer();
-        this.clearAllDisconnectTimers();
-        deleteRoom(this.id);
+        if (!this.emptyRoomTimer) {
+          this.emptyRoomTimer = setTimeout(() => {
+            const recheckActive = Array.from(this.participants.entries()).filter(([_, p]) => !p.hasLeft && p.isConnected !== false);
+            if (recheckActive.length === 0) {
+              this.clearConnectionTimeout();
+              this.clearSelectionTimer();
+              this.clearRoundTimer();
+              this.clearForfeitTimer();
+              this.clearAllDisconnectTimers();
+              deleteRoom(this.id);
+            }
+            this.emptyRoomTimer = null;
+          }, 30000);
+        }
         return;
       }
 
@@ -261,7 +270,7 @@ export class GameRoom {
     // Notify room of participant connection status change
     io.to(this.id).emit("room:participants", this.getRoomParticipantsData());
 
-    // Check if only 1 connected active player remains
+    // Check if only 1 connected active player remains across the entire room
     const activeConnected = Array.from(this.participants.entries()).filter(
       ([_, p]) => !p.hasLeft && p.isConnected !== false
     );
@@ -269,11 +278,10 @@ export class GameRoom {
     if (activeConnected.length === 1 && this.status !== "ended") {
       const remainingUsername = activeConnected[0][0];
       this.startForfeitCountdown(remainingUsername, io);
-      // The 15s forfeit countdown governs the outcome; no redundant 30s disconnect timer needed
       return;
     }
 
-    // Set a 30-second disconnect timeout only if multiple players are still active
+    // Set a 30-second disconnect timeout if multiple players are still active
     const timer = setTimeout(() => {
       this.disconnectTimers.delete(username);
       this.removeParticipant(username, io);
@@ -289,6 +297,10 @@ export class GameRoom {
     if (!participant) return;
 
     this.clearDisconnectTimer(username);
+    if (this.emptyRoomTimer) {
+      clearTimeout(this.emptyRoomTimer);
+      this.emptyRoomTimer = null;
+    }
     participant.isConnected = true;
     participant.hasLeft = false;
     if (socket.user?.avatar_url) {
@@ -487,23 +499,24 @@ export class GameRoom {
 
     // Check if the current round roster has completed all turns or is uninitialized
     if (this.roundParticipants.length === 0 || this.roundTurnIndex >= this.roundParticipants.length) {
-      // Re-snapshot participants from all active, connected players
+      // Re-snapshot participants from all active players who have not permanently left
       this.roundParticipants = Array.from(this.participants.entries())
-        .filter(([_, p]) => !p.hasLeft && p.isConnected !== false)
+        .filter(([_, p]) => !p.hasLeft)
         .map(([username]) => username);
       this.roundTurnIndex = 0;
       this.currentRound++;
     }
 
-    // Check if no active players remain
+    // Check if no active players remain or alphabet is completely exhausted
     if (this.roundParticipants.length === 0 || this.availableLetters.length === 0) {
       this.endGame(io, socket);
       return true;
     }
 
-    // Check if total scheduled player-round turns are exhausted
-    if (this.currentRound > this.totalRound) {
-      // If computer helper is allowed and unused letters remain, let computer pick randomly and continue
+    // Dynamic Letter Sufficiency Check:
+    // If remaining letters are fewer than the number of participants needed for an equal round:
+    if (this.availableLetters.length < this.roundParticipants.length) {
+      // If computer helper is allowed, computer takes over and picks randomly until letters finish
       if (this.allowComputerHelper && this.availableLetters.length > 0) {
         this.usersTurn = "computer";
         const randomLetter =
@@ -514,7 +527,7 @@ export class GameRoom {
         return true;
       }
 
-      // Otherwise match concludes normally
+      // If computer helper is disabled, end the game immediately so everyone played equal rounds
       this.usersTurn = null;
       this.endGame(io, socket);
       return true;
@@ -844,10 +857,10 @@ export class GameRoom {
       this.clearRoundTimer();
       this.recapSkipVotes.clear();
 
-      // If this was the final round, conclude match directly
+      // Check if letters are exhausted or insufficient without computer helper
       if (
-        this.currentRound >= this.totalRound &&
-        (!this.allowComputerHelper || this.availableLetters.length === 0)
+        this.availableLetters.length === 0 ||
+        (this.availableLetters.length < this.roundParticipants.length && !this.allowComputerHelper)
       ) {
         this.endGame(io, socket);
       } else {
@@ -894,8 +907,8 @@ export class GameRoom {
       this.recapSkipVotes.clear();
 
       if (
-        this.currentRound >= this.totalRound &&
-        (!this.allowComputerHelper || this.availableLetters.length === 0)
+        this.availableLetters.length === 0 ||
+        (this.availableLetters.length < this.roundParticipants.length && !this.allowComputerHelper)
       ) {
         this.endGame(io, socket);
       } else {

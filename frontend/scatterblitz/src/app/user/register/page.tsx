@@ -4,13 +4,15 @@ import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import styles from "../auth.module.css";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
 import { isValidEmail } from "../../utils/validation";
 
 export default function Register() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get("redirect") || "/";
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -126,8 +128,12 @@ export default function Register() {
                 )}
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", alignItems: "center" }}>
-                  <Link href="/" className={`${styles.submitButton} ${styles.centerButton}`} style={{ textDecoration: "none" }}>
-                    Back to Home Page
+                  <Link
+                    href={redirectTarget || "/"}
+                    className={`${styles.submitButton} ${styles.centerButton}`}
+                    style={{ textDecoration: "none" }}
+                  >
+                    Continue to Game
                   </Link>
                   <Link href="/user/send-verification" className={styles.resendLink}>
                     Didn&apos;t receive email? Resend verification link
@@ -227,7 +233,14 @@ export default function Register() {
 
                 <p className={styles.switchPrompt}>
                   Already have an account?{" "}
-                  <Link href="/user/login" className={styles.switchLink}>
+                  <Link
+                    href={
+                      redirectTarget && redirectTarget !== "/"
+                        ? `/user/login?redirect=${encodeURIComponent(redirectTarget)}`
+                        : "/user/login"
+                    }
+                    className={styles.switchLink}
+                  >
                     Log In
                   </Link>
                 </p>

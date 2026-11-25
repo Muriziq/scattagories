@@ -4,12 +4,14 @@ import { useState, FormEvent, useRef, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import styles from "../auth.module.css";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { saveAccessToken, updateUserData, getDeviceId } from "../../accessToken";
 import { API_BASE_URL } from "../../../config/api";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get("redirect") || "/";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -57,9 +59,7 @@ export default function LoginPage() {
         if (data?.user && typeof data.user === "object") {
           updateUserData(data.user);
         }
-        setTimeout(() => {
-          router.push("/");
-        }, 1000);
+        router.push(redirectTarget);
       }
     } catch (err) {
       setErrorMsg("Network error. Could not connect to server.");
@@ -178,7 +178,14 @@ export default function LoginPage() {
 
               <p className={styles.switchPrompt}>
                 Don&apos;t have an account?{" "}
-                <Link href="/user/register" className={styles.switchLink}>
+                <Link
+                  href={
+                    redirectTarget && redirectTarget !== "/"
+                      ? `/user/register?redirect=${encodeURIComponent(redirectTarget)}`
+                      : "/user/register"
+                  }
+                  className={styles.switchLink}
+                >
                   Sign Up
                 </Link>
               </p>

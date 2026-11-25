@@ -235,6 +235,20 @@ function GameContent() {
         const currentOffset = serverOffsetRef.current;
         const synchronizedNow = Date.now() - currentOffset;
 
+        // Ensure currentUser is hydrated upon receiving room state
+        const localUser = getUserData();
+        if (localUser) {
+          setCurrentUser(localUser);
+        }
+
+        if (data.isForfeitPaused === false) {
+          setForfeitWarning(null);
+        }
+        if (data.hasSubmitted !== undefined) {
+          setHasSubmitted(Boolean(data.hasSubmitted));
+          hasSubmittedRef.current = Boolean(data.hasSubmitted);
+        }
+
         if (data.participants) setParticipants(data.participants);
         if (data.allLetters) setAllLetters(data.allLetters);
         if (data.availableLetters) setAvailableLetters(data.availableLetters);
@@ -588,7 +602,7 @@ function GameContent() {
   // User chooses a letter (when it's their turn)
   const handleSelectLetter = (letter: string) => {
     if (!socket) return;
-    if (currentUser?.username !== usersTurn) {
+    if (!isYourTurn) {
       setError("It is not your turn!");
       return;
     }
@@ -627,9 +641,13 @@ function GameContent() {
     }
   };
 
+  const effectiveUser = currentUser || getUserData();
   const isPaused = Boolean(forfeitWarning);
-  const isYourTurn =
-    Boolean(currentUser?.username && usersTurn && currentUser.username === usersTurn);
+  const isYourTurn = Boolean(
+    effectiveUser?.username &&
+      usersTurn &&
+      effectiveUser.username.toLowerCase() === usersTurn.toLowerCase()
+  );
   const canStopRound = (isYourTurn || usersTurn === "computer") && !isPaused;
 
   return (

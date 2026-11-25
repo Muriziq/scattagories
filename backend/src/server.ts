@@ -311,7 +311,6 @@ io.on("connection", (socket: AuthenticatedSocket) => {
     }
 
     room.status = "letter_selection";
-    room.calculateTotalRound();
     room.getNextUserTurn(io, socket);
     return io.to(roomId).emit("game:started", "Game Has Started");
   });
@@ -360,6 +359,12 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       usersTurn: room.usersTurn,
       activeLetter: room.activeLetter,
       status: room.status,
+      submitStatus: room.submitStatus,
+      hasSubmitted: Boolean(
+        room.activeLetter &&
+          room.detailedSubmissions[room.activeLetter]?.[socket.user.username]
+      ),
+      isForfeitPaused: room.forfeitTimer !== null,
       maxTimePerRound: room.maxTimePerRound,
       selectionTimeLimit: room.selectionTimeLimit,
       selectionStartTime: room.selectionStartTime,

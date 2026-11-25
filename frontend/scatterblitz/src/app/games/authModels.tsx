@@ -1,16 +1,23 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FaTimes, FaUserCircle } from "react-icons/fa";
 import styles from "./authmodel.module.css";
 
 interface AuthModelProps {
   modelFunction?: () => void;
   cancelModal?: () => void;
+  redirectUrl?: string;
 }
 
-export default function AuthModel({ modelFunction, cancelModal }: AuthModelProps) {
+export default function AuthModel({ modelFunction, cancelModal, redirectUrl }: AuthModelProps) {
   const router = useRouter();
+  const pathname = usePathname();
+
+  const handleLoginRedirect = () => {
+    const target = redirectUrl || pathname || "/";
+    router.push(`/user/login?redirect=${encodeURIComponent(target)}`);
+  };
 
   return (
     <div className={styles.modalOverlay}>
@@ -33,7 +40,7 @@ export default function AuthModel({ modelFunction, cancelModal }: AuthModelProps
           <button
             type="button"
             className={styles.modalPrimaryBtn}
-            onClick={() => router.push("/user/login")}
+            onClick={handleLoginRedirect}
           >
             Log In / Sign Up
           </button>
