@@ -4,6 +4,7 @@
 
 .main {
     min-height: 100vh;
+    min-height: 100dvh;
     width: 100%;
     color: #f7f3ed;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -31,6 +32,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 1.5rem;
 }
 
@@ -178,6 +180,10 @@ max-width: 1000px;
 
 .letterSelectionSection {
     composes: gamePanelBase;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .activeSprintSection {
@@ -186,7 +192,10 @@ max-width: 1000px;
     background-color: transparent;
     position:relative;
     backdrop-filter: none;
-
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 @property --timerProgress {
     syntax: "<angle>";
@@ -245,6 +254,9 @@ max-width: 1000px;
     background-color: transparent;
     backdrop-filter: none;
     padding: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .endedSection {
@@ -253,7 +265,10 @@ max-width: 1000px;
     background-color: transparent;
     position:relative;
     backdrop-filter: none;
-
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 /* Letter Selection Styles */
@@ -460,6 +475,11 @@ max-width: 1000px;
 
 .categoryInput:focus {
     outline: none;
+}
+
+.categoryInputInvalid {
+    text-decoration: underline wavy #ff6b6b;
+    text-underline-offset: 4px;
 }
 
 .categoryInput::placeholder {
@@ -1138,6 +1158,10 @@ max-width: 1000px;
         padding-left: 0 !important;
         padding-right: 0 !important;
         margin: 0 !important;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     .endedContainer {

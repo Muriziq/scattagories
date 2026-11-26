@@ -166,8 +166,9 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ message: "Internal Server Error" });
 });
 
-// Socket.IO Server Setup
+// Socket.IO Server Setup with 10KB maximum packet payload limit
 export const io = new Server(server, {
+  maxHttpBufferSize: 1e4, // 10 KB limit per socket packet to prevent memory exhaustion / payload flooding
   cors: {
     origin: (origin, callback) => {
       if (isAllowedOrigin(origin)) {

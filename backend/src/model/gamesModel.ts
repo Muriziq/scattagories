@@ -1108,8 +1108,9 @@ export class GameRoom {
     this.detailedSubmissions[this.activeLetter][username] = {};
 
     for (const [cat, word] of answerEntries) {
+      const cleanAnswer = typeof word === "string" ? word.trim().slice(0, 80) : "";
       this.detailedSubmissions[this.activeLetter][username][cat] = {
-        answer: word,
+        answer: cleanAnswer,
         score: 0,
       };
     }

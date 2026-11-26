@@ -25,7 +25,7 @@ import {
 } from "react-icons/fa";
 import styles from "./waitingRoom.module.css";
 import authStyles from "../authmodel.module.css";
-import { getAccessToken, getUserData, createNewGuest } from "../../accessToken";
+import { getAccessToken, requestAccessToken, getUserData, createNewGuest } from "../../accessToken";
 import AuthModel from "../authModels";
 import { useSocket } from "./SocketContext";
 import ErrorModals from "./ErrorModals";
@@ -63,6 +63,7 @@ function WaitingRoomContent() {
 
     // Persistent Socket Context
     const { socket, connectSocket: initSocket, disconnectSocket } = useSocket();
+    const hasAttemptedAuthRetryRef = useRef(false);
 
     // Routes socket errors to corresponding modal dialogs
     const handleSocketError = (err: any) => {
@@ -71,7 +72,21 @@ function WaitingRoomContent() {
         const type = typeof err === "object" ? err?.type : "";
 
         if (type === "authorization" || message.includes("Unauthorized") || message.includes("Authentication required")) {
-            setShowAuthModal(true);
+            if (!hasAttemptedAuthRetryRef.current) {
+                hasAttemptedAuthRetryRef.current = true;
+                requestAccessToken().then((newToken) => {
+                    if (newToken && socket) {
+                        socket.auth = { token: newToken };
+                        socket.emit("room:join", { roomId, password });
+                    } else {
+                        setShowAuthModal(true);
+                    }
+                }).catch(() => {
+                    setShowAuthModal(true);
+                });
+            } else {
+                setShowAuthModal(true);
+            }
         } else if (type === "password") {
             setPasswordError(message);
             setShowPasswordModal(true);

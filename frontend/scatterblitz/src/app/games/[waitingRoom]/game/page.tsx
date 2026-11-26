@@ -24,7 +24,7 @@ import {
 } from "react-icons/fa";
 import styles from "./game.module.css";
 import { useSocket } from "../SocketContext";
-import { getAccessToken, getUserData, createNewGuest } from "../../../accessToken";
+import { getAccessToken, requestAccessToken, getUserData, createNewGuest } from "../../../accessToken";
 import AuthModel from "../../authModels";
 import ErrorModals from "../ErrorModals";
 import Toast from "../../../components/Toast";
@@ -470,6 +470,7 @@ function GameContent() {
         setCheatNotice(msg);
       });
 
+      let hasAttemptedAuthRetry = false;
       activeSocket.on("error", (err: any) => {
         const msg = typeof err === "object" ? err?.message : String(err || "");
         const type = typeof err === "object" ? err?.type : "";
@@ -482,7 +483,22 @@ function GameContent() {
           msg.includes("Unauthorized") ||
           msg.includes("Authentication required")
         ) {
-          setShowAuthModal(true);
+          // Strict one-shot retry: only attempt refresh once, then permanently fall back to modal
+          if (!hasAttemptedAuthRetry) {
+            hasAttemptedAuthRetry = true;
+            requestAccessToken().then((newToken) => {
+              if (newToken && activeSocket) {
+                activeSocket.auth = { token: newToken };
+                activeSocket.emit("game:join", { roomId, clientSendTime: Date.now() });
+              } else {
+                setShowAuthModal(true);
+              }
+            }).catch(() => {
+              setShowAuthModal(true);
+            });
+          } else {
+            setShowAuthModal(true);
+          }
         } else if (type === "not-started") {
           setNotStartedMsg(msg);
           setShowNotStartedModal(true);
@@ -766,29 +782,36 @@ function GameContent() {
             <div className={styles.activeLetterBox}>{activeLetter || "?"}</div>
 
             <div className={styles.categoriesContainer}>
-              {categories.map((category, index) => (
-                <label key={category} className={styles.categoryLabel}>
-                  <span className={styles.categoryBadge}>{category}</span>
-                  <input
-                    ref={(el) => {
-                      inputRefs.current[index] = el;
-                    }}
-                    type="text"
-                    inputMode="text"
-                    name="search"
-                    disabled={isPaused}
-                    aria-autocomplete="none"
-                    enterKeyHint="next"
-                    className={styles.categoryInput}
-                    placeholder={
-                      isPaused
-                        ? "Game paused - waiting for opponent..."
-                        : `Type a ${category} starting with ${activeLetter}...`
-                    }
+              {categories.map((category, index) => {
+                const currentAnswer = answers[category] || "";
+                const isFirstLetterWrong =
+                  activeLetter &&
+                  currentAnswer.trim().length > 0 &&
+                  !currentAnswer.trim().toLowerCase().startsWith(activeLetter.toLowerCase());
+
+                return (
+                  <label key={category} className={styles.categoryLabel}>
+                    <span className={styles.categoryBadge}>{category}</span>
+                    <input
+                      ref={(el) => {
+                        inputRefs.current[index] = el;
+                      }}
+                      type="text"
+                      inputMode="text"
+                      name="search"
+                      disabled={isPaused}
+                      aria-autocomplete="none"
+                      enterKeyHint="next"
+                      className={`${styles.categoryInput} ${isFirstLetterWrong ? styles.categoryInputInvalid : ""}`}
+                      placeholder={
+                        isPaused
+                          ? "Game paused - waiting for opponent..."
+                          : `Type a ${category} starting with ${activeLetter}...`
+                      }
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="none"
-                    spellCheck={false}
+                    spellCheck={true}
                     data-form-type="other"
                     data-lpignore="true"
                     data-1p-ignore="true"
@@ -836,8 +859,9 @@ function GameContent() {
                     }}
                   />
                 </label>
-              ))}
-            </div>
+              );
+            })}
+          </div>
             {canStopRound && (
               <button
                 type="button"
