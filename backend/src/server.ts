@@ -515,7 +515,14 @@ io.on("connection", (socket: AuthenticatedSocket) => {
 
       const allRooms = [...publicRooms.values(), ...privateRooms.values()];
       for (const room of allRooms) {
-        if (!room.participants.has(username)) continue;
+        const participant = room.participants.get(username);
+        if (!participant) continue;
+
+        // Ignore stale disconnect events from superseded sockets
+        if (participant.socketId && participant.socketId !== socket.id) {
+          console.log(`[Socket] Ignoring stale disconnect from old socket ${socket.id} for ${username} (current active socket: ${participant.socketId})`);
+          continue;
+        }
 
         if (room.status === "waiting") {
           // Pre-game lobby: remove immediately

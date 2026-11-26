@@ -19,41 +19,45 @@ const SocketContext = createContext<SocketContextType>({
   disconnectSocket: () => {},
 });
 
+// Global module-level singleton instance to prevent multiple socket connections across renders/layouts
+let globalSocket: Socket | null = null;
+let globalConnectingPromise: Promise<Socket | null> | null = null;
+
 // Provides a singleton Socket.IO client instance across lobby and game routes
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const socketRef = useRef<Socket | null>(null);
-  const connectingPromiseRef = useRef<Promise<Socket | null> | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(globalSocket);
+  const [isConnected, setIsConnected] = useState<boolean>(Boolean(globalSocket?.connected));
 
-  // Explicitly disconnects and clears the socket reference
+  // Explicitly disconnects and clears the singleton socket reference
   const disconnectSocket = useCallback(() => {
-    connectingPromiseRef.current = null;
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-      setSocket(null);
-      setIsConnected(false);
+    globalConnectingPromise = null;
+    if (globalSocket) {
+      globalSocket.disconnect();
+      globalSocket = null;
     }
+    setSocket(null);
+    setIsConnected(false);
   }, []);
 
-  // Connects or re-authenticates the socket using the current access token
+  // Connects or returns the existing active singleton socket
   const connectSocket = useCallback(async (): Promise<Socket | null> => {
-    // Reuse existing active socket if already connected
-    if (socketRef.current?.connected) {
-      return socketRef.current;
+    // 1. Reuse existing connected socket
+    if (globalSocket?.connected) {
+      setSocket(globalSocket);
+      setIsConnected(true);
+      return globalSocket;
     }
 
-    // Reuse in-flight connection promise to prevent concurrent calls from spawning duplicates
-    if (connectingPromiseRef.current) {
-      return connectingPromiseRef.current;
+    // 2. Reuse in-flight connection promise to prevent duplicate handshakes
+    if (globalConnectingPromise) {
+      return globalConnectingPromise;
     }
 
-    connectingPromiseRef.current = (async () => {
+    globalConnectingPromise = (async () => {
       try {
-        if (socketRef.current) {
-          socketRef.current.disconnect();
-          socketRef.current = null;
+        if (globalSocket) {
+          globalSocket.disconnect();
+          globalSocket = null;
         }
 
         const token = await getAccessToken();
@@ -76,7 +80,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
           reconnectionDelay: 1000,
         });
 
-        socketRef.current = newSocket;
+        globalSocket = newSocket;
         setSocket(newSocket);
 
         newSocket.on("connect", () => {
@@ -97,7 +101,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             errMsg.includes("jwt")
           ) {
             if (hasRetriedAuth) {
-              // Already tried once and still failed; abort further socket connection attempts
               newSocket.disconnect();
               return;
             }
@@ -117,19 +120,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         return newSocket;
       } finally {
-        connectingPromiseRef.current = null;
+        globalConnectingPromise = null;
       }
     })();
 
-    return connectingPromiseRef.current;
+    return globalConnectingPromise;
   }, []);
 
-  // Clean up socket connection on unmount
   useEffect(() => {
-    return () => {
-      disconnectSocket();
-    };
-  }, [disconnectSocket]);
+    // If a global socket already exists, sync state on mount
+    if (globalSocket) {
+      setSocket(globalSocket);
+      setIsConnected(globalSocket.connected);
+    }
+  }, []);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected, connectSocket, disconnectSocket }}>

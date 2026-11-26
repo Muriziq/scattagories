@@ -108,6 +108,7 @@ export class GameRoom {
       avatar_url?: string | null;
       hasLeft?: boolean;
       isConnected?: boolean;
+      socketId?: string;
     }
   >;
 
@@ -197,6 +198,7 @@ export class GameRoom {
       avatar_url: socket.user.avatar_url || null,
       hasLeft: false,
       isConnected: true,
+      socketId: socket.id,
     });
   }
 
@@ -303,6 +305,7 @@ export class GameRoom {
     }
     participant.isConnected = true;
     participant.hasLeft = false;
+    participant.socketId = socket.id;
     if (socket.user?.avatar_url) {
       participant.avatar_url = socket.user.avatar_url;
     }
