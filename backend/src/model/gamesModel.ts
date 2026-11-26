@@ -308,13 +308,15 @@ export class GameRoom {
     }
 
     // If room was counting down to forfeit victory for the sole player, cancel it and resume
-    if (this.forfeitTimer !== null) {
+    if (this.forfeitTimer !== null || this.pausedStateBeforeForfeit !== null) {
       const paused = this.pausedStateBeforeForfeit;
       this.clearForfeitTimer();
 
-      io.to(this.id).emit("room:forfeit_cancelled", {
+      const cancelPayload = {
         message: `${username} reconnected. Resuming match!`,
-      });
+      };
+      io.to(this.id).emit("room:forfeit_cancelled", cancelPayload);
+      socket.emit("room:forfeit_cancelled", cancelPayload);
 
       // Resume exact paused game flow without skipping rounds or prematurely triggering recap
       if (this.status !== "ended" && paused) {

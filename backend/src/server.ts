@@ -277,8 +277,10 @@ io.on("connection", (socket: AuthenticatedSocket) => {
         return socket.emit("error", { message: "Room is currently full.", type: "room" });
       }
       room.addParticipant(socket);
+      socket.join(roomId);
     } else {
-      // Reconnecting player: restore connection state and cancel pending forfeit/disconnect timers
+      // Reconnecting player: join room channel FIRST so reconnect broadcasts are received
+      socket.join(roomId);
       room.handlePlayerReconnect(username, socket, io);
       if (room.status !== "waiting") {
         socket.emit("game:started", "Game Has Started");
@@ -290,7 +292,6 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       room.clearConnectionTimeout();
     }
 
-    socket.join(roomId);
     io.to(roomId).emit("room:participants", room.getRoomParticipantsData());
   });
 

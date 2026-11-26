@@ -811,7 +811,7 @@ function GameContent() {
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="none"
-                    spellCheck={true}
+                    spellCheck={false}
                     data-form-type="other"
                     data-lpignore="true"
                     data-1p-ignore="true"
