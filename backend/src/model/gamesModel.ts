@@ -30,6 +30,7 @@ export const availableCategories = [
   "Capitals",
   "Currencies",
   "States",
+  "Cities",
 ] as const;
 
 // Strips diacritics, punctuation, and leading whitespace for normalized answer matching
@@ -601,6 +602,7 @@ export class GameRoom {
     io.to(this.id).emit("letter:active", {
       letter: newLetter,
       roundStartTime: this.roundStartTime,
+      usersTurn: this.usersTurn,
     });
   }
 

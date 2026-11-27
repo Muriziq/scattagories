@@ -230,8 +230,8 @@ export async function runCategorySync(): Promise<void> {
     console.error("[CategoryWorker] Error processing elements:", err.message);
   }
 
-  // 5. Base Categories (Countries, Capitals, Currencies, States)
-  for (const baseCategory of ["countries", "capitals", "currencies", "states"]) {
+  // 5. Base Categories (Countries, Capitals, Currencies, States, Cities)
+  for (const baseCategory of ["countries", "capitals", "currencies", "states", "cities"]) {
     const existing = loadExistingCategory(baseCategory);
     if (existing) {
       const wordCount = Object.values(existing).reduce((acc, words) => acc + words.length, 0);

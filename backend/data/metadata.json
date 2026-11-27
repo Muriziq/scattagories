@@ -1,14 +1,15 @@
 {
-  "lastSync": "2026-11-24T20:22:39.345Z",
-  "totalWords": 17098,
-  "categoriesCount": 7,
+  "lastSync": "2026-11-27T16:29:19.394Z",
+  "totalWords": 154113,
+  "categoriesCount": 8,
   "stats": {
-    "capitals": 255,
-    "countries": 306,
-    "currencies": 412,
+    "capitals": 244,
+    "countries": 1378,
+    "currencies": 325,
     "elements": 118,
     "languages": 7837,
     "pokemon": 1351,
-    "states": 6819
+    "states": 5112,
+    "cities": 137748
   }
 }

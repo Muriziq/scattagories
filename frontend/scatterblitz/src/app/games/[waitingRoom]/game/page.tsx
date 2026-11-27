@@ -365,6 +365,9 @@ function GameContent() {
         const synchronizedNow = Date.now() - serverOffsetRef.current;
         const letterStr =
           typeof data === "object" ? data.letter : String(data || "");
+        if (typeof data === "object" && data.usersTurn) {
+          setUsersTurn(data.usersTurn);
+        }
         const startTime =
           typeof data === "object" && data.roundStartTime
             ? data.roundStartTime
